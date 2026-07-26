@@ -21,7 +21,7 @@
 
 ### ✅ Email
 - **Servicio:** Resend
-- **Key:** re_a4Kzg64a_EyQb98KCfFWA9mouF8HbohTf
+- **Key:** [CONFIGURADO EN .env.local]
 - **Status:** Listo (100 emails/día gratis)
 
 ### ✅ Hosting

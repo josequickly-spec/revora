@@ -61,7 +61,7 @@ Name: CLERK_SECRET_KEY
 Value: sk_test_0FflUOcPekxNwTPZhqMojJjhgFQ9WmM3iOhIMcnF5U
 
 Name: RESEND_API_KEY
-Value: re_a4Kzg64a_EyQb98KCfFWA9mouF8HbohTf
+Value: [OBTÉN TU CLAVE EN https://resend.com/api-keys]
 ```
 
 ### 6. Click "Deploy"

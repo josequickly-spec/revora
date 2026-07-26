@@ -10,7 +10,7 @@
 |---|---|---|
 | **Supabase** | ✅ Conectado | postgresql://postgres:... |
 | **Clerk** | ✅ Configurado | pk_test_... + sk_test_... |
-| **Resend** | ✅ Listo | re_a4Kzg64a_EyQb98KCfFWA9mouF8HbohTf |
+| **Resend** | ✅ Listo | [CONFIGURADO EN .env.local] |
 | **Servidor** | ✅ Corriendo | npm run dev (localhost:3000) |
 
 ---
