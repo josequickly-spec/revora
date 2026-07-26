@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Search, Globe, Sparkles, Zap, Mail, Video, Calculator, ArrowRight, CheckCircle2, TrendingUp, ExternalLink, Flame, UserCheck, DollarSign, Copy, Send, Layers, Check, RefreshCw, Plus, Clock, Kanban, ShieldCheck, Filter, Target, BarChart3, Percent, Award } from "lucide-react";
 import { INDUSTRY_LIST } from "@/lib/industries";
 import type { IndustryConfig } from "@/lib/industries";
+import { AutoDiscovery } from "@/components/AutoDiscovery";
 
 interface Business { id: number; name: string; domain: string; country: string; businessType: string; niche: string; monthlyRevenue: number; platform: string; logoUrl?: string | null; brandColor?: string | null; brandAccent?: string | null; status: string; heroOffer?: string | null; heroPrice?: string | null; painPoint?: string | null; }
 interface Funnel { id: number; businessId: number | null; funnelName: string; templateType: string; headline: string; subheadline: string; ctaText: string; offerBadge: string | null; bonusOffer: string | null; customPrimaryColor: string | null; slug: string; viewCount: number | null; }
@@ -19,7 +20,7 @@ export default function HomePage() {
   const [funs, setFuns] = useState<Funnel[]>([]);
   const [cons, setCons] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"discover"|"funnels"|"contacts"|"outreach"|"calculator"|"crm">("discover");
+  const [tab, setTab] = useState<"autodiscover"|"discover"|"funnels"|"contacts"|"outreach"|"calculator"|"crm">("autodiscover");
   const [selId, setSelId] = useState<number|null>(null);
   const [typeFilter, setTypeFilter] = useState("all");
   const [countryFilter, setCountryFilter] = useState("all");
@@ -141,10 +142,11 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 5-Step Progress */}
+      {/* 6-Step Progress */}
       <section className="bg-slate-950 border-b border-slate-800/80 px-4 py-3">
-        <div className="max-w-7xl mx-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+        <div className="max-w-7xl mx-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
           {([
+            {k:"autodiscover" as const,n:"0. Auto-Discovery",sub:"Hunter.io",icon:<Zap className="w-3.5 h-3.5 text-purple-400"/>},
             {k:"discover" as const,n:"1. Descubrir",sub:"Cualquier negocio",icon:<Globe className="w-3.5 h-3.5 text-amber-400"/>},
             {k:"funnels" as const,n:"2. Embudo Gratis",sub:"Adaptado al negocio",icon:<Layers className="w-3.5 h-3.5 text-indigo-400"/>},
             {k:"contacts" as const,n:"3. Contacto",sub:"Email del decisor",icon:<UserCheck className="w-3.5 h-3.5 text-emerald-400"/>},
@@ -160,6 +162,11 @@ export default function HomePage() {
       </section>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
+
+        {/* ===== TAB 0: AUTO-DISCOVER ===== */}
+        {tab === "autodiscover" && (
+          <AutoDiscovery />
+        )}
 
         {/* ===== TAB 1: DISCOVER ===== */}
         {tab === "discover" && (
