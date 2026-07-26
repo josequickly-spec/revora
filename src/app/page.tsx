@@ -20,7 +20,11 @@ export default function HomePage() {
   const [funs, setFuns] = useState<Funnel[]>([]);
   const [cons, setCons] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"autodiscover"|"discover"|"funnels"|"contacts"|"outreach"|"calculator"|"crm">("autodiscover");
+  const [tab, setTab] = useState<"autodiscover"|"discover"|"funnels"|"contacts"|"outreach"|"calculator"|"crm"|"autoanalyze">("autodiscover");
+  const [autoCampaigns, setAutoCampaigns] = useState<any[]>([]);
+  const [autoInput, setAutoInput] = useState("");
+  const [autoAnalyzing, setAutoAnalyzing] = useState(false);
+  const [selectedCampaign, setSelectedCampaign] = useState<any|null>(null);
   const [selId, setSelId] = useState<number|null>(null);
   const [typeFilter, setTypeFilter] = useState("all");
   const [countryFilter, setCountryFilter] = useState("all");
@@ -142,9 +146,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 6-Step Progress */}
+      {/* 7-Step Progress */}
       <section className="bg-slate-950 border-b border-slate-800/80 px-4 py-3">
-        <div className="max-w-7xl mx-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+        <div className="max-w-7xl mx-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2">
           {([
             {k:"autodiscover" as const,n:"0. Auto-Discovery",sub:"Hunter.io",icon:<Zap className="w-3.5 h-3.5 text-purple-400"/>},
             {k:"discover" as const,n:"1. Descubrir",sub:"Cualquier negocio",icon:<Globe className="w-3.5 h-3.5 text-amber-400"/>},
@@ -152,6 +156,7 @@ export default function HomePage() {
             {k:"contacts" as const,n:"3. Contacto",sub:"Email del decisor",icon:<UserCheck className="w-3.5 h-3.5 text-emerald-400"/>},
             {k:"outreach" as const,n:"4. Pitch",sub:"Email + Loom 90s",icon:<Mail className="w-3.5 h-3.5 text-rose-400"/>},
             {k:"calculator" as const,n:"5. Rev-Share",sub:"Ads a % beneficio",icon:<Calculator className="w-3.5 h-3.5 text-amber-400"/>},
+            {k:"autoanalyze" as const,n:"6. Auto-Analyze",sub:"Análisis 1-click",icon:<Sparkles className="w-3.5 h-3.5 text-cyan-400"/>},
           ]).map(s => (
             <button key={s.k} onClick={() => setTab(s.k)} className={`p-2.5 rounded-xl border text-left transition ${tab===s.k?"bg-indigo-950/60 border-indigo-500 shadow":"bg-slate-900/40 border-slate-800 hover:border-slate-700"}`}>
               <p className="text-xs font-bold text-white flex items-center gap-1.5">{s.icon}{s.n}</p>
@@ -548,6 +553,48 @@ export default function HomePage() {
             </div>
           </div>
         )}
+
+        {/* ===== TAB 7: AUTO-ANALYZE ===== */}
+        {tab === "autoanalyze" && (
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-cyan-950/80 via-slate-900 to-purple-950/80 border border-cyan-500/40 rounded-2xl p-6 shadow-xl">
+              <h2 className="text-2xl font-black text-white mb-1">✨ Análisis Automático 1-Click</h2>
+              <p className="text-sm text-slate-300">Escribe el nombre de cualquier negocio y REVORA generará automáticamente: análisis SEO, landing page, emails, video script, ads strategy y proyecciones de ingresos.</p>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+              <label className="text-sm font-bold text-slate-300 block">Nombre del Negocio:</label>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input type="text" placeholder="Ej: Nike, Restaurant Milano, Gimnasio..." value={autoInput} onChange={(e) => setAutoInput(e.target.value)} disabled={autoAnalyzing} className="flex-1 bg-slate-950 border border-slate-700 text-white placeholder-slate-500 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-cyan-500 disabled:opacity-50"/>
+                <button onClick={async () => {if (!autoInput.trim()) return; setAutoAnalyzing(true); try {const res = await fetch("/api/campaign-auto-generate", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({businessName: autoInput})}); const data = await res.json(); if (data.success) {setAutoCampaigns([{id: Date.now(), businessName: autoInput, status: "ready", createdAt: new Date().toISOString(), ...data.campaign}, ...autoCampaigns]); setAutoInput("");}} catch(e) {console.error(e);} finally {setAutoAnalyzing(false);}}} disabled={autoAnalyzing || !autoInput.trim()} className="bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 disabled:opacity-50 text-white font-bold px-6 py-3 rounded-xl shadow-lg flex items-center gap-2 whitespace-nowrap transition">
+                  {autoAnalyzing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                  {autoAnalyzing ? "Analizando..." : "Analizar"}
+                </button>
+              </div>
+            </div>
+
+            {autoCampaigns.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-lg font-bold text-white">Análisis Generados</h3>
+                {autoCampaigns.map((campaign: any) => (
+                  <div key={campaign.id} className="bg-slate-900 border border-slate-800 rounded-xl p-5 hover:border-slate-700 transition cursor-pointer" onClick={() => setSelectedCampaign(campaign)}>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <h4 className="font-bold text-white text-base">{campaign.businessName}</h4>
+                        <p className="text-xs text-slate-400 mt-1">{campaign.status === "ready" ? "✓ Listo" : "🚀 Activo"} • {new Date(campaign.createdAt).toLocaleDateString("es-ES")}</p>
+                      </div>
+                      <div className="text-right text-xs">
+                        <div className="text-cyan-400 font-bold">{campaign.analysis?.seoScore || 0}/100 SEO</div>
+                        <div className="text-slate-400">Keywords: {campaign.analysis?.keywords?.length || 0}</div>
+                      </div>
+                      <button className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs px-4 py-2 rounded-xl whitespace-nowrap">Ver Paquete →</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </main>
 
       {/* ===== BLUEPRINT MODAL ===== */}
@@ -577,6 +624,90 @@ export default function HomePage() {
           </div>
         </div>
       )}
+
+      {/* ===== BOTTOM NAVIGATION DOCK ===== */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-gradient-to-t from-slate-950 via-slate-950 to-slate-950/80 border-t border-slate-800/60 backdrop-blur-md px-4 py-3">
+        <div className="max-w-7xl mx-auto flex items-center justify-center gap-1 sm:gap-2 overflow-x-auto pb-2">
+          {([
+            {k:"autodiscover" as const, emoji:"⚡", label:"Discovery"},
+            {k:"discover" as const, emoji:"🌍", label:"Businesses"},
+            {k:"funnels" as const, emoji:"📄", label:"Funnels"},
+            {k:"contacts" as const, emoji:"👤", label:"Contacts"},
+            {k:"outreach" as const, emoji:"✉️", label:"Outreach"},
+            {k:"calculator" as const, emoji:"💰", label:"Revenue"},
+            {k:"autoanalyze" as const, emoji:"✨", label:"Auto-Analyze"},
+            {k:"crm" as const, emoji:"📊", label:"CRM"},
+          ]).map(item => (
+            <button
+              key={item.k}
+              onClick={() => setTab(item.k)}
+              className={`px-3 sm:px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap transition ${
+                tab === item.k
+                  ? "bg-gradient-to-r from-cyan-600 to-purple-600 text-white shadow-lg"
+                  : "bg-slate-800/60 text-slate-300 hover:bg-slate-700/60 hover:text-white"
+              }`}
+            >
+              <span className="text-sm">{item.emoji}</span>
+              <span className="hidden sm:inline">{item.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ===== CAMPAIGN DETAIL MODAL ===== */}
+      {selectedCampaign && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-800">
+              <h3 className="font-black text-xl text-white">{selectedCampaign.businessName}</h3>
+              <button onClick={() => setSelectedCampaign(null)} className="text-slate-400 hover:text-white text-2xl">✕</button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-2xl">📊</span>
+                  <h4 className="font-bold text-white">Análisis Competitivo & SEO</h4>
+                </div>
+                <p className="text-sm text-slate-300 mb-3">SEO Score: <span className="font-bold text-emerald-400">{selectedCampaign.analysis?.seoScore || 0}/100</span></p>
+                <p className="text-xs text-slate-300">Keywords principales: {selectedCampaign.analysis?.keywords?.join(", ") || "N/A"}</p>
+              </div>
+
+              <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-2xl">🎨</span>
+                  <h4 className="font-bold text-white">Funnel de Ventas</h4>
+                </div>
+                <p className="text-xs text-slate-300">Headline: <span className="font-semibold text-slate-200">{selectedCampaign.landingPage?.headline || "Generado"}</span></p>
+                <p className="text-xs text-slate-300 mt-2">Offer: {selectedCampaign.landingPage?.offer || "Premium"}</p>
+              </div>
+
+              <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-2xl">✉️</span>
+                  <h4 className="font-bold text-white">Estrategia de Outreach</h4>
+                </div>
+                <p className="text-xs text-slate-300">Email Sequence: {selectedCampaign.emailSequence?.length || 3} emails</p>
+                <p className="text-xs text-slate-300 mt-2">Video Script: {selectedCampaign.videoScript?.duration || "60-90s"}</p>
+              </div>
+
+              <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-2xl">📈</span>
+                  <h4 className="font-bold text-white">Proyecciones & ROI</h4>
+                </div>
+                <p className="text-xs text-slate-300">Expected Revenue: <span className="font-bold text-amber-400">€{selectedCampaign.projections?.monthlyRevenue?.toLocaleString() || "5000"}/month</span></p>
+                <p className="text-xs text-slate-300 mt-2">Expected ROI: <span className="font-bold text-emerald-400">{selectedCampaign.projections?.expectedROI || 100}%</span></p>
+              </div>
+            </div>
+
+            <button onClick={() => setSelectedCampaign(null)} className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-2.5 rounded-xl mt-6">Cerrar</button>
+          </div>
+        </div>
+      )}
+
+      {/* Add bottom padding to main so content doesn't hide under dock */}
+      <div className="h-24" />
 
       {/* ===== ADD BUSINESS MODAL ===== */}
       {addOpen && (
