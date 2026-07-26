@@ -118,7 +118,7 @@ export async function POST(req: Request) {
         name: contactName || `${firstName || ""} ${lastName || ""}`.trim() || "Director",
         role: bestContact.type === "discovered" ? "CEO/Founder" : (bestContact.type || "CEO"),
         email: bestContact.value,
-        linkedinUrl: null,
+        linkedinUrl: "",
         confidenceScore: Math.round((bestContact.confidence || 0) * 100),
         status: "verified",
         createdAt: new Date().toISOString(),
