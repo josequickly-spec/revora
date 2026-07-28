@@ -2,10 +2,13 @@
   "name": "revora",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": ">=20.9 <25"
+  },
   "scripts": {
     "init": "node scripts/init-db.mjs",
     "dev": "next dev --webpack",
-    "build": "next build --webpack",
+    "build": "node scripts/build.mjs",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
