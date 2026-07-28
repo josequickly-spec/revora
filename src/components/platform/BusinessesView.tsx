@@ -25,6 +25,7 @@ type Funnel = { id: number; businessId: number | null; funnelName: string; slug:
 type Audit = { id: string; businessId: number | null; domain: string; score: number; createdAt: string; opportunityCount: number };
 type ConsultantReport = { id: string; status: string; objective: string; createdAt: string };
 type ProposalSummary = { id: string; title: string; status: string };
+type CampaignSummary = { id: string; name: string; status: string };
 
 export default function BusinessesView({ selectedId }: { selectedId?: number }) {
   const [businesses, setBusinesses] = useState<Business[]>([]);
@@ -33,6 +34,7 @@ export default function BusinessesView({ selectedId }: { selectedId?: number }) 
   const [audits, setAudits] = useState<Audit[]>([]);
   const [consultantReports, setConsultantReports] = useState<ConsultantReport[]>([]);
   const [proposals, setProposals] = useState<ProposalSummary[]>([]);
+  const [campaigns, setCampaigns] = useState<CampaignSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -55,11 +57,13 @@ export default function BusinessesView({ selectedId }: { selectedId?: number }) 
       fetch(`/api/funnelspy/history?businessId=${selectedId}`).then(response => response.ok ? response.json() : Promise.reject(new Error("Audit history unavailable"))),
       fetch(`/api/businesses/${selectedId}/consultant-reports`).then(response => response.ok ? response.json() : { reports: [] }),
       fetch(`/api/proposals?businessId=${selectedId}`).then(response => response.ok ? response.json() : { proposals: [] }),
-    ]).then(([auditData, consultantData, proposalData]) => {
+      fetch(`/api/outreach/campaigns?businessId=${selectedId}`).then(response => response.ok ? response.json() : { campaigns: [] }),
+    ]).then(([auditData, consultantData, proposalData, campaignData]) => {
       setAudits(auditData.audits || []);
       setConsultantReports(consultantData.reports || []);
       setProposals(proposalData.proposals || []);
-    }).catch(() => { setAudits([]); setConsultantReports([]); setProposals([]); });
+      setCampaigns(campaignData.campaigns || []);
+    }).catch(() => { setAudits([]); setConsultantReports([]); setProposals([]); setCampaigns([]); });
   }, [selectedId]);
 
   const selected = useMemo(() => businesses.find((business) => business.id === selectedId), [businesses, selectedId]);
@@ -111,6 +115,11 @@ export default function BusinessesView({ selectedId }: { selectedId?: number }) 
             {selected.technologyData?.technologies?.length
               ? <ul className="mt-3 flex flex-wrap gap-2">{selected.technologyData.technologies.map(technology => <li key={technology.name} className="rounded-lg bg-white/[.05] px-3 py-1.5 text-xs text-slate-300">{technology.name}{technology.category ? ` · ${technology.category}` : ""}</li>)}</ul>
               : <p className="mt-3 text-sm text-slate-500">Technology evidence is unavailable.</p>}
+          </section>
+          <section className="mt-6 border-t border-white/[.07] pt-6">
+            <div className="flex items-center justify-between gap-3"><h3 className="font-black text-white">Outreach campaigns</h3><Link href={`/outreach/campaigns/new?businessId=${selected.id}`} className="text-xs font-bold text-cyan-300">Create draft</Link></div>
+            <p className="mt-2 text-xs text-slate-500">{businessContacts.length} contact candidates · verification and suppression are rechecked before approval.</p>
+            {campaigns.length ? <ul className="mt-3 space-y-2">{campaigns.map(item => <li key={item.id}><Link href={`/outreach/campaigns/${item.id}`} className="flex justify-between rounded-xl bg-black/20 p-3 text-sm"><span>{item.name}</span><span className="text-cyan-200">{item.status}</span></Link></li>)}</ul> : <p className="mt-3 text-sm text-slate-500">No campaign drafts. Opening this profile does not create one.</p>}
           </section>
           <section className="mt-6 border-t border-white/[.07] pt-6">
             <div className="flex items-center justify-between gap-3"><h3 className="font-black text-white">AI Consultant</h3><Link href={`/businesses/${selected.id}/consultant`} className="text-xs font-bold text-violet-300">Report history</Link></div>

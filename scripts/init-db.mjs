@@ -1,5 +1,6 @@
 import { config } from "dotenv";
 import pg from "pg";
+import { readFile } from "node:fs/promises";
 
 config({ path: ".env.local" });
 
@@ -263,6 +264,8 @@ try {
     CREATE INDEX IF NOT EXISTS proposal_versions_proposal_version_idx ON proposal_versions(proposal_id, version DESC);
     CREATE INDEX IF NOT EXISTS proposal_events_proposal_created_idx ON proposal_events(proposal_id, created_at DESC);
   `);
+  const outreachMigration = await readFile(new URL("./migrate-phase6-outreach.sql", import.meta.url), "utf8");
+  await client.query(outreachMigration);
   console.log("Database initialized successfully");
 } finally {
   client.release();

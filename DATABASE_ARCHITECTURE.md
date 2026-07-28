@@ -333,3 +333,7 @@ The operational Proposal Builder owns `proposal_documents`, immutable `proposal_
 - `proposal_events.proposal_id → proposal_documents.id` (`RESTRICT`)
 
 Money is persisted as integer minor units; percentage values are basis points. Public tokens are 256-bit random values whose raw representation is returned only at creation/rotation; PostgreSQL stores only a SHA-256 hash and a short non-secret prefix. The public route reads the immutable `published_version`.
+
+## Phase 6 addendum: Outreach Automation
+
+Phase 6 owns additive `outreach_*` campaign, recipient, sequence, suppression, sender, provider, event and webhook tables plus `outbound_messages`. Legacy `campaigns`, `campaign_metrics` and `outreach_messages` remain historical compatibility stores. Canonical ownership and history references use `ON DELETE RESTRICT`; the outbound queue uses unique idempotency keys and row locking.

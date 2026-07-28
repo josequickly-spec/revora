@@ -1,0 +1,1 @@
+import{NextResponse}from"next/server";import{getCampaign}from"@/lib/outreach/store";export async function GET(_r:Request,{params}:{params:Promise<{id:string}>}){const{id}=await params;const c=await getCampaign(id);return c?NextResponse.json({events:c.events}):NextResponse.json({error:"Not found."},{status:404})}

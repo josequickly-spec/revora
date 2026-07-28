@@ -1,0 +1,1 @@
+import PageHeader from"@/components/app-shell/PageHeader";import{SendersView}from"@/components/outreach/OutreachViews";export default function Page(){return <><PageHeader eyebrow="Outreach" title="Sender identities" description="Sender verification and address readiness. Current delivery provider remains dry-run."/><SendersView/></>}

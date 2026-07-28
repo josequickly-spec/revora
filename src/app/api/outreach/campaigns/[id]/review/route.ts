@@ -1,0 +1,2 @@
+import { NextResponse } from "next/server";import { reviewCampaign } from "@/lib/outreach/store";
+export async function POST(r:Request,{params}:{params:Promise<{id:string}>}){try{const[{id},b]=await Promise.all([params,r.json()]);return NextResponse.json({campaign:await reviewCampaign(id,b.expectedVersion)})}catch(e){return NextResponse.json({error:e instanceof Error?e.message:"Review failed."},{status:e instanceof Error&&e.message==="optimistic_conflict"?409:422})}}

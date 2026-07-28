@@ -279,3 +279,6 @@ Required service-level indicators:
 - Outreach delivery acceptance.
 - Event backlog and oldest-message age.
 - Dead-letter count.
+# Phase 6 outreach events
+
+Outreach lifecycle, suppression, unsubscribe and delivery events are append-only operational records. Provider-reported delivered/opened/clicked events are signals, not proof of human attention, intent or CRM stage. Webhook event IDs are deduplicated before domain effects.

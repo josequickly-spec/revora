@@ -1,0 +1,2 @@
+import { NextResponse } from "next/server";import { scheduleCampaign } from "@/lib/outreach/store";
+export async function POST(r:Request,{params}:{params:Promise<{id:string}>}){try{const[{id},b]=await Promise.all([params,r.json()]);return NextResponse.json({campaign:await scheduleCampaign(id,b.expectedVersion,b.startAt)})}catch(e){return NextResponse.json({error:e instanceof Error?e.message:"Schedule failed."},{status:409})}}
