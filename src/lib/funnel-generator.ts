@@ -17,6 +17,19 @@ export interface GeneratedFunnel {
   audience: string;
   primaryGoal: string;
   valueProposition: string;
+  leadMagnet: {
+    name: string;
+    format: string;
+    deliveryPromise: string;
+  };
+  fascinationBullets: string[];
+  ctaOptions: string[];
+  welcomeEmail: {
+    subject: string;
+    previewText: string;
+    body: string;
+    postscript: string;
+  };
   processSteps: Array<{ title: string; description: string }>;
   visualDirection: string;
   colorScheme: {
@@ -43,7 +56,7 @@ export async function generateFunnel(
   context: FunnelBusinessContext = {}
 ): Promise<GeneratedFunnel> {
   const prompt = `Actúa como estratega senior de conversión, UX writer y especialista en investigación comercial.
-Tu trabajo es diseñar una landing de captación profesional y específica, basada únicamente en los datos proporcionados.
+Tu trabajo es crear un sistema de adquisición de leads de respuesta directa, profesional y específico, basado únicamente en los datos proporcionados.
 
 DATOS DEL NEGOCIO
 - Nombre: ${businessName}
@@ -68,6 +81,24 @@ PROCESO INTERNO OBLIGATORIO
 8. Diseña para móvil primero: una idea por sección, lectura escaneable y CTA repetible sin saturación.
 9. La página debe poder competir con una landing profesional de agencia, no parecer una plantilla genérica.
 10. Cada beneficio debe responder "qué obtiene el cliente" y cada paso debe reducir incertidumbre.
+11. Infiere un buyer persona concreto: situación, intención, frustración, objeción y nivel de conciencia.
+12. Diseña un lead magnet de bajo coste de entrega y alto valor percibido, coherente con el negocio. No afirmes que ya existe: preséntalo como el recurso que esta campaña entregará.
+13. Usa PAS: describe el problema con precisión, agita consecuencias plausibles de posponerlo y presenta el lead magnet como el primer paso rápido, no como una cura milagrosa.
+14. Aplica psicología inversa con moderación: permite que el visitante se autodescalifique sin insultarlo ni manipularlo.
+15. La urgencia solo puede basarse en tiempo, coste de oportunidad o disponibilidad que pueda confirmarse. Nunca inventes cupos, fechas límite ni escasez.
+16. Escribe frases cortas, tono conversacional y párrafos de máximo tres líneas. Evita los adjetivos "revolucionario", "increíble" y "único".
+17. Las viñetas de fascinación deben revelar el beneficio y reservar el mecanismo, sin promesas engañosas.
+18. Los CTA deben usar verbos de propiedad en primera persona y nunca decir "Enviar" o "Registrarse".
+19. El email de bienvenida debe entregar o explicar claramente cómo acceder al recurso, romper el escepticismo y anticipar el servicio de pago sin presión.
+20. No declares porcentajes de apertura o CTR. Optimiza el asunto para curiosidad y relevancia, sin clickbait.
+
+CONTROL EDITORIAL ANTES DE RESPONDER
+- Descarta cualquier frase intercambiable con otro negocio. Cada bloque debe reflejar el nicho, la intención y el problema observado.
+- Comprueba que ninguna frase presuponga promociones, testimonios, reseñas, tasas, aprobación de crédito, inventario, entrega inmediata o disponibilidad si la auditoría no lo demuestra.
+- No escribas "disponible hoy", "promociones actuales", "clientes satisfechos" ni equivalentes sin evidencia explícita.
+- El asunto del email debe prometer una información concreta o abrir una pregunta relevante; nunca uses "Bienvenido", "Gracias por registrarte" ni saludos genéricos como idea principal.
+- El lead magnet debe poder crearse honestamente con la información del negocio. No prometas un archivo adjunto o enlace que todavía no existe; explica que llegará al correo indicado cuando la campaña esté configurada.
+- Haz una última revisión silenciosa y reescribe cualquier sección vaga, exagerada o no sustentada antes de producir el JSON.
 
 REGLAS DE VERACIDAD
 - No inventes testimonios, clientes, años de experiencia, certificaciones, descuentos, stock, plazas, garantías, resultados, estadísticas ni urgencia.
@@ -83,9 +114,19 @@ Responde SOLO con un objeto JSON válido, sin markdown y con exactamente esta es
   "audience": "Descripción concreta del cliente ideal y su intención",
   "primaryGoal": "Una sola conversión medible para esta landing",
   "valueProposition": "Por qué elegir este negocio, sin afirmaciones no verificadas",
+  "leadMagnet": {
+    "name": "Nombre específico y deseable del recurso",
+    "format": "Auditoría, guía, checklist, calculadora, diagnóstico u otro formato apropiado",
+    "deliveryPromise": "Qué recibirá exactamente el lead y cómo lo recibirá"
+  },
   "headline": "Titular específico de máximo 70 caracteres",
   "subheadline": "Propuesta de valor de máximo 160 caracteres",
-  "ctaText": "Acción concreta de máximo 28 caracteres",
+  "ctaText": "La mejor acción en primera persona, máximo 38 caracteres",
+  "ctaOptions": [
+    "CTA de propiedad en primera persona 1",
+    "CTA de propiedad en primera persona 2",
+    "CTA de propiedad en primera persona 3"
+  ],
   "offer": "Oferta principal coherente y verificable",
   "offerBadge": "Etiqueta informativa sin falsa urgencia",
   "bonusOffer": "Valor adicional; si no existe, indicar Evaluación personalizada",
@@ -94,6 +135,12 @@ Responde SOLO con un objeto JSON válido, sin markdown y con exactamente esta es
   "solutionCopy": "Cómo el negocio ayuda en 2-3 oraciones",
   "proofCopy": "Texto de confianza basado solo en hechos observados; si no hay pruebas, explicar el siguiente paso sin riesgo",
   "benefits": ["3 a 5 beneficios concretos y distintos"],
+  "fascinationBullets": [
+    "Beneficio atractivo que reserva el mecanismo 1",
+    "Beneficio atractivo que reserva el mecanismo 2",
+    "Beneficio atractivo que reserva el mecanismo 3",
+    "Beneficio atractivo que reserva el mecanismo 4"
+  ],
   "trustPoints": ["3 señales de confianza verificables o pasos transparentes"],
   "processSteps": [
     {"title": "Paso 1 corto", "description": "Qué hace el visitante y qué ocurre"},
@@ -106,6 +153,12 @@ Responde SOLO con un objeto JSON válido, sin markdown y con exactamente esta es
     {"question": "Objeción real 2", "answer": "Respuesta prudente"},
     {"question": "Objeción real 3", "answer": "Respuesta prudente"}
   ],
+  "welcomeEmail": {
+    "subject": "Asunto breve, específico y creíble",
+    "previewText": "Texto de vista previa que complementa el asunto",
+    "body": "Email móvil con bienvenida, acceso al recurso, ruptura del escepticismo y un siguiente paso concreto. Usa saltos de línea.",
+    "postscript": "P.D. que anticipa de forma natural el producto o servicio de pago"
+  },
   "colorScheme": {
     "primary": "#RRGGBB",
     "secondary": "#RRGGBB",
@@ -121,10 +174,10 @@ Responde SOLO con un objeto JSON válido, sin markdown y con exactamente esta es
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "gpt-4.1-mini",
         messages: [{ role: "user", content: prompt }],
         max_tokens: 1800,
-        temperature: 0.45,
+        temperature: 0.35,
         response_format: { type: "json_object" },
       }),
     });
@@ -145,6 +198,9 @@ Responde SOLO con un objeto JSON válido, sin markdown y con exactamente esta es
         !Array.isArray(result.benefits) || result.benefits.length < 3 ||
         !Array.isArray(result.objections) || result.objections.length < 2 ||
         !Array.isArray(result.processSteps) || result.processSteps.length < 3 ||
+        !Array.isArray(result.fascinationBullets) || result.fascinationBullets.length !== 4 ||
+        !Array.isArray(result.ctaOptions) || result.ctaOptions.length !== 3 ||
+        !result.leadMagnet?.name || !result.welcomeEmail?.subject || !result.welcomeEmail?.body ||
         !result.audience || !result.primaryGoal || !result.valueProposition) {
       throw new Error("OpenAI devolvió un embudo incompleto");
     }

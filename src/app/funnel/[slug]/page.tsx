@@ -168,7 +168,7 @@ export default function PublicFunnelPage() {
                 <span className="text-xs font-bold text-amber-300 flex items-center gap-1">
                   <Gift className="w-3.5 h-3.5" /> ¡SÍ! AÑADIR BONUS EXCLUSIVO
                 </span>
-                <p className="text-[11px] text-slate-300 mt-1">{funnel?.bonusOffer || "Beneficio adicional exclusivo para esta oferta."}</p>
+                <p className="text-[11px] text-slate-300 mt-1">{content?.leadMagnet?.deliveryPromise || funnel?.bonusOffer || "Beneficio adicional exclusivo para esta oferta."}</p>
               </div>
             </div>
 
@@ -217,11 +217,12 @@ export default function PublicFunnelPage() {
                 <p className="text-slate-300 mt-3 leading-relaxed">{content.solutionCopy}</p>
               </article>
             </div>
-            {Array.isArray(content.benefits) && (
+            {(Array.isArray(content.fascinationBullets) || Array.isArray(content.benefits)) && (
               <div>
-                <h3 className="text-2xl font-black text-center mb-5">Qué puedes conseguir</h3>
+                <h3 className="text-2xl font-black text-center mb-2">{content.leadMagnet?.name || "Qué vas a descubrir"}</h3>
+                <p className="text-slate-400 text-center mb-5">{content.leadMagnet?.format}</p>
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {content.benefits.map((benefit: string) => (
+                  {(content.fascinationBullets || content.benefits).map((benefit: string) => (
                     <div key={benefit} className="bg-slate-800 border border-slate-700 rounded-xl p-4 flex gap-3">
                       <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0"/><span>{benefit}</span>
                     </div>
