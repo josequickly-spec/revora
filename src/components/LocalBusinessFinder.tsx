@@ -31,6 +31,7 @@ export function LocalBusinessFinder({
   const [searched, setSearched] = useState(false);
   const [discoveringId, setDiscoveringId] = useState<string | null>(null);
   const [successId, setSuccessId] = useState<string | null>(null);
+  const [languageMode, setLanguageMode] = useState<"es" | "en" | "bilingual">("bilingual");
 
   const handleSearch = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -86,6 +87,7 @@ export function LocalBusinessFinder({
           zipcode: biz.zipcode,
           industryType: "general",
           businessCategory: category || biz.category,
+          languageMode,
         }),
       });
       const data = await response.json();
@@ -144,6 +146,16 @@ export function LocalBusinessFinder({
               className="bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-3"
             />
           </div>
+
+          <select
+            value={languageMode}
+            onChange={(e) => setLanguageMode(e.target.value as "es" | "en" | "bilingual")}
+            className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-3"
+          >
+            <option value="bilingual">Embudo bilingüe — Español + English</option>
+            <option value="es">Solo español</option>
+            <option value="en">English only</option>
+          </select>
 
           <button
             type="submit"

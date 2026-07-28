@@ -3,7 +3,7 @@ import { findEmail, getDomainEmails, verifyEmail } from "@/lib/hunter";
 import { getIndustry } from "@/lib/industries";
 import { businessSelect, contactSelect, funnelSelect, pool } from "@/lib/postgres";
 import { auditSite, detectWebsitePlatform } from "@/lib/site-audit";
-import { generateFunnel } from "@/lib/funnel-generator";
+import { FunnelLanguageMode, generateLocalizedFunnel } from "@/lib/funnel-generator";
 
 interface DiscoveryRequest {
   domain?: string;
@@ -15,6 +15,7 @@ interface DiscoveryRequest {
   contactName?: string;
   firstName?: string;
   lastName?: string;
+  languageMode?: FunnelLanguageMode;
 }
 
 interface LocationMatch {
@@ -96,7 +97,7 @@ export async function POST(req: Request) {
     const ind = getIndustry(industryType);
     const niche = body.businessCategory?.trim() || ind.defaultNiche;
     const audit = await auditSite(siteResponse.url || domain).catch(() => null);
-    const generatedFunnel = await generateFunnel(
+    const generatedFunnel = await generateLocalizedFunnel(
       body.businessName,
       industryType,
       niche,
@@ -106,7 +107,8 @@ export async function POST(req: Request) {
         country: locationMatch?.address?.country,
         platform,
         audit,
-      }
+      },
+      body.languageMode || "bilingual"
     );
     const domainData = await getDomainEmails(domain);
     let bestContact = domainData?.emails?.slice().sort((a, b) => b.confidence - a.confidence)[0] || null;
@@ -170,6 +172,7 @@ export async function POST(req: Request) {
       success: true, business, contact, funnel: funnelResult.rows[0],
       emailFound: Boolean(bestContact?.value), emailVerified, platformDetected: platform,
       domainDiscovered: !body.domain, locationMatched: locationMatch?.display_name || null,
+      availableLanguages: generatedFunnel.availableLanguages,
     });
   } catch (error) {
     await client.query("ROLLBACK").catch(() => undefined);

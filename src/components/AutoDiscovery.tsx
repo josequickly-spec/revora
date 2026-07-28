@@ -11,6 +11,7 @@ export function AutoDiscovery() {
   const [businessCategory, setBusinessCategory] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [languageMode, setLanguageMode] = useState<"es" | "en" | "bilingual">("bilingual");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState("");
@@ -39,6 +40,7 @@ export function AutoDiscovery() {
           zipcode: zipcode || undefined,
           firstName: firstName || undefined,
           lastName: lastName || undefined,
+          languageMode,
         }),
       });
 
@@ -77,6 +79,19 @@ export function AutoDiscovery() {
         {/* Formulario */}
         <div className="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-2xl">
           <form onSubmit={handleDiscover} className="space-y-4">
+            <div>
+              <label className="text-xs text-slate-400 font-semibold block mb-1">Idioma del embudo</label>
+              <select
+                value={languageMode}
+                onChange={(e) => setLanguageMode(e.target.value as "es" | "en" | "bilingual")}
+                className="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm"
+              >
+                <option value="bilingual">Bilingüe — Español + English</option>
+                <option value="es">Solo español</option>
+                <option value="en">English only</option>
+              </select>
+            </div>
+
             <div>
               <label className="text-xs text-slate-400 font-semibold block mb-1">
                 Dominio del Negocio (opcional)
@@ -262,7 +277,9 @@ export function AutoDiscovery() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">Embudo:</span>
-                    <span className="text-emerald-400 font-semibold">/funnel/{result.funnel?.slug}</span>
+                    <span className="text-emerald-400 font-semibold">
+                      {(result.availableLanguages || ["es"]).map((lang: string) => `/${lang}/funnel/${result.funnel?.slug}`).join(" · ")}
+                    </span>
                   </div>
                 </div>
               </div>

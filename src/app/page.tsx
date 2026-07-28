@@ -389,7 +389,7 @@ export default function HomePage() {
                   <h2 className="text-2xl font-black text-white">Embudo para {sel.name} ({selInd.label.split("·")[0].trim()})</h2>
                   <p className="text-sm text-slate-300 mt-1 max-w-2xl">Funciona para <strong>cualquier negocio y cualquier ingreso</strong>. El embudo está adaptado al sector y genera facturación extra inmediata.</p>
                 </div>
-                {selFun && <Link href={`/funnel/${selFun.slug}`} target="_blank" className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-3 rounded-xl shadow-lg flex items-center gap-2 whitespace-nowrap">
+                {selFun && <Link href={`/es/funnel/${selFun.slug}`} target="_blank" className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-3 rounded-xl shadow-lg flex items-center gap-2 whitespace-nowrap">
                   <ExternalLink className="w-4 h-4"/>Abrir Embudo en Vivo
                 </Link>}
               </div>
@@ -418,7 +418,7 @@ export default function HomePage() {
                     <span className="text-[11px] font-bold text-emerald-300 uppercase tracking-wider block">Enlace Público:</span>
                     <div className="flex items-center justify-between gap-2 bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs">
                       <span className="font-mono text-emerald-400 truncate">/funnel/{selFun?.slug||"funnel"}</span>
-                      <button onClick={() => copy(`${typeof window!=="undefined"?window.location.origin:""}/funnel/${selFun?.slug}`,"url")} className="bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded text-[11px] font-semibold shrink-0 flex items-center gap-1">
+                      <button onClick={() => copy(`${typeof window!=="undefined"?window.location.origin:""}/es/funnel/${selFun?.slug}`,"url")} className="bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded text-[11px] font-semibold shrink-0 flex items-center gap-1">
                         {copied==="url"?<Check className="w-3 h-3"/>:<Copy className="w-3 h-3"/>}{copied==="url"?"Copiado":"Copiar"}
                       </button>
                     </div>
@@ -455,7 +455,7 @@ export default function HomePage() {
                       <div><span className="text-slate-400 block">Oferta Principal</span><span className="text-lg font-black text-white">{sel.heroOffer}</span></div>
                       <div className="text-right"><span className="text-slate-400 block">Precio</span><span className="font-bold text-emerald-400">{sel.heroPrice}</span></div>
                     </div>
-                    {selFun && <Link href={`/funnel/${selFun.slug}`} target="_blank" className="w-full py-3 rounded-xl font-bold text-white text-xs flex items-center justify-center gap-2 shadow-lg" style={{backgroundColor:sel.brandColor||"#6366F1"}}>
+                    {selFun && <Link href={`/es/funnel/${selFun.slug}`} target="_blank" className="w-full py-3 rounded-xl font-bold text-white text-xs flex items-center justify-center gap-2 shadow-lg" style={{backgroundColor:sel.brandColor||"#6366F1"}}>
                       {selFun.ctaText||selInd.funnelCta} <ArrowRight className="w-4 h-4"/>
                     </Link>}
                   </div>

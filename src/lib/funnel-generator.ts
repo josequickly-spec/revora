@@ -46,6 +46,15 @@ export interface FunnelBusinessContext {
   offer?: string;
   price?: string;
   audit?: unknown;
+  language?: "es" | "en";
+}
+
+export type FunnelLanguageMode = "es" | "en" | "bilingual";
+
+export interface LocalizedFunnelContent extends GeneratedFunnel {
+  defaultLanguage: "es" | "en";
+  availableLanguages: Array<"es" | "en">;
+  translations: Partial<Record<"es" | "en", GeneratedFunnel>>;
 }
 
 export async function generateFunnel(
@@ -55,8 +64,14 @@ export async function generateFunnel(
   painPoint: string,
   context: FunnelBusinessContext = {}
 ): Promise<GeneratedFunnel> {
+  const outputLanguage = context.language === "en" ? "English (United States)" : "español";
   const prompt = `Actúa como estratega senior de conversión, UX writer y especialista en investigación comercial.
 Tu trabajo es crear un sistema de adquisición de leads de respuesta directa, profesional y específico, basado únicamente en los datos proporcionados.
+
+IDIOMA DE SALIDA
+- Escribe TODO el contenido visible en ${outputLanguage}.
+- Localiza el mensaje para el mercado indicado; no traduzcas literalmente.
+- Conserva exactamente nombres comerciales, marcas, precios, dominios y direcciones.
 
 DATOS DEL NEGOCIO
 - Nombre: ${businessName}
@@ -210,6 +225,33 @@ Responde SOLO con un objeto JSON válido, sin markdown y con exactamente esta es
     console.error("Funnel generation error:", error);
     throw error;
   }
+}
+
+export async function generateLocalizedFunnel(
+  businessName: string,
+  industryType: string,
+  niche: string,
+  painPoint: string,
+  context: FunnelBusinessContext = {},
+  mode: FunnelLanguageMode = "bilingual"
+): Promise<LocalizedFunnelContent> {
+  const languages: Array<"es" | "en"> = mode === "bilingual" ? ["es", "en"] : [mode];
+  const generated = await Promise.all(
+    languages.map(async (language) => [
+      language,
+      await generateFunnel(businessName, industryType, niche, painPoint, { ...context, language }),
+    ] as const)
+  );
+  const translations = Object.fromEntries(generated) as Partial<Record<"es" | "en", GeneratedFunnel>>;
+  const defaultLanguage: "es" | "en" = mode === "en" ? "en" : "es";
+  const primary = translations[defaultLanguage] || translations[languages[0]];
+  if (!primary) throw new Error("No se pudo generar el contenido localizado");
+  return {
+    ...primary,
+    defaultLanguage,
+    availableLanguages: languages,
+    translations,
+  };
 }
 
 export async function generateFunnelVariations(

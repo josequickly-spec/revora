@@ -37,6 +37,7 @@ export function FunnelGenerator({
   const [generated, setGenerated] = useState<GeneratedFunnelContent | null>(null);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState<string | null>(null);
+  const [languageMode, setLanguageMode] = useState<"es" | "en" | "bilingual">("bilingual");
 
   const handleGenerate = async () => {
     setGenerating(true);
@@ -52,6 +53,7 @@ export function FunnelGenerator({
           industryType,
           niche,
           painPoint,
+          languageMode,
         }),
       });
 
@@ -106,6 +108,16 @@ export function FunnelGenerator({
             </>
           )}
         </button>
+
+        <select
+          value={languageMode}
+          onChange={(e) => setLanguageMode(e.target.value as "es" | "en" | "bilingual")}
+          className="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm"
+        >
+          <option value="bilingual">Bilingüe — Español + English</option>
+          <option value="es">Solo español</option>
+          <option value="en">English only</option>
+        </select>
 
         {error && (
           <div className="bg-red-950/60 border border-red-700/80 rounded-xl p-3 flex gap-2 text-xs text-red-200">

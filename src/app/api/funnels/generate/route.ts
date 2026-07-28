@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { generateFunnel } from "@/lib/funnel-generator";
+import { FunnelLanguageMode, generateLocalizedFunnel } from "@/lib/funnel-generator";
 import { getIndustry } from "@/lib/industries";
 import { funnelSelect, pool } from "@/lib/postgres";
 import { auditSite } from "@/lib/site-audit";
@@ -10,6 +10,7 @@ interface FunnelGenerateRequest {
   industryType: string;
   niche: string;
   painPoint: string;
+  languageMode?: FunnelLanguageMode;
 }
 
 export async function POST(req: Request) {
@@ -35,7 +36,7 @@ export async function POST(req: Request) {
       ? await auditSite(business.domain).catch(() => null)
       : null;
 
-    const generatedFunnel = await generateFunnel(
+    const generatedFunnel = await generateLocalizedFunnel(
       businessName,
       industryType,
       niche,
@@ -47,7 +48,8 @@ export async function POST(req: Request) {
         offer: business?.hero_offer && business.hero_offer !== ind.defaultOffer ? business.hero_offer : undefined,
         price: business?.hero_price && business.hero_price !== ind.defaultPrice ? business.hero_price : undefined,
         audit,
-      }
+      },
+      body.languageMode || "bilingual"
     );
 
     const slug =
@@ -71,6 +73,7 @@ export async function POST(req: Request) {
       funnel: newFunnel,
       generatedContent: generatedFunnel,
       message: `Embudo generado automaticamente para "${businessName}"`,
+      availableLanguages: generatedFunnel.availableLanguages,
     });
   } catch (error) {
     console.error("Funnel generation error:", error);

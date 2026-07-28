@@ -73,6 +73,7 @@ try {
       UNIQUE(funnel_id, email)
     );
     ALTER TABLE funnels ADD COLUMN IF NOT EXISTS content_json JSONB;
+    ALTER TABLE funnel_leads ADD COLUMN IF NOT EXISTS language VARCHAR(5) DEFAULT 'es';
 
     CREATE TABLE IF NOT EXISTS outreach_messages (
       id BIGSERIAL PRIMARY KEY,
