@@ -56,6 +56,8 @@ Eligible by default: provider_verified, domain_valid or syntax_valid plus explic
 
 No address guessing, name-pattern generation or AI personalization exists.
 
+The contact association remains mandatory (`contact_id NOT NULL`). Contact Intelligence is the canonical owner of recipient identity, business association, discovery provenance and verification evidence. Making `contact_id` nullable would create a second, weaker recipient identity model inside Outreach and break that boundary.
+
 ## Compliance controls
 
 Central review validates campaign state, recipient syntax and verification, suppression, unsubscribe, bounce state, sender/provider readiness, physical address, unsubscribe placeholder, timezone, active steps, deceptive subjects, unsupported claims and unsafe HTML.
@@ -68,6 +70,8 @@ Suppression precedence is complaint, global unsubscribe, hard bounce, legal hold
 
 Suppressions are append-only. No automatic unsuppression exists.
 
+An active-suppression unique index covers normalized email hash, scope, campaign, sender and suppression type. Released records retain history through `released_at`; only records where `released_at IS NULL` participate in active uniqueness.
+
 Unsubscribe tokens use 256 bits of entropy. Only SHA-256 hash and an eight-character administrative prefix are stored. Public URLs contain neither email nor database IDs. Repeated requests are idempotently successful, create suppression and cancel future pending messages while preserving history.
 
 ## Sender and provider
@@ -75,6 +79,8 @@ Unsubscribe tokens use 256 bits of entropy. Only SHA-256 hash and an eight-chara
 Phase 6 creates a dry-run provider connection and review-only sender identity. The provider abstraction returns truthful `dry_run`/unknown state and `liveMessagesSent: 0`. It never falls back to Resend.
 
 The sender UI shows verification state and does not claim SPF, DKIM or DMARC validity. Real delivery requires a future verified provider adapter and valid business mailing address.
+
+The seeded review sender is explicitly `unverified`. A database trigger rejects live-delivery status transitions when the provider is `dry-run`, the sender is not `provider_verified`, the domain ends in `.invalid`, or the physical address remains a configuration placeholder. Another trigger enforces the invariant that a campaign's provider connection equals the selected sender identity's provider connection; application callers should validate the same invariant before persistence.
 
 ## Templates and personalization
 
@@ -92,7 +98,25 @@ Templates require unsubscribe and physical-address placeholders, omit unknown na
 
 Default window is Monday-Friday, 09:00-17:00 in an explicitly selected IANA timezone. Default limits are 25/day and 10/hour. The scheduler uses fixed hour/day delays and creates immutable outbound message snapshots.
 
+Approval freezes the campaign sender, provider, compliance version, sequence version and content version. Sequence rows cannot be inserted, changed or removed after draft review begins. Outbound subject, HTML, text, recipient, sequence step, content version and idempotency key are immutable after the snapshot is created.
+
 The PostgreSQL queue uses unique SHA-256 idempotency keys and `FOR UPDATE SKIP LOCKED` with a maximum worker batch of 25. Content version is frozen on queued messages.
+
+`outbound_messages` records `locked_at`, `locked_by` and `lease_expires_at`. Worker acquisition must occur in one transaction, select only eligible unlocked or expired rows, and claim them using:
+
+```sql
+SELECT id
+FROM outbound_messages
+WHERE status IN ('scheduled','queued','deferred')
+  AND scheduled_at <= NOW()
+  AND (lease_expires_at IS NULL OR lease_expires_at < NOW())
+ORDER BY scheduled_at
+FOR UPDATE SKIP LOCKED;
+```
+
+The worker must persist its lock owner and lease before committing. Row locks prevent concurrent claims in the transaction; leases support crash recovery; unique message idempotency keys and attempt numbers prevent duplicate local processing records. Provider adapters must also use the idempotency key because PostgreSQL cannot make an external network delivery transactionally exactly-once.
+
+Every provider attempt is persisted in `outreach_delivery_attempts`, unique on `(message_id, attempt_number)`, with safe error fields, request correlation, latency and retry timing. Negative latency and non-positive attempt numbers are rejected.
 
 Retry policy is 5, 30 and 120 minutes, maximum three attempts, only for confirmed temporary provider/network/rate-limit classes. No retry is allowed for hard bounce, invalid address, complaint, unsubscribe, policy rejection, permanent rejection or ambiguous provider acceptance.
 
@@ -101,6 +125,8 @@ Retry policy is 5, 30 and 120 minutes, maximum three attempts, only for confirme
 Canonical webhook: `POST /api/outreach/webhooks/[provider]`.
 
 It requires HMAC-SHA256, a five-minute timestamp window and a unique provider event ID. Stored payload is minimized. Bounce and complaint create global suppression. Duplicate events are ignored.
+
+Webhook storage includes provider message correlation, canonical message association, provider occurrence time, processing time/status and safe error code. `(provider, provider_event_id)` remains the idempotency boundary. SQL enforces a strict `safe_payload` allow-list containing only `type` and `messageId`, with scalar string/null values; message IDs containing `@` are rejected. Raw email, authorization headers, provider secrets, cookies, credentials and arbitrary nested payloads cannot be persisted there. Recipient email must not appear in logs, exports, public routes or webhook public responses.
 
 Reply is a terminal sequence signal in the contract, but Phase 6 dry-run has no mailbox ingestion and does not fabricate replies or auto-reply. Opens/clicks never mark a recipient interested or move CRM.
 
@@ -117,14 +143,28 @@ Additive tables:
 - outreach_suppressions
 - outreach_events
 - outreach_webhook_events
+- outreach_delivery_attempts
 
 All ownership/history foreign keys use `ON DELETE RESTRICT`. Existing `campaigns`, `campaign_metrics` and `outreach_messages` are unchanged.
+
+Phase 6 hardening adds exact state and numeric `CHECK` constraints; worker leases and delivery-attempt history; webhook correlation and processing fields; safe-payload validation; active suppression uniqueness; approved-content and sender/provider guards; unsafe live-delivery refusal; and indexes for queue, recipient state, provider message correlation, attempts and webhook processing.
 
 Exact idempotent SQL: `scripts/migrate-phase6-outreach.sql`.
 
 Rollback, only after backup and explicit approval:
 
 ```sql
+DROP TRIGGER IF EXISTS outbound_message_live_delivery_guard ON outbound_messages;
+DROP TRIGGER IF EXISTS outbound_message_snapshot_freeze_guard ON outbound_messages;
+DROP TRIGGER IF EXISTS outreach_sequence_freeze_guard ON outreach_sequence_steps;
+DROP TRIGGER IF EXISTS outreach_campaign_approved_freeze_guard ON outreach_campaigns;
+DROP TRIGGER IF EXISTS outreach_campaign_sender_provider_guard ON outreach_campaigns;
+DROP FUNCTION IF EXISTS prevent_unsafe_live_outreach_delivery();
+DROP FUNCTION IF EXISTS freeze_outbound_message_snapshot();
+DROP FUNCTION IF EXISTS freeze_outreach_sequence_after_review();
+DROP FUNCTION IF EXISTS freeze_approved_outreach_campaign();
+DROP FUNCTION IF EXISTS enforce_outreach_campaign_sender_provider();
+DROP TABLE outreach_delivery_attempts;
 DROP TABLE outreach_webhook_events;
 DROP TABLE outreach_events;
 DROP TABLE outreach_suppressions;
@@ -187,7 +227,7 @@ The suite uses no network, database mutation, AI credential, live provider, emai
 
 Validation results:
 
-- `npm run init`: passed; additive migration applied.
+- `npm run init`: passed; hardened additive migration applied and reapplied idempotently.
 - `npm run lint`: passed.
 - `npm run typecheck`: passed.
 - `npm run test:phase2`: passed, 18 assertions.
@@ -197,7 +237,7 @@ Validation results:
 - `npm run test:phase6`: passed, 96 assertions.
 - `npm run build`: passed; 59 static pages generated.
 - `git diff --check`: passed.
-- PostgreSQL: 19 canonical foreign keys verified as `RESTRICT`; zero campaigns, recipients, messages and suppressions created by migration; one dry-run provider and sender configuration inserted; 1 legacy outreach message and 6 legacy campaigns preserved.
+- PostgreSQL: required constraints, columns, indexes and triggers inspected after migration; seeded `dry-run` sender is `unverified` on `example.invalid`; no campaign, recipient or message is created by the hardening migration.
 - Browser desktop: outreach list, new campaign, templates, suppressions, senders, safe missing campaign and unsubscribe routes rendered without console errors.
 - Browser mobile 390×844: outreach list, new campaign, campaign safe state and unsubscribe had no horizontal overflow.
 - Route manifest: Phase 5 generated 50 static pages; Phase 6 generates 59. All FunnelSpy, AI Consultant and Proposal Builder routes remain present.
