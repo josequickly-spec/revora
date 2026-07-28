@@ -148,6 +148,33 @@ try {
     CREATE INDEX IF NOT EXISTS idx_funnel_leads_funnel_id ON funnel_leads(funnel_id);
     CREATE INDEX IF NOT EXISTS idx_outreach_business_id ON outreach_messages(business_id);
     CREATE INDEX IF NOT EXISTS idx_proposals_business_id ON proposals(business_id);
+
+    CREATE TABLE IF NOT EXISTS funnelspy_audits (
+      id UUID PRIMARY KEY,
+      domain TEXT NOT NULL,
+      analysis JSONB NOT NULL,
+      report JSONB,
+      share_token UUID UNIQUE NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    ALTER TABLE funnelspy_audits
+      ADD COLUMN IF NOT EXISTS business_id BIGINT REFERENCES businesses(id) ON DELETE SET NULL;
+    CREATE INDEX IF NOT EXISTS funnelspy_audits_domain_created_idx
+      ON funnelspy_audits(domain, created_at DESC);
+    CREATE INDEX IF NOT EXISTS funnelspy_audits_business_created_idx
+      ON funnelspy_audits(business_id, created_at DESC);
+
+    CREATE TABLE IF NOT EXISTS funnelspy_monitors (
+      id UUID PRIMARY KEY,
+      domain TEXT UNIQUE NOT NULL,
+      frequency TEXT NOT NULL DEFAULT 'weekly',
+      enabled BOOLEAN NOT NULL DEFAULT TRUE,
+      last_audit_id UUID,
+      last_checked_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    ALTER TABLE funnelspy_monitors
+      ADD COLUMN IF NOT EXISTS business_id BIGINT REFERENCES businesses(id) ON DELETE SET NULL;
   `);
   console.log("Database initialized successfully");
 } finally {

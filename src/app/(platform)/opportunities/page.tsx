@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import PageHeader from "@/components/app-shell/PageHeader";
-import ModuleState from "@/components/app-shell/ModuleState";
+import OpportunitiesView from "@/components/opportunities/OpportunitiesView";
 
 export const metadata: Metadata = {
   title: "Opportunities",
@@ -13,14 +13,10 @@ export default function OpportunitiesPage() {
       <PageHeader
         eyebrow="Opportunity Engine"
         title="Opportunities"
-        description="This surface will organize existing audit findings into a persistent opportunity lifecycle in a later authorized phase."
+        description="Deterministic, evidence-linked opportunities derived from persisted FunnelSpy audits."
         actions={[{ label: "Review audits", href: "/audits" }]}
       />
-      <ModuleState
-        title="Module consolidation in progress"
-        description="FunnelSpy scores, missing stages, weaknesses and recommendations remain available in each audit. Phase 1 does not create a duplicate opportunity model."
-        action={{ label: "Open audit history", href: "/audits" }}
-      />
+      <OpportunitiesView />
     </>
   );
 }

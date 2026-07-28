@@ -22,11 +22,13 @@ type Business = {
 };
 type Contact = { id: number; businessId: number | null; name: string; email: string; status: string | null };
 type Funnel = { id: number; businessId: number | null; funnelName: string; slug: string; viewCount: number | null };
+type Audit = { id: string; businessId: number | null; domain: string; score: number; createdAt: string; opportunityCount: number };
 
 export default function BusinessesView({ selectedId }: { selectedId?: number }) {
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [funnels, setFunnels] = useState<Funnel[]>([]);
+  const [audits, setAudits] = useState<Audit[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -42,6 +44,14 @@ export default function BusinessesView({ selectedId }: { selectedId?: number }) 
       .catch((reason) => setError(reason instanceof Error ? reason.message : "Unable to load business intelligence."))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!selectedId) return;
+    fetch(`/api/funnelspy/history?businessId=${selectedId}`)
+      .then(response => response.ok ? response.json() : Promise.reject(new Error("Audit history unavailable")))
+      .then(data => setAudits(data.audits || []))
+      .catch(() => setAudits([]));
+  }, [selectedId]);
 
   const selected = useMemo(() => businesses.find((business) => business.id === selectedId), [businesses, selectedId]);
 
@@ -63,7 +73,7 @@ export default function BusinessesView({ selectedId }: { selectedId?: number }) 
                 <Globe2 className="size-4" />{selected.domain}
               </a>
             </div>
-            <Link href={`/funnelspy?url=${encodeURIComponent(selected.domain)}`} className="rounded-xl bg-cyan-300 px-4 py-2.5 text-sm font-black text-slate-950 outline-none hover:bg-cyan-200 focus-visible:ring-2 focus-visible:ring-cyan-300">Audit funnel</Link>
+            <Link href={`/funnelspy?url=${encodeURIComponent(selected.domain)}&businessId=${selected.id}`} className="rounded-xl bg-cyan-300 px-4 py-2.5 text-sm font-black text-slate-950 outline-none hover:bg-cyan-200 focus-visible:ring-2 focus-visible:ring-cyan-300">Run Funnel Audit</Link>
           </div>
           <dl className="mt-8 grid gap-4 border-t border-white/[.07] pt-6 sm:grid-cols-2">
             {[
@@ -92,6 +102,10 @@ export default function BusinessesView({ selectedId }: { selectedId?: number }) 
             {selected.technologyData?.technologies?.length
               ? <ul className="mt-3 flex flex-wrap gap-2">{selected.technologyData.technologies.map(technology => <li key={technology.name} className="rounded-lg bg-white/[.05] px-3 py-1.5 text-xs text-slate-300">{technology.name}{technology.category ? ` · ${technology.category}` : ""}</li>)}</ul>
               : <p className="mt-3 text-sm text-slate-500">Technology evidence is unavailable.</p>}
+          </section>
+          <section className="mt-6 border-t border-white/[.07] pt-6">
+            <div className="flex items-center justify-between gap-3"><h3 className="font-black text-white">Funnel audits</h3><Link href={`/businesses/${selected.id}/opportunities`} className="text-xs font-bold text-violet-300">View opportunities</Link></div>
+            {audits.length ? <ul className="mt-3 space-y-2">{audits.map(audit => <li key={audit.id}><Link href={`/audits/${audit.id}`} className="flex items-center justify-between rounded-xl bg-black/20 p-3 text-sm"><span className="text-slate-300">{new Date(audit.createdAt).toLocaleString()}</span><span className="text-cyan-300">{audit.score} score · {audit.opportunityCount} opportunities</span></Link></li>)}</ul> : <p className="mt-3 text-sm text-slate-500">No associated audit. Opening this profile does not run one automatically.</p>}
           </section>
         </section>
         <div className="space-y-6">

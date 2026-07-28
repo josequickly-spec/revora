@@ -10,6 +10,9 @@ export type StoredAudit = {
   report: FunnelAIReport | null;
   createdAt: string;
   shareToken: string;
+  businessId: number | null;
+  storageMode: "postgres" | "memory";
+  businessName: string | null;
 };
 
 const memory = new Map<string, StoredAudit>();
@@ -26,8 +29,12 @@ async function ensureSchema() {
       share_token UUID UNIQUE NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+    ALTER TABLE funnelspy_audits
+      ADD COLUMN IF NOT EXISTS business_id BIGINT REFERENCES businesses(id) ON DELETE SET NULL;
     CREATE INDEX IF NOT EXISTS funnelspy_audits_domain_created_idx
       ON funnelspy_audits(domain, created_at DESC);
+    CREATE INDEX IF NOT EXISTS funnelspy_audits_business_created_idx
+      ON funnelspy_audits(business_id, created_at DESC);
     CREATE TABLE IF NOT EXISTS funnelspy_monitors (
       id UUID PRIMARY KEY,
       domain TEXT UNIQUE NOT NULL,
@@ -37,6 +44,8 @@ async function ensureSchema() {
       last_checked_at TIMESTAMPTZ,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+    ALTER TABLE funnelspy_monitors
+      ADD COLUMN IF NOT EXISTS business_id BIGINT REFERENCES businesses(id) ON DELETE SET NULL;
   `);
   schemaReady = true;
 }
@@ -49,10 +58,17 @@ function normalizeRow(row: Record<string, unknown>): StoredAudit {
     report: (row.report as FunnelAIReport | null) || null,
     createdAt: new Date(String(row.created_at)).toISOString(),
     shareToken: String(row.share_token),
+    businessId: row.business_id == null ? null : Number(row.business_id),
+    storageMode: "postgres",
+    businessName: row.business_name == null ? null : String(row.business_name),
   };
 }
 
-export async function saveAudit(analysis: FunnelSpyAnalysis, report: FunnelAIReport | null = null) {
+export async function saveAudit(
+  analysis: FunnelSpyAnalysis,
+  report: FunnelAIReport | null = null,
+  options: { businessId?: number | null } = {},
+) {
   const audit: StoredAudit = {
     id: randomUUID(),
     domain: analysis.domain,
@@ -60,14 +76,17 @@ export async function saveAudit(analysis: FunnelSpyAnalysis, report: FunnelAIRep
     report,
     createdAt: new Date().toISOString(),
     shareToken: randomUUID(),
+    businessId: options.businessId || null,
+    storageMode: "memory",
+    businessName: null,
   };
   memory.set(audit.id, audit);
   try {
     await ensureSchema();
     const result = await pool.query(
-      `INSERT INTO funnelspy_audits (id, domain, analysis, report, share_token, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [audit.id, audit.domain, JSON.stringify(analysis), report ? JSON.stringify(report) : null, audit.shareToken, audit.createdAt],
+      `INSERT INTO funnelspy_audits (id, domain, analysis, report, share_token, created_at, business_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [audit.id, audit.domain, JSON.stringify(analysis), report ? JSON.stringify(report) : null, audit.shareToken, audit.createdAt, audit.businessId],
     );
     return normalizeRow(result.rows[0]);
   } catch (error) {
@@ -87,45 +106,59 @@ export async function attachReport(id: string, report: FunnelAIReport) {
   }
 }
 
-export async function listAudits(domain?: string, limit = 30) {
+export async function listAudits(domain?: string, limit = 30, businessId?: number) {
   try {
     await ensureSchema();
-    const result = domain
-      ? await pool.query("SELECT * FROM funnelspy_audits WHERE domain = $1 ORDER BY created_at DESC LIMIT $2", [domain, limit])
-      : await pool.query("SELECT * FROM funnelspy_audits ORDER BY created_at DESC LIMIT $1", [limit]);
+    const result = businessId
+      ? await pool.query("SELECT fa.*, b.name AS business_name FROM funnelspy_audits fa LEFT JOIN businesses b ON b.id=fa.business_id WHERE fa.business_id = $1 ORDER BY fa.created_at DESC LIMIT $2", [businessId, limit])
+      : domain
+        ? await pool.query("SELECT fa.*, b.name AS business_name FROM funnelspy_audits fa LEFT JOIN businesses b ON b.id=fa.business_id WHERE lower(regexp_replace(fa.domain, '^www\\.', '')) = lower(regexp_replace($1, '^www\\.', '')) ORDER BY fa.created_at DESC LIMIT $2", [domain, limit])
+        : await pool.query("SELECT fa.*, b.name AS business_name FROM funnelspy_audits fa LEFT JOIN businesses b ON b.id=fa.business_id ORDER BY fa.created_at DESC LIMIT $1", [limit]);
     return result.rows.map(normalizeRow);
   } catch {
     return [...memory.values()]
-      .filter((item) => !domain || item.domain === domain)
+      .filter((item) => (!domain || item.domain === domain) && (!businessId || item.businessId === businessId))
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
       .slice(0, limit);
   }
+}
+
+export async function findLatestAudit(domain: string, businessId?: number) {
+  const audits = await listAudits(domain, 10, businessId);
+  return audits[0] || null;
+}
+
+export function storageWarning(audit: StoredAudit) {
+  return audit.storageMode === "memory"
+    ? "Audit persistence is using non-durable in-memory storage."
+    : null;
 }
 
 export async function getAudit(idOrShareToken: string) {
   const cached = [...memory.values()].find((item) => item.id === idOrShareToken || item.shareToken === idOrShareToken);
   try {
     await ensureSchema();
-    const result = await pool.query("SELECT * FROM funnelspy_audits WHERE id::text = $1 OR share_token::text = $1 LIMIT 1", [idOrShareToken]);
+    const result = await pool.query("SELECT fa.*, b.name AS business_name FROM funnelspy_audits fa LEFT JOIN businesses b ON b.id=fa.business_id WHERE fa.id::text = $1 OR fa.share_token::text = $1 LIMIT 1", [idOrShareToken]);
     return result.rows[0] ? normalizeRow(result.rows[0]) : cached || null;
   } catch {
     return cached || null;
   }
 }
 
-export async function upsertMonitor(domain: string, frequency = "weekly") {
+export async function upsertMonitor(domain: string, frequency = "weekly", businessId?: number | null) {
   const id = randomUUID();
   try {
     await ensureSchema();
     const result = await pool.query(
-      `INSERT INTO funnelspy_monitors (id, domain, frequency) VALUES ($1, $2, $3)
-       ON CONFLICT (domain) DO UPDATE SET frequency = EXCLUDED.frequency, enabled = TRUE
+      `INSERT INTO funnelspy_monitors (id, domain, frequency, business_id) VALUES ($1, $2, $3, $4)
+       ON CONFLICT (domain) DO UPDATE SET frequency = EXCLUDED.frequency, enabled = TRUE,
+         business_id = COALESCE(EXCLUDED.business_id, funnelspy_monitors.business_id)
        RETURNING *`,
-      [id, domain, frequency],
+      [id, domain, frequency, businessId || null],
     );
     return result.rows[0];
   } catch {
-    return { id, domain, frequency, enabled: true, created_at: new Date().toISOString() };
+    return { id, domain, frequency, business_id: businessId || null, enabled: true, created_at: new Date().toISOString() };
   }
 }
 
@@ -143,7 +176,7 @@ export async function listDueMonitors() {
       ORDER BY last_checked_at NULLS FIRST
       LIMIT 5
     `);
-    return result.rows as Array<{ id: string; domain: string; frequency: string }>;
+    return result.rows as Array<{ id: string; domain: string; frequency: string; business_id: number | null }>;
   } catch {
     return [];
   }

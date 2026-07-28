@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { normalizeBusinessDomain, isPrivateAddress } from "../src/lib/business-intelligence/domain.ts";
+import { normalizePublicHttpUrl, isPrivateOrLocalAddress } from "../src/lib/public-url-security.ts";
 import { parseCreateFunnel } from "../src/lib/business-intelligence/request.ts";
 import { leadSearchSchema } from "../src/lib/lead-finder/validation.ts";
 import { mapOverpassCandidates } from "../src/lib/lead-finder/normalization.ts";
@@ -12,13 +12,12 @@ assert.equal(valid.limit, 40);
 assert.equal(leadSearchSchema.safeParse({ location: { type: "city", value: "" } }).success, false);
 assert.equal(leadSearchSchema.safeParse({ location: { type: "city", value: "Miami" }, limit: 101 }).success, false);
 
-assert.deepEqual(normalizeBusinessDomain("HTTPS://WWW.Example.com/path?q=1"), {
-  domain: "example.com", originalUrl: "HTTPS://WWW.Example.com/path?q=1",
-});
-assert.throws(() => normalizeBusinessDomain("http://localhost:3000"), /Local or private/);
-assert.equal(isPrivateAddress("127.0.0.1"), true);
-assert.equal(isPrivateAddress("192.168.1.2"), true);
-assert.equal(isPrivateAddress("8.8.8.8"), false);
+const normalizedBusinessUrl = normalizePublicHttpUrl("HTTPS://WWW.Example.com/path?q=1");
+assert.equal(normalizedBusinessUrl.hostname.toLowerCase().replace(/^www\./, ""), "example.com");
+assert.throws(() => normalizePublicHttpUrl("http://localhost:3000"), /Local or private/);
+assert.equal(isPrivateOrLocalAddress("127.0.0.1"), true);
+assert.equal(isPrivateOrLocalAddress("192.168.1.2"), true);
+assert.equal(isPrivateOrLocalAddress("8.8.8.8"), false);
 
 assert.equal(parseCreateFunnel({ businessName: "Test", domain: "example.com" }), false);
 assert.equal(parseCreateFunnel({ businessName: "Test", domain: "example.com", createFunnel: true }), true);

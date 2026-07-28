@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Activity, ArrowUpRight, Bot, Check, ChevronRight, CircleAlert, Code2,
@@ -38,6 +38,7 @@ function Pill({ children }: { children: React.ReactNode }) {
 
 export default function FunnelSpyPage() {
   const [url, setUrl] = useState("");
+  const [businessId, setBusinessId] = useState<number | undefined>();
   const [analysis, setAnalysis] = useState<FunnelSpyAnalysis | null>(null);
   const [report, setReport] = useState<FunnelAIReport | null>(null);
   const [loading, setLoading] = useState(false);
@@ -49,19 +50,34 @@ export default function FunnelSpyPage() {
   const [funnelLoading, setFunnelLoading] = useState(false);
   const [funnelError, setFunnelError] = useState("");
   const [createdFunnel, setCreatedFunnel] = useState<{ es: string | null; en: string | null } | null>(null);
+  const [auditNotice, setAuditNotice] = useState("");
 
-  async function analyze(target = url) {
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const params = new URLSearchParams(window.location.search);
+      setUrl(params.get("url") || "");
+      const candidateBusinessId = Number(params.get("businessId"));
+      setBusinessId(Number.isInteger(candidateBusinessId) && candidateBusinessId > 0 ? candidateBusinessId : undefined);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  async function analyze(target = url, forceRefresh = false) {
     if (!target.trim()) return;
     setLoading(true); setError(""); setAnalysis(null); setReport(null); setAuditId(""); setShareToken("");
     try {
       const response = await fetch("/api/funnelspy/analyze", {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: target }),
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: target, businessId, forceRefresh }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "No se pudo analizar el sitio.");
       setAnalysis(data.analysis);
       setAuditId(data.audit?.id || "");
       setShareToken(data.audit?.shareToken || "");
+      setAuditNotice([
+        data.reused ? `Reused a completed audit from ${new Date(data.audit.createdAt).toLocaleString()}.` : "Fresh audit completed.",
+        ...(data.warnings || []),
+      ].join(" "));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo analizar el sitio.");
     } finally { setLoading(false); }
@@ -92,7 +108,7 @@ export default function FunnelSpyPage() {
     try {
       const response = await fetch("/api/funnelspy/monitor", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ domain: analysis.domain, frequency: "weekly" }),
+        body: JSON.stringify({ domain: analysis.domain, frequency: "weekly", businessId }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "No se pudo activar.");
@@ -175,9 +191,11 @@ export default function FunnelSpyPage() {
                 {auditId && <a href={`/api/funnelspy/export?id=${auditId}&format=csv`} className="rounded-xl border border-white/10 px-3 py-2 text-xs text-slate-400 hover:text-white">Exportar CSV</a>}
                 {auditId && <a href={`/api/funnelspy/export?id=${auditId}&format=json`} className="rounded-xl border border-white/10 px-3 py-2 text-xs text-slate-400 hover:text-white">JSON</a>}
                 {shareToken && <a href={`/shared/funnelspy/${shareToken}`} target="_blank" className="rounded-xl border border-violet-400/25 bg-violet-500/10 px-3 py-2 text-xs text-violet-200">Compartir</a>}
+                <button onClick={() => analyze(url, true)} disabled={loading} className="rounded-xl border border-cyan-400/20 bg-cyan-400/[.06] px-3 py-2 text-xs text-cyan-200">Run fresh audit</button>
                 <button onClick={activateMonitor} disabled={monitoring} className="rounded-xl border border-lime-400/20 bg-lime-400/[.06] px-3 py-2 text-xs text-lime-200">{monitoring ? "Monitoreo activo" : "Monitorear semanalmente"}</button>
               </div>
             </div>
+            {auditNotice && <div className="mb-5 rounded-2xl border border-cyan-300/20 bg-cyan-300/[.06] p-4 text-sm text-cyan-100">{auditNotice}</div>}
             {error && <div className="mb-5 flex gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-200"><CircleAlert className="size-4" />{error}</div>}
 
             <section className="grid gap-4 lg:grid-cols-[1.5fr_.8fr]">

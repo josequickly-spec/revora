@@ -6,12 +6,13 @@ import { analyzeFunnel } from "@/lib/funnelspy";
 const schema = z.object({
   domain: z.string().min(3),
   frequency: z.enum(["daily", "weekly", "monthly"]).default("weekly"),
+  businessId: z.coerce.number().int().positive().optional(),
 });
 
 export async function POST(request: Request) {
   try {
     const input = schema.parse(await request.json());
-    const monitor = await upsertMonitor(input.domain, input.frequency);
+    const monitor = await upsertMonitor(input.domain, input.frequency, input.businessId);
     return NextResponse.json({ monitor, message: "Monitoreo activado." }, { status: 201 });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "No fue posible activar el monitoreo." }, { status: 400 });
@@ -30,7 +31,7 @@ export async function GET(request: Request) {
   for (const monitor of monitors) {
     try {
       const analysis = await analyzeFunnel(monitor.domain);
-      const audit = await saveAudit(analysis);
+      const audit = await saveAudit(analysis, null, { businessId: monitor.business_id });
       await markMonitorChecked(monitor.id, audit.id);
       completed.push({ domain: monitor.domain, auditId: audit.id, score: analysis.score });
     } catch (error) {

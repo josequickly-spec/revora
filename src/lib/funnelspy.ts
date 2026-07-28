@@ -1,6 +1,7 @@
 import * as cheerio from "cheerio";
-import { lookup } from "node:dns/promises";
 import { z } from "zod";
+import { assertPublicHostname, normalizePublicHttpUrl } from "@/lib/public-url-security";
+import { calculateFunnelScore } from "@/lib/funnel-score";
 
 export const funnelSpyRequestSchema = z.object({
   url: z.string().trim().min(3).max(300),
@@ -20,6 +21,7 @@ export type FunnelPage = {
 };
 
 export type FunnelSpyAnalysis = {
+  version?: { auditSchema: "funnel-audit-v1"; crawler: "funnelspy-crawler-v1"; score: "funnelspy-score-v1" };
   analyzedAt: string;
   origin: string;
   domain: string;
@@ -55,37 +57,37 @@ const PAGE_LIMIT = 8;
 const FETCH_TIMEOUT = 12_000;
 
 function normalizeUrl(input: string) {
-  const candidate = /^https?:\/\//i.test(input) ? input : `https://${input}`;
-  const url = new URL(candidate);
-  url.hash = "";
-  if (!["http:", "https:"].includes(url.protocol)) throw new Error("Solo se admiten URLs HTTP o HTTPS.");
-  return url;
+  return normalizePublicHttpUrl(input);
 }
 
 async function assertPublicHost(url: URL) {
-  const host = url.hostname.toLowerCase();
-  if (host === "localhost" || host.endsWith(".local")) throw new Error("El dominio debe ser público.");
-  const addresses = await lookup(host, { all: true });
-  const blocked = addresses.some(({ address }) =>
-    /^(127\.|10\.|192\.168\.|169\.254\.|0\.|::1$|fc|fd|fe80)/i.test(address) ||
-    /^172\.(1[6-9]|2\d|3[01])\./.test(address),
-  );
-  if (blocked) throw new Error("No se permiten redes privadas o locales.");
+  await assertPublicHostname(url.hostname);
 }
 
 async function fetchText(url: string) {
-  const response = await fetch(url, {
-    cache: "no-store",
-    redirect: "follow",
-    signal: AbortSignal.timeout(FETCH_TIMEOUT),
-    headers: { "User-Agent": "Mozilla/5.0 FunnelSpyBot/1.0 (+public-site-audit)" },
-  });
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  const type = response.headers.get("content-type") || "";
-  if (!type.includes("text/html") && !type.includes("xml") && !type.includes("text/plain")) {
-    throw new Error("Contenido no compatible");
+  let current = normalizePublicHttpUrl(url);
+  for (let redirectCount = 0; redirectCount <= 5; redirectCount += 1) {
+    await assertPublicHost(current);
+    const response = await fetch(current, {
+      cache: "no-store",
+      redirect: "manual",
+      signal: AbortSignal.timeout(FETCH_TIMEOUT),
+      headers: { "User-Agent": "Mozilla/5.0 FunnelSpyBot/1.0 (+public-site-audit)" },
+    });
+    if ([301, 302, 303, 307, 308].includes(response.status)) {
+      const location = response.headers.get("location");
+      if (!location) throw new Error("Redirect response did not include a destination.");
+      current = normalizePublicHttpUrl(new URL(location, current).toString());
+      continue;
+    }
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const type = response.headers.get("content-type") || "";
+    if (!type.includes("text/html") && !type.includes("xml") && !type.includes("text/plain")) {
+      throw new Error("Contenido no compatible");
+    }
+    return response.text();
   }
-  return response.text();
+  throw new Error("Too many redirects.");
 }
 
 function unique(values: string[]) {
@@ -336,7 +338,10 @@ export async function analyzeFunnel(input: string): Promise<FunnelSpyAnalysis> {
   const hasCheckout = pages.some((page) => page.kind === "checkout");
   const hasThankYou = pages.some((page) => page.kind === "thank-you");
   const hasOffer = pages.some((page) => ["landing", "product"].includes(page.kind));
-  const score = Math.min(100, 28 + Math.min(pages.length * 5, 20) + Math.min(allCtas.length, 15) + Math.min(formCount * 9, 18) + Math.min(pixels.length * 5, 10) + (hasCheckout ? 5 : 0) + (hasThankYou ? 4 : 0));
+  const score = calculateFunnelScore({
+    pages: pages.length, ctas: allCtas.length, forms: formCount,
+    pixels: pixels.length, hasCheckout, hasThankYou,
+  });
   const [performance, domainIntel, publicScreenshot] = await Promise.all([
     pageSpeed(origin.toString()),
     rdap(origin.hostname),
@@ -349,6 +354,7 @@ export async function analyzeFunnel(input: string): Promise<FunnelSpyAnalysis> {
     evidence,
   });
   return {
+    version: { auditSchema: "funnel-audit-v1", crawler: "funnelspy-crawler-v1", score: "funnelspy-score-v1" },
     analyzedAt: new Date().toISOString(),
     origin: origin.origin,
     domain: origin.hostname,
