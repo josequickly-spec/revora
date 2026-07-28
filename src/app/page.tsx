@@ -5,6 +5,7 @@ import { Search, Globe, Sparkles, Zap, Mail, Video, Calculator, ArrowRight, Chec
 import { INDUSTRY_LIST } from "@/lib/industries";
 import type { IndustryConfig } from "@/lib/industries";
 import { AutoDiscovery } from "@/components/AutoDiscovery";
+import { LocalBusinessFinder } from "@/components/LocalBusinessFinder";
 
 interface Business { id: number; name: string; domain: string; country: string; businessType: string; niche: string; monthlyRevenue: number; averageOrderValue?: number; conversionRate?: number; monthlyAdSpend?: number; platform: string; logoUrl?: string | null; brandColor?: string | null; brandAccent?: string | null; status: string; heroOffer?: string | null; heroPrice?: string | null; painPoint?: string | null; }
 interface Funnel { id: number; businessId: number | null; funnelName: string; templateType: string; headline: string; subheadline: string; ctaText: string; offerBadge: string | null; bonusOffer: string | null; customPrimaryColor: string | null; slug: string; viewCount: number | null; }
@@ -307,6 +308,12 @@ export default function HomePage() {
               <h2 className="text-2xl font-black text-white mb-1">Explorador Universal de Negocios</h2>
               <p className="text-sm text-slate-300">Descubre negocios de <strong>cualquier industria, tamaño o ingreso</strong>. Desde autónomos hasta grandes corporaciones. El embudo + ads funciona para todos.</p>
             </div>
+
+            <LocalBusinessFinder onDiscovered={async (businessId) => {
+              await fetchAll();
+              setSelId(businessId);
+              setTab("funnels");
+            }} />
 
             {/* Filters */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center gap-3">
