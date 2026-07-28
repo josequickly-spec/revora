@@ -11,7 +11,8 @@
     "build": "node scripts/build.mjs",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:phase2": "node --experimental-strip-types scripts/phase2-characterization.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",

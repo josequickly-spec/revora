@@ -1,0 +1,69 @@
+import { pool } from "@/lib/postgres";
+import type { LeadSearchResponse } from "./contracts";
+import { candidateDomain, mapOverpassCandidates, type OverpassElement } from "./normalization";
+import type { ValidLeadSearchRequest } from "./validation";
+
+const categoryFilters: Record<string, string[]> = {
+  restaurant: ['["amenity"="restaurant"]'], restaurante: ['["amenity"="restaurant"]'],
+  cafe: ['["amenity"="cafe"]'], coffee: ['["amenity"="cafe"]'],
+  gym: ['["leisure"="fitness_centre"]'], gimnasio: ['["leisure"="fitness_centre"]'],
+  "auto repair": ['["shop"="car_repair"]'], taller: ['["shop"="car_repair"]'],
+  dealer: ['["shop"="car"]'], concesionario: ['["shop"="car"]'],
+  beauty: ['["shop"~"beauty|hairdresser"]'], belleza: ['["shop"~"beauty|hairdresser"]'],
+  dentist: ['["amenity"="dentist"]'], dental: ['["amenity"="dentist"]'],
+  pharmacy: ['["amenity"="pharmacy"]'], hotel: ['["tourism"~"hotel|motel|guest_house"]'],
+  realestate: ['["office"="estate_agent"]'], inmobiliaria: ['["office"="estate_agent"]'],
+};
+
+function filtersFor(category = "") {
+  const normalized = category.toLowerCase();
+  return Object.entries(categoryFilters).find(([key]) => normalized.includes(key))?.[1] || [
+    '["amenity"]["name"]', '["shop"]["name"]', '["office"]["name"]',
+    '["craft"]["name"]', '["tourism"]["name"]', '["healthcare"]["name"]',
+  ];
+}
+
+export class LeadSearchError extends Error {
+  constructor(message: string, public status = 502) { super(message); }
+}
+
+export async function searchLeads(input: ValidLeadSearchRequest): Promise<LeadSearchResponse> {
+  const geocodeUrl = new URL("https://nominatim.openstreetmap.org/search");
+  geocodeUrl.searchParams.set("q", input.query || input.location.value);
+  geocodeUrl.searchParams.set("format", "jsonv2");
+  geocodeUrl.searchParams.set("limit", "1");
+  const geocodeResponse = await fetch(geocodeUrl, {
+    signal: AbortSignal.timeout(15000),
+    headers: { "User-Agent": "RevoraLeadResearch/1.0 (business discovery)" },
+  });
+  if (!geocodeResponse.ok) throw new LeadSearchError(`OpenStreetMap responded ${geocodeResponse.status}`, geocodeResponse.status === 429 ? 429 : 502);
+  const geocodes = await geocodeResponse.json() as Array<{ lat: string; lon: string; display_name: string }>;
+  if (!geocodes[0]) throw new LeadSearchError("Location not found. Try city and region or a postal code.", 404);
+  const { lat, lon, display_name: searchArea } = geocodes[0];
+  const statements = filtersFor(input.category).flatMap(filter =>
+    ["node", "way", "relation"].map(type => `${type}(around:${input.radius},${lat},${lon})${filter};`)
+  ).join("");
+  const query = `[out:json][timeout:25];(${statements});out center tags ${input.limit};`;
+  const overpassResponse = await fetch("https://overpass-api.de/api/interpreter", {
+    method: "POST", body: new URLSearchParams({ data: query }),
+    signal: AbortSignal.timeout(35000),
+    headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": "RevoraLeadResearch/1.0 (business discovery)" },
+  });
+  if (!overpassResponse.ok) throw new LeadSearchError(`Business search responded ${overpassResponse.status}`, overpassResponse.status === 429 ? 429 : 502);
+  const overpass = await overpassResponse.json() as { elements: OverpassElement[] };
+  const excluded = input.excludeExisting
+    ? new Set<string>((await pool.query("SELECT b.domain FROM businesses b JOIN funnels f ON f.business_id=b.id")).rows.map(row => candidateDomain(row.domain)).filter(Boolean) as string[])
+    : new Set<string>();
+  const candidates = mapOverpassCandidates(overpass.elements, {
+    city: input.location.type === "city" ? input.location.value : undefined,
+    postalCode: input.location.type === "postalCode" ? input.location.value : undefined,
+    searchArea,
+  }, excluded);
+  const partial = overpass.elements.length >= input.limit;
+  return {
+    candidates,
+    providerStatus: { nominatim: "success", overpass: partial ? "partial" : "success" },
+    warnings: partial ? [`Results were limited to ${input.limit}; refine the search for complete coverage.`] : [],
+    requestMetadata: { searchArea, radius: input.radius, limit: input.limit, returned: candidates.length, partial },
+  };
+}

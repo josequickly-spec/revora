@@ -14,6 +14,11 @@ type Business = {
   niche: string;
   platform: string;
   status: string;
+  createdAt?: string;
+  technologyData?: {
+    checkedAt?: string;
+    technologies?: Array<{ name: string; category?: string | null }>;
+  } | null;
 };
 type Contact = { id: number; businessId: number | null; name: string; email: string; status: string | null };
 type Funnel = { id: number; businessId: number | null; funnelName: string; slug: string; viewCount: number | null };
@@ -68,6 +73,26 @@ export default function BusinessesView({ selectedId }: { selectedId?: number }) 
               ["Platform", selected.platform || "Not detected"],
             ].map(([label, value]) => <div key={label}><dt className="text-xs uppercase tracking-wider text-slate-600">{label}</dt><dd className="mt-1 text-sm font-semibold text-slate-200">{value}</dd></div>)}
           </dl>
+          <section className="mt-8 border-t border-white/[.07] pt-6">
+            <h3 className="font-black text-white">Enrichment status</h3>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs">
+              <Status label="Website" value={selected.domain ? "available" : "unavailable"} />
+              <Status label="BuiltWith" value={selected.technologyData ? "success" : "unavailable"} />
+              <Status label="Hunter" value={businessContacts.length ? "success" : "unavailable"} />
+              <Status label="Audit summary" value="not persisted" />
+            </div>
+            <p className="mt-4 text-xs leading-5 text-slate-500">
+              Provider values reflect persisted evidence only. Missing audit details are not reconstructed or estimated.
+              {selected.createdAt ? ` Business saved ${new Date(selected.createdAt).toLocaleString()}.` : ""}
+              {selected.technologyData?.checkedAt ? ` Technology checked ${new Date(selected.technologyData.checkedAt).toLocaleString()}.` : ""}
+            </p>
+          </section>
+          <section className="mt-6 border-t border-white/[.07] pt-6">
+            <h3 className="font-black text-white">Technologies</h3>
+            {selected.technologyData?.technologies?.length
+              ? <ul className="mt-3 flex flex-wrap gap-2">{selected.technologyData.technologies.map(technology => <li key={technology.name} className="rounded-lg bg-white/[.05] px-3 py-1.5 text-xs text-slate-300">{technology.name}{technology.category ? ` · ${technology.category}` : ""}</li>)}</ul>
+              : <p className="mt-3 text-sm text-slate-500">Technology evidence is unavailable.</p>}
+          </section>
         </section>
         <div className="space-y-6">
           <RelatedList title="Contacts" icon={Mail} empty="No contacts recorded." items={businessContacts.map((contact) => ({ id: contact.id, title: contact.name, detail: contact.email }))} />
@@ -112,4 +137,8 @@ function RelatedList({ title, icon: Icon, items, empty }: { title: string; icon:
 
 function Notice({ children }: { children: React.ReactNode }) {
   return <div role="status" className="rounded-3xl border border-white/[.08] bg-white/[.03] p-8 text-sm leading-6 text-slate-400">{children}</div>;
+}
+
+function Status({ label, value }: { label: string; value: string }) {
+  return <span className="rounded-full border border-white/10 bg-white/[.04] px-3 py-1 text-slate-300">{label}: {value}</span>;
 }

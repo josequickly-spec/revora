@@ -88,6 +88,7 @@ export function LocalBusinessFinder({
           industryType: "general",
           businessCategory: category || biz.category,
           languageMode,
+          createFunnel: true,
         }),
       });
       const data = await response.json();

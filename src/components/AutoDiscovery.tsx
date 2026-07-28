@@ -41,6 +41,7 @@ export function AutoDiscovery() {
           firstName: firstName || undefined,
           lastName: lastName || undefined,
           languageMode,
+          createFunnel: true,
         }),
       });
 
