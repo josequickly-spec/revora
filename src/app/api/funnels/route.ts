@@ -36,3 +36,37 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: false, error: error instanceof Error ? error.message : "Database error" }, { status: 500 });
   }
 }
+
+export async function DELETE(req: NextRequest) {
+  const origin = req.headers.get("origin");
+  if (origin && origin !== req.nextUrl.origin) {
+    return NextResponse.json({ success: false, error: "Origen no permitido" }, { status: 403 });
+  }
+  const body = await req.json().catch(() => null);
+  if (body?.confirmation !== "BORRAR TODOS LOS EMBUDOS") {
+    return NextResponse.json(
+      { success: false, error: 'Escribe exactamente "BORRAR TODOS LOS EMBUDOS"' },
+      { status: 400 }
+    );
+  }
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const leadCount = await client.query("SELECT COUNT(*)::int AS count FROM funnel_leads");
+    const deleted = await client.query("DELETE FROM funnels RETURNING id");
+    await client.query("COMMIT");
+    return NextResponse.json({
+      success: true,
+      deletedFunnels: deleted.rowCount || 0,
+      deletedLeads: leadCount.rows[0]?.count || 0,
+    });
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => undefined);
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : "No se pudieron borrar los embudos" },
+      { status: 500 }
+    );
+  } finally {
+    client.release();
+  }
+}

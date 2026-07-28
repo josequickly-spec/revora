@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { Search, Globe, Sparkles, Zap, Mail, Video, Calculator, ArrowRight, CheckCircle2, TrendingUp, ExternalLink, Flame, UserCheck, DollarSign, Copy, Send, Layers, Check, RefreshCw, Plus, Clock, Kanban, ShieldCheck, Filter, Target, BarChart3, Percent, Award } from "lucide-react";
+import { Search, Globe, Sparkles, Zap, Mail, Video, Calculator, ArrowRight, CheckCircle2, TrendingUp, ExternalLink, Flame, UserCheck, DollarSign, Copy, Send, Layers, Check, RefreshCw, Plus, Clock, Kanban, ShieldCheck, Filter, Target, BarChart3, Percent, Award, Trash2 } from "lucide-react";
 import { INDUSTRY_LIST } from "@/lib/industries";
 import type { IndustryConfig } from "@/lib/industries";
 import { AutoDiscovery } from "@/components/AutoDiscovery";
@@ -56,6 +56,7 @@ export default function HomePage() {
   const [blueprintCampaignId, setBlueprintCampaignId] = useState<string|null>(null);
   const [funnelGenerating, setFunnelGenerating] = useState(false);
   const [funnelError, setFunnelError] = useState("");
+  const [deletingFunnels, setDeletingFunnels] = useState(false);
 
   const fetchAll = React.useCallback(async () => {
     setLoading(true);
@@ -220,6 +221,37 @@ export default function HomePage() {
       setFunnelError(error instanceof Error ? error.message : "No se pudo generar el embudo");
     } finally {
       setFunnelGenerating(false);
+    }
+  };
+
+  const deleteAllFunnels = async () => {
+    if (!funs.length || deletingFunnels) return;
+    const confirmed = window.confirm(
+      `Vas a borrar ${funs.length} embudo(s) y todos sus leads capturados. Los negocios y contactos se conservarán. ¿Deseas continuar?`
+    );
+    if (!confirmed) return;
+    const typed = window.prompt('Para confirmar, escribe exactamente: BORRAR TODOS LOS EMBUDOS');
+    if (typed !== "BORRAR TODOS LOS EMBUDOS") {
+      setFunnelError("El texto de confirmación no coincide. No se borró nada.");
+      return;
+    }
+    setDeletingFunnels(true);
+    setFunnelError("");
+    try {
+      const response = await fetch("/api/funnels", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmation: typed }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || "No se pudieron borrar los embudos");
+      setFuns([]);
+      await fetchAll();
+      window.alert(`Se borraron ${data.deletedFunnels} embudo(s) y ${data.deletedLeads} lead(s).`);
+    } catch (error) {
+      setFunnelError(error instanceof Error ? error.message : "No se pudieron borrar los embudos");
+    } finally {
+      setDeletingFunnels(false);
     }
   };
 
@@ -406,9 +438,20 @@ export default function HomePage() {
                   <h2 className="text-2xl font-black text-white">Embudo para {sel.name} ({selInd.label.split("·")[0].trim()})</h2>
                   <p className="text-sm text-slate-300 mt-1 max-w-2xl">Funciona para <strong>cualquier negocio y cualquier ingreso</strong>. El embudo está adaptado al sector y genera facturación extra inmediata.</p>
                 </div>
-                {selFun && <Link href={`/es/funnel/${selFun.slug}`} target="_blank" className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-3 rounded-xl shadow-lg flex items-center gap-2 whitespace-nowrap">
-                  <ExternalLink className="w-4 h-4"/>Abrir Embudo en Vivo
-                </Link>}
+                <div className="flex flex-wrap gap-2">
+                  {selFun && <Link href={`/es/funnel/${selFun.slug}`} target="_blank" className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-3 rounded-xl shadow-lg flex items-center gap-2 whitespace-nowrap">
+                    <ExternalLink className="w-4 h-4"/>Abrir Embudo en Vivo
+                  </Link>}
+                  <button
+                    type="button"
+                    onClick={deleteAllFunnels}
+                    disabled={!funs.length || deletingFunnels}
+                    className="bg-red-950 hover:bg-red-900 disabled:opacity-40 border border-red-800 text-red-200 font-bold text-xs px-4 py-3 rounded-xl flex items-center gap-2"
+                  >
+                    <Trash2 className="w-4 h-4"/>
+                    {deletingFunnels ? "Borrando..." : `Borrar todos (${funs.length})`}
+                  </button>
+                </div>
               </div>
             </div>
 
