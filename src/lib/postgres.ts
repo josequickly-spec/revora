@@ -9,6 +9,7 @@ export const pool =
 if (process.env.NODE_ENV !== "production") globalForPg.revoraPool = pool;
 
 export const businessSelect = `id::int AS id, name, domain, country,
+  city, postal_code AS "postalCode", address,
   business_type AS "businessType", niche, monthly_revenue AS "monthlyRevenue",
   average_order_value AS "averageOrderValue", conversion_rate AS "conversionRate",
   monthly_ad_spend AS "monthlyAdSpend",

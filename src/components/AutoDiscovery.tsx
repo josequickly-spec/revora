@@ -5,6 +5,8 @@ import { Search, Zap, CheckCircle2, AlertCircle, Loader } from "lucide-react";
 export function AutoDiscovery() {
   const [domain, setDomain] = useState("");
   const [businessName, setBusinessName] = useState("");
+  const [city, setCity] = useState("");
+  const [zipcode, setZipcode] = useState("");
   const [industryType, setIndustryType] = useState("general");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -14,8 +16,8 @@ export function AutoDiscovery() {
 
   const handleDiscover = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!domain || !businessName) {
-      setError("Domain y nombre del negocio son requeridos");
+    if (!businessName || (!domain && !city && !zipcode)) {
+      setError("Indica el negocio y un dominio, ciudad o código postal");
       return;
     }
 
@@ -31,6 +33,8 @@ export function AutoDiscovery() {
           domain,
           businessName,
           industryType,
+          city: city || undefined,
+          zipcode: zipcode || undefined,
           firstName: firstName || undefined,
           lastName: lastName || undefined,
         }),
@@ -42,6 +46,8 @@ export function AutoDiscovery() {
         setResult(data);
         setDomain("");
         setBusinessName("");
+        setCity("");
+        setZipcode("");
         setFirstName("");
         setLastName("");
       } else {
@@ -70,7 +76,7 @@ export function AutoDiscovery() {
           <form onSubmit={handleDiscover} className="space-y-4">
             <div>
               <label className="text-xs text-slate-400 font-semibold block mb-1">
-                Dominio del Negocio *
+                Dominio del Negocio (opcional)
               </label>
               <input
                 type="text"
@@ -79,6 +85,30 @@ export function AutoDiscovery() {
                 onChange={(e) => setDomain(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2 focus:outline-none focus:border-purple-500 text-sm"
               />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-slate-400 font-semibold block mb-1">Ciudad</label>
+                <input
+                  type="text"
+                  placeholder="ej. Miami"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2 focus:outline-none focus:border-purple-500 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-slate-400 font-semibold block mb-1">Código postal</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="ej. 33101"
+                  value={zipcode}
+                  onChange={(e) => setZipcode(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2 focus:outline-none focus:border-purple-500 text-sm"
+                />
+              </div>
             </div>
 
             <div>
@@ -186,6 +216,12 @@ export function AutoDiscovery() {
                   <div className="flex justify-between">
                     <span className="text-slate-400">Industria:</span>
                     <span className="text-slate-200">{result.business?.businessType}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Ubicación:</span>
+                    <span className="text-slate-200">
+                      {[result.business?.city, result.business?.postalCode].filter(Boolean).join(" ") || "No disponible"}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">Embudo:</span>
