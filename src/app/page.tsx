@@ -87,6 +87,12 @@ export default function HomePage() {
     if (search && !b.name.toLowerCase().includes(search.toLowerCase()) && !b.domain.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
+  const hasActiveFilters = typeFilter !== "all" || countryFilter !== "all" || search.trim() !== "";
+  const resetFilters = () => {
+    setTypeFilter("all");
+    setCountryFilter("all");
+    setSearch("");
+  };
 
   const runBlueprint = async (b: Business) => {
     setSelId(b.id); setAutoName(b.name); setAutoRun(true); setAutoStep(1);
@@ -326,6 +332,16 @@ export default function HomePage() {
                   <button key={c} onClick={() => setCountryFilter(c)} className={`px-2.5 py-1 rounded-lg font-medium transition ${countryFilter===c?"bg-emerald-600 text-white":"text-slate-400 hover:text-white"}`}>{c==="all"?"🌍 Todos":c}</button>
                 ))}
               </div>
+              <button
+                type="button"
+                onClick={resetFilters}
+                disabled={!hasActiveFilters}
+                className="px-3 py-2 rounded-xl border border-slate-700 bg-slate-800 text-xs font-semibold text-slate-200 flex items-center gap-1.5 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Limpiar búsqueda, país y tipo de negocio"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Resetear filtros
+              </button>
               <span className="text-xs text-slate-400 ml-auto hidden sm:inline">Mostrando <strong className="text-white">{filtered.length}</strong> negocios</span>
             </div>
 
