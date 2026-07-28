@@ -41,7 +41,7 @@ export default function PublicFunnelPage() {
       } catch (e) { console.error(e); setLoadError("No se pudo cargar el embudo"); }
       finally { setLoading(false); }
     })();
-  }, [routeLanguage, router, slug]);
+  }, [lang, routeLanguage, router, slug]);
 
 
   const submitLead = async (event: React.FormEvent) => {

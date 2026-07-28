@@ -3,8 +3,11 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Revora — Revenue OS para Agencias",
-  description: "Plataforma universal de adquisición de clientes para cualquier negocio. Automatiza embudos, contactos, outreach y modelos de revenue-share. Escala a 10.000€/mes con 2-3 clientes.",
+  title: {
+    default: "Revora Lead Intelligence",
+    template: "%s | Revora",
+  },
+  description: "Lead intelligence, funnel analysis, proposals, outreach and CRM in one connected workspace.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
