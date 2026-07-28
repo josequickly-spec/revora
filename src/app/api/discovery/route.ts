@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { findEmail, getDomainEmails, verifyEmail } from "@/lib/hunter";
 import { getIndustry } from "@/lib/industries";
 import { businessSelect, contactSelect, funnelSelect, pool } from "@/lib/postgres";
-import { detectWebsitePlatform } from "@/lib/site-audit";
+import { auditSite, detectWebsitePlatform } from "@/lib/site-audit";
+import { generateFunnel } from "@/lib/funnel-generator";
 
 interface DiscoveryRequest {
   domain?: string;
@@ -94,6 +95,19 @@ export async function POST(req: Request) {
     const industryType = body.industryType || "general";
     const ind = getIndustry(industryType);
     const niche = body.businessCategory?.trim() || ind.defaultNiche;
+    const audit = await auditSite(siteResponse.url || domain).catch(() => null);
+    const generatedFunnel = await generateFunnel(
+      body.businessName,
+      industryType,
+      niche,
+      ind.defaultPainPoint,
+      {
+        website: siteResponse.url || domain,
+        country: locationMatch?.address?.country,
+        platform,
+        audit,
+      }
+    );
     const domainData = await getDomainEmails(domain);
     let bestContact = domainData?.emails?.slice().sort((a, b) => b.confidence - a.confidence)[0] || null;
     if (!bestContact && (body.firstName || body.lastName)) {
@@ -141,12 +155,13 @@ export async function POST(req: Request) {
     const slug = `${body.businessName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now().toString().slice(-6)}`;
     const funnelResult = await client.query(
       `INSERT INTO funnels
-       (business_id,funnel_name,template_type,headline,subheadline,cta_text,offer_badge,bonus_offer,custom_primary_color,slug)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING ${funnelSelect}`,
+       (business_id,funnel_name,template_type,headline,subheadline,cta_text,offer_badge,bonus_offer,custom_primary_color,slug,content_json)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING ${funnelSelect}`,
       [
         business.id, `Embudo para ${body.businessName}`, ind.funnelType,
-        ind.funnelHeadline(body.businessName, ind.defaultOffer), ind.funnelSubheadline(body.businessName),
-        ind.funnelCta, ind.funnelBadge, ind.funnelBonus, ind.color, slug,
+        generatedFunnel.headline, generatedFunnel.subheadline,
+        generatedFunnel.ctaText, generatedFunnel.offerBadge, generatedFunnel.bonusOffer,
+        generatedFunnel.colorScheme.primary, slug, JSON.stringify(generatedFunnel),
       ]
     );
     await client.query("COMMIT");

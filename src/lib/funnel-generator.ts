@@ -14,6 +14,11 @@ export interface GeneratedFunnel {
   benefits: string[];
   objections: Array<{ question: string; answer: string }>;
   trustPoints: string[];
+  audience: string;
+  primaryGoal: string;
+  valueProposition: string;
+  processSteps: Array<{ title: string; description: string }>;
+  visualDirection: string;
   colorScheme: {
     primary: string;
     secondary: string;
@@ -60,6 +65,9 @@ PROCESO INTERNO OBLIGATORIO
 5. Revisa consistencia entre titular, oferta, CTA y tipo de negocio.
 6. Da prioridad al title, description, H1 y demás señales de la auditoría sobre etiquetas genéricas configuradas.
 7. Identifica correctamente quién es el cliente: por ejemplo, en un concesionario la acción principal suele ser consultar inventario, financiación o prueba de manejo; no ofrecer valoración del vehículo salvo que el sitio indique compra o trade-in.
+8. Diseña para móvil primero: una idea por sección, lectura escaneable y CTA repetible sin saturación.
+9. La página debe poder competir con una landing profesional de agencia, no parecer una plantilla genérica.
+10. Cada beneficio debe responder "qué obtiene el cliente" y cada paso debe reducir incertidumbre.
 
 REGLAS DE VERACIDAD
 - No inventes testimonios, clientes, años de experiencia, certificaciones, descuentos, stock, plazas, garantías, resultados, estadísticas ni urgencia.
@@ -72,6 +80,9 @@ REGLAS DE VERACIDAD
 Responde SOLO con un objeto JSON válido, sin markdown y con exactamente esta estructura:
 {
   "eyebrow": "Contexto breve de 3-7 palabras",
+  "audience": "Descripción concreta del cliente ideal y su intención",
+  "primaryGoal": "Una sola conversión medible para esta landing",
+  "valueProposition": "Por qué elegir este negocio, sin afirmaciones no verificadas",
   "headline": "Titular específico de máximo 70 caracteres",
   "subheadline": "Propuesta de valor de máximo 160 caracteres",
   "ctaText": "Acción concreta de máximo 28 caracteres",
@@ -84,6 +95,12 @@ Responde SOLO con un objeto JSON válido, sin markdown y con exactamente esta es
   "proofCopy": "Texto de confianza basado solo en hechos observados; si no hay pruebas, explicar el siguiente paso sin riesgo",
   "benefits": ["3 a 5 beneficios concretos y distintos"],
   "trustPoints": ["3 señales de confianza verificables o pasos transparentes"],
+  "processSteps": [
+    {"title": "Paso 1 corto", "description": "Qué hace el visitante y qué ocurre"},
+    {"title": "Paso 2 corto", "description": "Qué hace el negocio y qué recibe el visitante"},
+    {"title": "Paso 3 corto", "description": "Cómo se completa la conversión sin fricción"}
+  ],
+  "visualDirection": "Dirección visual específica: tono, composición hero, tipo de imagen y uso del color; no generes una URL",
   "objections": [
     {"question": "Objeción real 1", "answer": "Respuesta prudente"},
     {"question": "Objeción real 2", "answer": "Respuesta prudente"},
@@ -126,7 +143,9 @@ Responde SOLO con un objeto JSON válido, sin markdown y con exactamente esta es
     const result = JSON.parse(content.replace(/```json\s*|```/g, "").trim()) as GeneratedFunnel;
     if (!result.headline || !result.subheadline || !result.ctaText || !result.colorScheme?.primary ||
         !Array.isArray(result.benefits) || result.benefits.length < 3 ||
-        !Array.isArray(result.objections) || result.objections.length < 2) {
+        !Array.isArray(result.objections) || result.objections.length < 2 ||
+        !Array.isArray(result.processSteps) || result.processSteps.length < 3 ||
+        !result.audience || !result.primaryGoal || !result.valueProposition) {
       throw new Error("OpenAI devolvió un embudo incompleto");
     }
     result.heroImage = `hero-${businessName.toLowerCase().replace(/\s+/g, "-")}.jpg`;

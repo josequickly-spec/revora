@@ -141,7 +141,7 @@ export default function PublicFunnelPage() {
           <div className="lg:col-span-6 bg-slate-800/90 border border-slate-700 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6">
             <div>
               <div className="inline-flex items-center gap-2 bg-emerald-950/80 border border-emerald-700/50 text-emerald-300 px-3 py-1 rounded-full text-xs font-semibold mb-3">
-                <Sparkles className="w-3.5 h-3.5 text-emerald-400" />{funnel?.offerBadge || "OFERTA EXCLUSIVA"}
+                <Sparkles className="w-3.5 h-3.5 text-emerald-400" />{content?.eyebrow || funnel?.offerBadge || "INFORMACIÓN DEL SERVICIO"}
               </div>
               <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight">{funnel?.headline || `${offer} — Oferta Especial`}</h2>
               <p className="text-sm text-slate-300 mt-2 leading-relaxed">{funnel?.subheadline || `Oportunidad única en ${name}.`}</p>
@@ -229,9 +229,33 @@ export default function PublicFunnelPage() {
                 </div>
               </div>
             )}
+            {Array.isArray(content.processSteps) && (
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-indigo-400 text-center">Cómo funciona</p>
+                <h3 className="text-2xl font-black text-center mt-2 mb-5">Un proceso claro, paso a paso</h3>
+                <div className="grid md:grid-cols-3 gap-4">
+                  {content.processSteps.map((step: {title:string;description:string}, index: number) => (
+                    <article key={`${step.title}-${index}`} className="bg-slate-800 border border-slate-700 rounded-2xl p-5">
+                      <span className="w-8 h-8 rounded-full inline-flex items-center justify-center text-sm font-black text-white" style={{backgroundColor: color}}>{index + 1}</span>
+                      <h4 className="font-black text-lg mt-4">{step.title}</h4>
+                      <p className="text-sm text-slate-300 mt-2 leading-relaxed">{step.description}</p>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="bg-slate-800/70 border border-slate-700 rounded-2xl p-6">
               <h3 className="text-xl font-black">Un siguiente paso transparente</h3>
               <p className="text-slate-300 mt-2">{content.proofCopy}</p>
+              {Array.isArray(content.trustPoints) && (
+                <ul className="grid sm:grid-cols-3 gap-3 mt-5">
+                  {content.trustPoints.map((point: string) => (
+                    <li key={point} className="bg-slate-900 rounded-xl p-3 flex gap-2 text-sm">
+                      <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"/>{point}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
             {Array.isArray(content.objections) && (
               <div>
