@@ -288,6 +288,9 @@ export default function HomePage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <Link href="/funnelspy" className="bg-violet-500/15 hover:bg-violet-500/25 text-violet-200 border border-violet-400/30 font-semibold text-xs sm:text-sm px-3.5 py-2 rounded-xl flex items-center gap-1.5">
+              <Search className="w-4 h-4" /><span>FunnelSpy</span>
+            </Link>
             <button onClick={() => sel && runBlueprint(sel)} className="bg-gradient-to-r from-amber-500 via-rose-500 to-indigo-600 hover:from-amber-400 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 transition active:scale-95">
               <Zap className="w-4 h-4 fill-white" /><span>Blueprint 1-Click</span>
             </button>

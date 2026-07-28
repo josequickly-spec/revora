@@ -108,7 +108,9 @@ export default function PublicFunnelPage() {
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white p-6 text-center">
       <h1 className="text-2xl font-black">{ui.unavailable}</h1>
       <p className="text-slate-400 mt-2">{loadError || ui.missing}</p>
-      <Link href="/" className="mt-5 bg-emerald-600 px-5 py-3 rounded-xl font-bold">{ui.back}</Link>
+      <Link href="/funnelspy" className="mt-5 bg-emerald-600 px-5 py-3 rounded-xl font-bold">
+        {lang === "en" ? "Back to FunnelSpy" : "Volver a FunnelSpy"}
+      </Link>
     </div>
   );
 
@@ -129,7 +131,12 @@ export default function PublicFunnelPage() {
         <div className="flex items-center gap-3">
           {availableLanguages.includes("es") && <Link href={`/es/funnel/${slug}`} className={lang === "es" ? "text-white font-bold" : "text-slate-400"}>ES</Link>}
           {availableLanguages.includes("en") && <Link href={`/en/funnel/${slug}`} className={lang === "en" ? "text-white font-bold" : "text-slate-400"}>EN</Link>}
-          <Link href="/" className="text-emerald-400 hover:text-emerald-300 font-medium flex items-center gap-1 transition">{ui.back} <ChevronRight className="w-3.5 h-3.5" /></Link>
+          <Link href="/funnelspy" className="text-emerald-400 hover:text-emerald-300 font-medium flex items-center gap-1 transition">
+            {lang === "en" ? "Back to FunnelSpy" : "Volver a FunnelSpy"} <ChevronRight className="w-3.5 h-3.5" />
+          </Link>
+          <Link href="/" className="text-slate-400 hover:text-white font-medium transition">
+            {lang === "en" ? "Open Revora" : "Abrir Revora"}
+          </Link>
         </div>
       </div>
 
