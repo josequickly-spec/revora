@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { mockData } from "@/db";
 import { generateFunnel } from "@/lib/funnel-generator";
 import { getIndustry } from "@/lib/industries";
+import { funnelSelect, pool } from "@/lib/postgres";
+import { auditSite } from "@/lib/site-audit";
 
 interface FunnelGenerateRequest {
   businessId: number;
@@ -24,37 +25,46 @@ export async function POST(req: Request) {
     }
 
     console.log(`Generating funnel for: ${businessName}`);
+    const businessResult = businessId ? await pool.query(
+      `SELECT domain,country,platform,hero_offer,hero_price,pain_point,niche,business_type
+       FROM businesses WHERE id=$1`, [businessId]
+    ) : null;
+    const business = businessResult?.rows[0];
+    const ind = getIndustry(business?.business_type || industryType);
+    const audit = business?.domain
+      ? await auditSite(business.domain).catch(() => null)
+      : null;
 
     const generatedFunnel = await generateFunnel(
       businessName,
       industryType,
       niche,
-      painPoint
+      business?.pain_point || painPoint,
+      {
+        website: business?.domain,
+        country: business?.country,
+        platform: business?.platform,
+        offer: business?.hero_offer && business.hero_offer !== ind.defaultOffer ? business.hero_offer : undefined,
+        price: business?.hero_price && business.hero_price !== ind.defaultPrice ? business.hero_price : undefined,
+        audit,
+      }
     );
 
-    const ind = getIndustry(industryType);
     const slug =
       businessName.toLowerCase().replace(/[^a-z0-9]+/g, "-") +
       "-" +
       Date.now().toString().slice(-4);
 
-    const newFunnel = {
-      id: Math.max(...mockData.funnels.map((f) => f.id || 0)) + 1,
-      businessId: businessId || null,
-      funnelName: `Embudo para ${businessName}`,
-      templateType: ind.funnelType,
-      headline: generatedFunnel.headline,
-      subheadline: generatedFunnel.subheadline,
-      ctaText: generatedFunnel.ctaText,
-      offerBadge: generatedFunnel.offerBadge,
-      bonusOffer: generatedFunnel.bonusOffer,
-      customPrimaryColor: generatedFunnel.colorScheme.primary,
-      slug,
-      viewCount: 0,
-      createdAt: new Date().toISOString(),
-    };
-
-    mockData.funnels.push(newFunnel as any);
+    const result = await pool.query(
+      `INSERT INTO funnels
+       (business_id,funnel_name,template_type,headline,subheadline,cta_text,offer_badge,bonus_offer,custom_primary_color,slug,content_json)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING ${funnelSelect}`,
+      [businessId || null, `Embudo para ${businessName}`, ind.funnelType,
+       generatedFunnel.headline, generatedFunnel.subheadline, generatedFunnel.ctaText,
+       generatedFunnel.offerBadge, generatedFunnel.bonusOffer,
+       generatedFunnel.colorScheme.primary, slug, JSON.stringify(generatedFunnel)]
+    );
+    const newFunnel = result.rows[0];
 
     return NextResponse.json({
       success: true,

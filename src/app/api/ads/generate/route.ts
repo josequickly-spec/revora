@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { generateAdCampaign, generateAIBotOptimizations } from "@/lib/ad-generator";
+import { generateAdCampaign } from "@/lib/ad-generator";
 
 interface AdGenerateRequest {
   businessName: string;
@@ -31,23 +31,22 @@ export async function POST(req: Request) {
       platform
     );
 
-    const mockMetrics = {
-      impressions: Math.floor(Math.random() * 50000) + 10000,
-      clicks: Math.floor(Math.random() * 1500) + 300,
-      conversions: Math.floor(Math.random() * 150) + 20,
-      spend: budget / 30,
-    };
-
-    const optimizations = await generateAIBotOptimizations(
-      campaign.id,
-      mockMetrics
-    );
+    const readiness = platform === "google"
+      ? {
+          ready: Boolean(process.env.GOOGLE_ADS_CUSTOMER_ID && process.env.GOOGLE_ADS_ACCESS_TOKEN && process.env.GOOGLE_ADS_DEVELOPER_TOKEN),
+          missing: ["GOOGLE_ADS_CUSTOMER_ID", "GOOGLE_ADS_ACCESS_TOKEN", "GOOGLE_ADS_DEVELOPER_TOKEN"].filter(key => !process.env[key]),
+        }
+      : {
+          ready: Boolean(process.env.META_AD_ACCOUNT_ID && process.env.META_ACCESS_TOKEN),
+          missing: ["META_AD_ACCOUNT_ID", "META_ACCESS_TOKEN"].filter(key => !process.env[key]),
+        };
 
     return NextResponse.json({
       success: true,
       campaign,
-      metrics: mockMetrics,
-      aiOptimizations: optimizations,
+      metrics: null,
+      providerReadiness: readiness,
+      publicationStatus: readiness.ready ? "ready_for_review" : "credentials_required",
       message: `Campana publicitaria generada para ${businessName}`,
     });
   } catch (error) {

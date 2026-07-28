@@ -2,9 +2,9 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ShieldCheck, Sparkles, Clock, CheckCircle2, Star, Flame, ArrowRight, Gift, Lock, Heart, ChevronRight } from "lucide-react";
+import { ShieldCheck, Sparkles, CheckCircle2, Flame, ArrowRight, Gift, Lock, Heart, ChevronRight } from "lucide-react";
 
-const INDUSTRY_ICONS: Record<string,string> = { ecommerce:"🛒", restaurant:"🍽️", gym:"💪", professional:"👨‍💼", healthcare:"🏥", saas:"💻", realestate:"🏠", coaching:"🎓", agency:"🚀" };
+const INDUSTRY_ICONS: Record<string,string> = { general:"🏢", ecommerce:"🛒", restaurant:"🍽️", gym:"💪", professional:"👨‍💼", healthcare:"🏥", saas:"💻", realestate:"🏠", coaching:"🎓", agency:"🚀" };
 
 export default function PublicFunnelPage() {
   const params = useParams();
@@ -12,9 +12,14 @@ export default function PublicFunnelPage() {
   const [loading, setLoading] = useState(true);
   const [funnel, setFunnel] = useState<any>(null);
   const [biz, setBiz] = useState<any>(null);
-  const [timeLeft, setTimeLeft] = useState(899);
   const [bonusAdded, setBonusAdded] = useState(true);
   const [completed, setCompleted] = useState(false);
+  const [leadName, setLeadName] = useState("");
+  const [leadEmail, setLeadEmail] = useState("");
+  const [leadPhone, setLeadPhone] = useState("");
+  const [consent, setConsent] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
     (async () => {
@@ -22,20 +27,36 @@ export default function PublicFunnelPage() {
         const r = await fetch(`/api/funnels?slug=${encodeURIComponent(slug || "")}`);
         const j = await r.json();
         if (j.success) { setFunnel(j.funnel); setBiz(j.business); }
-      } catch (e) { console.error(e); }
+        else setLoadError(j.error || "No se encontró este embudo");
+      } catch (e) { console.error(e); setLoadError("No se pudo cargar el embudo"); }
       finally { setLoading(false); }
     })();
   }, [slug]);
 
-  useEffect(() => { const t = setInterval(() => setTimeLeft(p => p > 0 ? p - 1 : 0), 1000); return () => clearInterval(t); }, []);
-  const fmt = (s: number) => `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
+
+  const submitLead = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setSubmitError("");
+    const response = await fetch("/api/funnel-leads", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ funnelId: funnel?.id, name: leadName, email: leadEmail, phone: leadPhone, consent }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      setSubmitError(data.error || "No se pudo registrar tu solicitud");
+      return;
+    }
+    setCompleted(true);
+  };
 
   const name = biz?.name || "Negocio";
   const offer = biz?.heroOffer || "Oferta Especial";
   const price = biz?.heroPrice || "Gratis";
   const color = funnel?.customPrimaryColor || biz?.brandColor || "#6366F1";
-  const type = biz?.businessType || "ecommerce";
+  const type = biz?.businessType || "general";
   const icon = INDUSTRY_ICONS[type] || "🏢";
+  const content = funnel?.contentJson;
 
   if (loading) return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white p-6">
@@ -44,12 +65,20 @@ export default function PublicFunnelPage() {
     </div>
   );
 
+  if (loadError || !funnel || !biz) return (
+    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white p-6 text-center">
+      <h1 className="text-2xl font-black">Embudo no disponible</h1>
+      <p className="text-slate-400 mt-2">{loadError || "No se encontraron datos para este enlace."}</p>
+      <Link href="/" className="mt-5 bg-emerald-600 px-5 py-3 rounded-xl font-bold">Volver a la aplicación</Link>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100">
       {/* Flash Bar */}
       <div className="bg-gradient-to-r from-amber-600 via-rose-600 to-emerald-600 text-white text-xs md:text-sm font-semibold py-2 px-4 text-center flex items-center justify-center gap-2 shadow-lg">
         <Flame className="w-4 h-4 text-yellow-300 animate-bounce" /><span>{funnel?.offerBadge || "¡OFERTA ESPECIAL!"}</span>
-        <span className="bg-black/30 px-2 py-0.5 rounded text-yellow-200 font-mono">Finaliza en {fmt(timeLeft)}</span>
+        <span className="bg-black/30 px-2 py-0.5 rounded text-yellow-200">Oferta publicada por el negocio</span>
       </div>
 
       {/* Agency Tag */}
@@ -71,8 +100,8 @@ export default function PublicFunnelPage() {
               <p className="text-[11px] text-emerald-400 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> {icon} Negocio Verificado • {biz?.niche}</p>
             </div>
           </div>
-          <div className="flex items-center gap-1 text-amber-400 font-bold text-xs bg-amber-950/40 border border-amber-800/60 px-3 py-1.5 rounded-full">
-            <Star className="w-3.5 h-3.5 fill-amber-400" /><span>4.9 / 5.0 (2,490+)</span>
+          <div className="text-xs bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-full text-slate-300">
+            Visitas registradas: {funnel?.viewCount || 0}
           </div>
         </div>
       </header>
@@ -99,23 +128,12 @@ export default function PublicFunnelPage() {
                     <p className="text-white font-black text-lg leading-tight drop-shadow">{offer}</p>
                     <p className="text-white/70 text-xs mt-1">{biz?.niche}</p>
                   </div>
-                  <div className="bg-black/40 backdrop-blur rounded-lg p-2 text-center text-xs font-semibold text-emerald-300">Garantía Total</div>
+                  <div className="bg-black/40 backdrop-blur rounded-lg p-2 text-center text-xs font-semibold text-emerald-300">Solicita información sin compromiso</div>
                 </div>
               </div>
             </div>
-            {/* Testimonial */}
-            <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 space-y-3">
-              <div className="flex items-center justify-between border-b border-slate-700/50 pb-2">
-                <span className="text-xs font-semibold text-slate-300">Reseñas Verificadas:</span>
-                <span className="text-xs text-emerald-400 font-bold">100% Auténtico</span>
-              </div>
-              <div className="flex items-start gap-2 text-xs text-slate-300">
-                <div className="w-6 h-6 rounded-full bg-emerald-600 flex items-center justify-center text-[10px] font-bold text-white shrink-0">SC</div>
-                <div>
-                  <p className="font-semibold text-white">Sara C. — <span className="text-slate-400 font-normal">{biz?.country}</span></p>
-                  <p className="italic">&ldquo;Increíble experiencia con {name}. {offer} superó mis expectativas. 100% recomendado.&rdquo;</p>
-                </div>
-              </div>
+            <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 text-xs text-slate-300">
+              Esta página no publica reseñas, puntuaciones ni disponibilidad inventadas. Confirma los detalles directamente con {name}.
             </div>
           </div>
 
@@ -134,12 +152,12 @@ export default function PublicFunnelPage() {
               <div>
                 <span className="text-xs text-slate-400 uppercase tracking-wider block">Precio Oferta</span>
                 <div className="flex items-baseline gap-2 mt-0.5">
-                  <span className="text-3xl font-black text-white">{price.includes("/") ? price : `${price}€`}</span>
+                  <span className="text-3xl font-black text-white">{/^\d+(?:[.,]\d+)?$/.test(price) ? `${price}€` : price}</span>
                 </div>
               </div>
               <div className="text-right">
                 <span className="text-[10px] text-slate-400 block">Disponibilidad</span>
-                <span className="text-sm font-bold text-rose-400 bg-rose-950/60 border border-rose-900 px-2 py-1 rounded inline-block mt-1 animate-pulse">Plazas Limitadas</span>
+                <span className="text-sm font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-900 px-2 py-1 rounded inline-block mt-1">Consulta disponible</span>
               </div>
             </div>
 
@@ -163,18 +181,73 @@ export default function PublicFunnelPage() {
                   <p className="text-xs text-slate-300">Así es como este embudo convierte visitantes en clientes.</p>
                 </div>
               ) : (
-                <button onClick={() => setCompleted(true)} className="w-full py-4 px-6 rounded-xl font-black text-white text-base tracking-wide shadow-xl flex items-center justify-center gap-3 transition transform active:scale-95 hover:opacity-95" style={{ backgroundColor: color, boxShadow: `0 10px 25px -5px ${color}66` }}>
-                  <span>{funnel?.ctaText || "RESERVAR AHORA"}</span>
-                  <ArrowRight className="w-5 h-5" />
-                </button>
+                <form onSubmit={submitLead} className="space-y-3">
+                  <input required value={leadName} onChange={e => setLeadName(e.target.value)} placeholder="Nombre" className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3" />
+                  <input required type="email" value={leadEmail} onChange={e => setLeadEmail(e.target.value)} placeholder="Email" className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3" />
+                  <input value={leadPhone} onChange={e => setLeadPhone(e.target.value)} placeholder="Teléfono (opcional)" className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3" />
+                  <label className="flex items-start gap-2 text-xs text-slate-300">
+                    <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} className="mt-0.5" />
+                    Acepto que {name} me contacte sobre esta solicitud.
+                  </label>
+                  {submitError && <p className="text-xs text-red-400">{submitError}</p>}
+                  <button type="submit" className="w-full py-4 px-6 rounded-xl font-black text-white text-base tracking-wide shadow-xl flex items-center justify-center gap-3 transition hover:opacity-95" style={{ backgroundColor: color, boxShadow: `0 10px 25px -5px ${color}66` }}>
+                    <span>{funnel?.ctaText || "SOLICITAR INFORMACIÓN"}</span>
+                    <ArrowRight className="w-5 h-5" />
+                  </button>
+                </form>
               )}
               <div className="flex items-center justify-center gap-4 text-[11px] text-slate-400 pt-2">
                 <span className="flex items-center gap-1"><Lock className="w-3 h-3 text-emerald-400" /> 100% Seguro</span>
-                <span className="flex items-center gap-1"><ShieldCheck className="w-3 h-3 text-indigo-400" /> Garantía Total</span>
+                <span className="flex items-center gap-1"><ShieldCheck className="w-3 h-3 text-indigo-400" /> Datos protegidos</span>
               </div>
             </div>
           </div>
         </div>
+        {content && (
+          <section className="mt-12 space-y-8">
+            <div className="grid md:grid-cols-2 gap-6">
+              <article className="bg-slate-800/70 border border-slate-700 rounded-2xl p-6">
+                <p className="text-xs font-bold uppercase tracking-wider text-rose-400">El reto</p>
+                <h3 className="text-xl font-black mt-2">{content.painPoint}</h3>
+                <p className="text-slate-300 mt-3 leading-relaxed">{content.agitationCopy}</p>
+              </article>
+              <article className="bg-slate-800/70 border border-slate-700 rounded-2xl p-6">
+                <p className="text-xs font-bold uppercase tracking-wider text-emerald-400">La solución</p>
+                <h3 className="text-xl font-black mt-2">{content.offer}</h3>
+                <p className="text-slate-300 mt-3 leading-relaxed">{content.solutionCopy}</p>
+              </article>
+            </div>
+            {Array.isArray(content.benefits) && (
+              <div>
+                <h3 className="text-2xl font-black text-center mb-5">Qué puedes conseguir</h3>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {content.benefits.map((benefit: string) => (
+                    <div key={benefit} className="bg-slate-800 border border-slate-700 rounded-xl p-4 flex gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0"/><span>{benefit}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="bg-slate-800/70 border border-slate-700 rounded-2xl p-6">
+              <h3 className="text-xl font-black">Un siguiente paso transparente</h3>
+              <p className="text-slate-300 mt-2">{content.proofCopy}</p>
+            </div>
+            {Array.isArray(content.objections) && (
+              <div>
+                <h3 className="text-2xl font-black text-center mb-5">Preguntas frecuentes</h3>
+                <div className="space-y-3">
+                  {content.objections.map((item: {question:string;answer:string}) => (
+                    <article key={item.question} className="bg-slate-800 border border-slate-700 rounded-xl p-5">
+                      <h4 className="font-bold">{item.question}</h4>
+                      <p className="text-sm text-slate-300 mt-2">{item.answer}</p>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+        )}
       </main>
     </div>
   );

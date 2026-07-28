@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { mockData } from "@/db";
 import { findEmail, getDomainEmails, verifyEmail } from "@/lib/hunter";
 import { getIndustry } from "@/lib/industries";
+import { businessSelect, contactSelect, funnelSelect, pool } from "@/lib/postgres";
+import { detectWebsitePlatform } from "@/lib/site-audit";
 
 interface DiscoveryRequest {
   domain: string;
@@ -12,175 +13,91 @@ interface DiscoveryRequest {
   lastName?: string;
 }
 
-/**
- * POST /api/discovery
- * Automatically discover business details and find contact emails using Hunter.io
- */
 export async function POST(req: Request) {
+  const client = await pool.connect();
   try {
     const body: DiscoveryRequest = await req.json();
-    const { domain, businessName, industryType, contactName, firstName, lastName } = body;
+    if (!body.domain || !body.businessName) {
+      return NextResponse.json({ success: false, error: "domain and businessName are required" }, { status: 400 });
+    }
 
-    if (!domain || !businessName) {
-      return NextResponse.json(
-        { success: false, error: "domain and businessName are required" },
-        { status: 400 }
+    const domain = body.domain.replace(/^(https?:\/\/)?(www\.)?/, "").split("/")[0].toLowerCase();
+    const siteResponse = await fetch(`https://${domain}`, {
+      redirect: "follow",
+      signal: AbortSignal.timeout(10000),
+      headers: { "User-Agent": "Mozilla/5.0 RevoraBusinessDiscovery/1.0" },
+    });
+    if (!siteResponse.ok) {
+      return NextResponse.json({ success: false, error: `El dominio no respondió correctamente (${siteResponse.status})` }, { status: 422 });
+    }
+
+    const html = await siteResponse.text();
+    const platform = detectWebsitePlatform(html);
+    const industryType = body.industryType || "general";
+    const ind = getIndustry(industryType);
+    const domainData = await getDomainEmails(domain);
+    let bestContact = domainData?.emails
+      ?.slice()
+      .sort((a, b) => b.confidence - a.confidence)[0] || null;
+
+    if (!bestContact && (body.firstName || body.lastName)) {
+      const found = await findEmail(domain, body.firstName || "", body.lastName || "");
+      if (found) bestContact = { value: found.email, type: "person", confidence: found.confidence, sources: found.sources };
+    }
+    const emailVerified = bestContact?.value ? await verifyEmail(bestContact.value) : false;
+
+    await client.query("BEGIN");
+    const businessResult = await client.query(
+      `INSERT INTO businesses
+       (name,domain,country,business_type,niche,monthly_revenue,platform,brand_color,brand_accent,status,hero_offer,hero_price,pain_point)
+       VALUES ($1,$2,$3,$4,$5,0,$6,$7,$8,'discovered',$9,$10,$11)
+       ON CONFLICT (domain) DO UPDATE SET name=EXCLUDED.name,business_type=EXCLUDED.business_type,
+       niche=EXCLUDED.niche,platform=EXCLUDED.platform,status='discovered'
+       RETURNING ${businessSelect}`,
+      [body.businessName, domain, domainData?.country || "Unknown", industryType,
+       ind.defaultNiche, platform, ind.color, ind.accent,
+       ind.defaultOffer, ind.defaultPrice, ind.defaultPainPoint]
+    );
+    const business = businessResult.rows[0];
+
+    let contact = null;
+    if (bestContact?.value) {
+      const contactResult = await client.query(
+        `INSERT INTO contacts (business_id,name,role,email,linkedin_url,confidence_score,status)
+         VALUES ($1,$2,$3,$4,$5,$6,$7)
+         ON CONFLICT (business_id,email) DO UPDATE SET confidence_score=EXCLUDED.confidence_score,status=EXCLUDED.status
+         RETURNING ${contactSelect}`,
+        [business.id, body.contactName || [body.firstName, body.lastName].filter(Boolean).join(" ") || "Decision maker",
+         bestContact.type || "Business contact", bestContact.value, domainData?.linkedin_url || null,
+         Math.round(bestContact.confidence || 0), emailVerified ? "verified" : "discovered"]
       );
+      contact = contactResult.rows[0];
     }
 
-    // Clean domain (remove www, https, etc)
-    const cleanDomain = domain.replace(/^(https?:\/\/)?(www\.)?/, "").split("/")[0].toLowerCase();
-
-    // Get industry config
-    const ind = getIndustry(industryType || "ecommerce");
-
-    // Step 1: Get all emails from the domain using Hunter.io
-    console.log(`🔍 Discovering emails for domain: ${cleanDomain}`);
-    const domainData = await getDomainEmails(cleanDomain);
-
-    let bestContact = null;
-
-    // Step 2: If we have domain data, find the best contact (CEO/Founder preferred)
-    if (domainData?.emails && domainData.emails.length > 0) {
-      // Look for CEO, Founder, Director titles
-      const priorityTitles = ["ceo", "founder", "director", "owner", "president"];
-
-      const ceoOrders = domainData.emails.sort((a, b) => {
-        const aType = a.type?.toLowerCase() || "";
-        const bType = b.type?.toLowerCase() || "";
-
-        const aPriority = priorityTitles.some((t) => aType.includes(t)) ? 0 : 1;
-        const bPriority = priorityTitles.some((t) => bType.includes(t)) ? 0 : 1;
-
-        if (aPriority !== bPriority) return aPriority - bPriority;
-        return b.confidence - a.confidence;
-      });
-
-      bestContact = ceoOrders[0];
-    }
-
-    // Step 3: If no domain data, try finding specific person
-    if (!bestContact && (firstName || lastName)) {
-      const fName = firstName || contactName?.split(" ")[0] || "";
-      const lName = lastName || contactName?.split(" ")[1] || contactName || "";
-
-      if (fName && lName) {
-        console.log(`📧 Finding email for: ${fName} ${lName}`);
-        const emailResult = await findEmail(cleanDomain, fName, lName);
-
-        if (emailResult) {
-          bestContact = {
-            value: emailResult.email,
-            type: "discovered",
-            confidence: emailResult.confidence,
-            sources: emailResult.sources,
-          };
-        }
-      }
-    }
-
-    // Step 4: Verify the email if found
-    if (bestContact?.value) {
-      const isValid = await verifyEmail(bestContact.value);
-      if (!isValid) {
-        console.warn(`⚠️ Email ${bestContact.value} failed verification`);
-      }
-    }
-
-    // Step 5: Create business record
-    const newBiz = {
-      id: Math.max(...mockData.businesses.map((b) => b.id || 0)) + 1,
-      name: businessName,
-      domain: cleanDomain,
-      country: "España", // Default, could be parameterized
-      businessType: industryType || "ecommerce",
-      niche: ind.defaultNiche,
-      monthlyRevenue: 25000, // Default estimate
-      platform: ind.defaultPlatform,
-      logoUrl: null,
-      brandColor: ind.color,
-      brandAccent: ind.accent,
-      status: "discovered",
-      heroOffer: ind.defaultOffer,
-      heroPrice: ind.defaultPrice,
-      painPoint: ind.defaultPainPoint,
-      createdAt: new Date().toISOString(),
-    };
-
-    mockData.businesses.push(newBiz);
-
-    // Step 6: Create contact if email found
-    let newContact = null;
-    if (bestContact?.value) {
-      newContact = {
-        id: Math.max(...mockData.contacts.map((c) => c.id || 0)) + 1,
-        businessId: newBiz.id,
-        name: contactName || `${firstName || ""} ${lastName || ""}`.trim() || "Director",
-        role: bestContact.type === "discovered" ? "CEO/Founder" : (bestContact.type || "CEO"),
-        email: bestContact.value,
-        linkedinUrl: "",
-        confidenceScore: Math.round((bestContact.confidence || 0) * 100),
-        status: "verified",
-        createdAt: new Date().toISOString(),
-      };
-
-      mockData.contacts.push(newContact);
-    }
-
-    // Step 7: Create funnel
-    const slug = businessName.toLowerCase().replace(/[^a-z0-9]+/g, "-") + "-" + Date.now().toString().slice(-4);
-    const newFunnel = {
-      id: Math.max(...mockData.funnels.map((f) => f.id || 0)) + 1,
-      businessId: newBiz.id,
-      funnelName: `Embudo para ${businessName}`,
-      templateType: ind.funnelType,
-      headline: ind.funnelHeadline(businessName, ind.defaultOffer),
-      subheadline: ind.funnelSubheadline(businessName),
-      ctaText: ind.funnelCta,
-      offerBadge: ind.funnelBadge,
-      bonusOffer: ind.funnelBonus,
-      customPrimaryColor: ind.color,
-      slug,
-      viewCount: 0,
-      createdAt: new Date().toISOString(),
-    };
-
-    mockData.funnels.push(newFunnel);
+    const slug = `${body.businessName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now().toString().slice(-6)}`;
+    const funnelResult = await client.query(
+      `INSERT INTO funnels
+       (business_id,funnel_name,template_type,headline,subheadline,cta_text,offer_badge,bonus_offer,custom_primary_color,slug)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING ${funnelSelect}`,
+      [business.id, `Embudo para ${body.businessName}`, ind.funnelType,
+       ind.funnelHeadline(body.businessName, ind.defaultOffer), ind.funnelSubheadline(body.businessName),
+       ind.funnelCta, ind.funnelBadge, ind.funnelBonus, ind.color, slug]
+    );
+    await client.query("COMMIT");
 
     return NextResponse.json({
-      success: true,
-      business: newBiz,
-      contact: newContact,
-      funnel: newFunnel,
-      emailFound: !!bestContact?.value,
-      emailConfidence: bestContact?.confidence || 0,
-      message: `✅ Negocio "${businessName}" descubierto automáticamente`,
+      success: true, business, contact, funnel: funnelResult.rows[0],
+      emailFound: Boolean(bestContact?.value), emailVerified, platformDetected: platform,
     });
   } catch (error) {
-    console.error("Discovery error:", error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Unknown error" },
-      { status: 500 }
-    );
+    await client.query("ROLLBACK").catch(() => undefined);
+    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : "Discovery failed" }, { status: 500 });
+  } finally {
+    client.release();
   }
 }
 
-/**
- * GET /api/discovery
- * Get list of discovered businesses
- */
 export async function GET() {
-  try {
-    const discovered = mockData.businesses.filter((b) => b.status === "discovered");
-    return NextResponse.json({
-      success: true,
-      count: discovered.length,
-      businesses: discovered,
-    });
-  } catch (error) {
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Unknown error" },
-      { status: 500 }
-    );
-  }
+  const result = await pool.query(`SELECT ${businessSelect} FROM businesses WHERE status='discovered' ORDER BY created_at DESC`);
+  return NextResponse.json({ success: true, count: result.rows.length, businesses: result.rows });
 }

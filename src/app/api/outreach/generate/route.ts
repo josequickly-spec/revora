@@ -1,84 +1,43 @@
 import { NextResponse } from "next/server";
-import { mockData } from "@/db";
 import { generateOutreachSequence } from "@/lib/outreach-generator";
-
-interface OutreachGenerateRequest {
-  contactId?: number;
-  contactName: string;
-  businessName: string;
-  offerHeadline: string;
-  painPoint: string;
-  bonusOffer: string;
-  recipientEmail?: string;
-}
+import { pool } from "@/lib/postgres";
 
 export async function POST(req: Request) {
   try {
-    const body: OutreachGenerateRequest = await req.json();
-    const {
-      contactName,
-      businessName,
-      offerHeadline,
-      painPoint,
-      bonusOffer,
-      recipientEmail,
-    } = body;
-
-    if (!contactName || !businessName) {
+    const body = await req.json();
+    if (!body.contactName || !body.businessName || !body.recipientEmail) {
       return NextResponse.json(
-        { success: false, error: "contactName and businessName are required" },
+        { success: false, error: "contactName, businessName and a real recipientEmail are required" },
         { status: 400 }
       );
     }
 
-    console.log(`Generating outreach for: ${contactName}`);
-
-    const generatedOutreach = await generateOutreachSequence(
-      contactName,
-      businessName,
-      offerHeadline,
-      painPoint,
-      bonusOffer
+    const generated = await generateOutreachSequence(
+      body.contactName,
+      body.businessName,
+      body.offerHeadline || "Auditoría personalizada",
+      body.painPoint || "Conversión de tráfico",
+      body.bonusOffer || "Plan de implementación"
     );
-
-    const outreach = {
-      id: Date.now(),
-      contactName,
-      businessName,
-      recipientEmail: recipientEmail || `${contactName.toLowerCase().replace(/\s+/g, ".")}@example.com`,
-      status: "draft",
-      emailSequence: generatedOutreach.emailSequence,
-      videoPitch: generatedOutreach.videoPitch,
-      followUpTiming: generatedOutreach.followUpTiming,
-      createdAt: new Date().toISOString(),
-      sentAt: null,
-      opens: 0,
-      clicks: 0,
-    };
+    const firstEmail = generated.emailSequence[0];
+    const result = await pool.query(
+      `INSERT INTO outreach_messages
+       (business_id,contact_id,campaign_id,recipient_email,email_subject,email_body,email_sequence,video_script,status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'draft') RETURNING *`,
+      [body.businessId || null, body.contactId || null, body.campaignId || null,
+       body.recipientEmail, firstEmail.subject, firstEmail.body,
+       JSON.stringify(generated.emailSequence), JSON.stringify(generated.videoPitch)]
+    );
 
     return NextResponse.json({
       success: true,
-      outreach,
-      message: `Secuencia de outreach generada para ${contactName}`,
-    });
-  } catch (error) {
-    console.error("Outreach generation error:", error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Unknown error" },
-      { status: 500 }
-    );
-  }
-}
-
-export async function GET() {
-  try {
-    return NextResponse.json({
-      success: true,
-      message: "Use POST to generate outreach sequences",
+      outreach: result.rows[0],
+      emailSequence: generated.emailSequence,
+      videoPitch: generated.videoPitch,
     });
   } catch (error) {
     return NextResponse.json(
-      { success: false, error: "Error" },
+      { success: false, error: error instanceof Error ? error.message : "Outreach generation failed" },
       { status: 500 }
     );
   }

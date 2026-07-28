@@ -9,4 +9,5 @@ data.db-wal
 .DS_Store
 dist/
 build/
+*.tsbuildinfo
 .vercel/

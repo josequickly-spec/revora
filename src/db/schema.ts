@@ -1,11 +1,12 @@
 import { sqliteTable, integer, text, primaryKey } from "drizzle-orm/sqlite-core";
+import { sql } from "drizzle-orm";
 
 export const businesses = sqliteTable("businesses", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),
   domain: text("domain").notNull(),
   country: text("country").notNull(),
-  businessType: text("business_type").notNull().default("ecommerce"),
+  businessType: text("business_type").notNull().default("general"),
   niche: text("niche").notNull(),
   monthlyRevenue: integer("monthly_revenue").notNull().default(50000),
   platform: text("platform").notNull().default("Website"),
@@ -16,7 +17,7 @@ export const businesses = sqliteTable("businesses", {
   heroOffer: text("hero_offer").default("Servicio Premium"),
   heroPrice: text("hero_price").default("99"),
   painPoint: text("pain_point").default("Baja conversión de leads a clientes"),
-  createdAt: text("created_at").default(() => new Date().toISOString()),
+  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
 });
 
 export const funnels = sqliteTable("funnels", {
@@ -32,7 +33,7 @@ export const funnels = sqliteTable("funnels", {
   customPrimaryColor: text("custom_primary_color").default("#6366F1"),
   slug: text("slug").notNull().unique(),
   viewCount: integer("view_count").default(0),
-  createdAt: text("created_at").default(() => new Date().toISOString()),
+  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
 });
 
 export const contacts = sqliteTable("contacts", {
@@ -44,7 +45,7 @@ export const contacts = sqliteTable("contacts", {
   linkedinUrl: text("linkedin_url"),
   confidenceScore: integer("confidence_score").default(96),
   status: text("status").default("verified"),
-  createdAt: text("created_at").default(() => new Date().toISOString()),
+  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
 });
 
 export const outreachCampaigns = sqliteTable("outreach_campaigns", {
@@ -57,7 +58,7 @@ export const outreachCampaigns = sqliteTable("outreach_campaigns", {
   loomScript: text("loom_script"),
   status: text("status").notNull().default("draft"),
   sentAt: text("sent_at"),
-  createdAt: text("created_at").default(() => new Date().toISOString()),
+  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
 });
 
 export const proposals = sqliteTable("proposals", {
@@ -71,5 +72,5 @@ export const proposals = sqliteTable("proposals", {
   adCopy: text("ad_copy"),
   adPlatform: text("ad_platform").default("Meta Ads"),
   status: text("status").notNull().default("active"),
-  createdAt: text("created_at").default(() => new Date().toISOString()),
+  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
 });

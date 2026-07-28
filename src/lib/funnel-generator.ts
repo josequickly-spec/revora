@@ -10,6 +10,10 @@ export interface GeneratedFunnel {
   agitationCopy: string;
   solutionCopy: string;
   proofCopy: string;
+  eyebrow: string;
+  benefits: string[];
+  objections: Array<{ question: string; answer: string }>;
+  trustPoints: string[];
   colorScheme: {
     primary: string;
     secondary: string;
@@ -17,36 +21,78 @@ export interface GeneratedFunnel {
   };
 }
 
+export interface FunnelBusinessContext {
+  website?: string;
+  country?: string;
+  platform?: string;
+  offer?: string;
+  price?: string;
+  audit?: unknown;
+}
+
 export async function generateFunnel(
   businessName: string,
   industryType: string,
   niche: string,
-  painPoint: string
+  painPoint: string,
+  context: FunnelBusinessContext = {}
 ): Promise<GeneratedFunnel> {
-  const prompt = `Eres experto en copywriting de embudos de ventas de alto rendimiento.
+  const prompt = `Actúa como estratega senior de conversión, UX writer y especialista en investigación comercial.
+Tu trabajo es diseñar una landing de captación profesional y específica, basada únicamente en los datos proporcionados.
 
-Genera un embudo COMPLETO para:
-Negocio: ${businessName}
-Industria: ${industryType}
-Nicho: ${niche}
-Problema: ${painPoint}
+DATOS DEL NEGOCIO
+- Nombre: ${businessName}
+- Industria: ${industryType}
+- Nicho: ${niche}
+- País/mercado: ${context.country || "no confirmado"}
+- Web: ${context.website || "no proporcionada"}
+- Tecnología detectada: ${context.platform || "no confirmada"}
+- Oferta configurada (puede ser un valor provisional): ${context.offer || "no confirmada"}
+- Precio informado: ${context.price || "no confirmado"}
+- Problema inicial: ${painPoint}
+- Auditoría observada del sitio: ${JSON.stringify(context.audit || null)}
 
-Responde SOLO JSON valido, sin markdown:
+PROCESO INTERNO OBLIGATORIO
+1. Define el público y su intención principal a partir de industria, nicho y datos observados.
+2. Elige UNA acción de conversión adecuada: consulta, cita, reserva, cotización, prueba, visita o compra.
+3. Construye la propuesta de valor con claridad, especificidad y bajo riesgo.
+4. Ordena el mensaje: contexto -> problema -> solución -> beneficios -> confianza -> objeciones -> CTA.
+5. Revisa consistencia entre titular, oferta, CTA y tipo de negocio.
+6. Da prioridad al title, description, H1 y demás señales de la auditoría sobre etiquetas genéricas configuradas.
+7. Identifica correctamente quién es el cliente: por ejemplo, en un concesionario la acción principal suele ser consultar inventario, financiación o prueba de manejo; no ofrecer valoración del vehículo salvo que el sitio indique compra o trade-in.
+
+REGLAS DE VERACIDAD
+- No inventes testimonios, clientes, años de experiencia, certificaciones, descuentos, stock, plazas, garantías, resultados, estadísticas ni urgencia.
+- No prometas ingresos ni resultados garantizados.
+- Si falta información, usa lenguaje verificable como "solicita información" o "consulta disponibilidad".
+- No uses clichés vacíos como "líder del mercado", "revolucionario" o "la mejor calidad".
+- Escribe en español natural, profesional, concreto y centrado en el cliente.
+- El titular debe comunicar valor, no mencionar que la página es un embudo.
+
+Responde SOLO con un objeto JSON válido, sin markdown y con exactamente esta estructura:
 {
-  "headline": "Titular maximo 60 caracteres",
-  "subheadline": "Subtitulo maximo 120 caracteres",
-  "ctaText": "Texto boton maximo 25 caracteres",
-  "offer": "Ej: Consulta Gratis, 30% Descuento",
-  "offerBadge": "Ej: Oferta 48h, Ultimas 5 slots",
-  "bonusOffer": "Ej: Guia gratis, Acceso comunidad",
-  "painPoint": "Reformula el dolor del cliente",
-  "agitationCopy": "Parrafo 2-3 oraciones agitando problema",
-  "solutionCopy": "Parrafo 2-3 oraciones presentando solucion",
-  "proofCopy": "Parrafo 2-3 oraciones con prueba social",
+  "eyebrow": "Contexto breve de 3-7 palabras",
+  "headline": "Titular específico de máximo 70 caracteres",
+  "subheadline": "Propuesta de valor de máximo 160 caracteres",
+  "ctaText": "Acción concreta de máximo 28 caracteres",
+  "offer": "Oferta principal coherente y verificable",
+  "offerBadge": "Etiqueta informativa sin falsa urgencia",
+  "bonusOffer": "Valor adicional; si no existe, indicar Evaluación personalizada",
+  "painPoint": "Problema específico en una oración",
+  "agitationCopy": "Consecuencia realista del problema en 2 oraciones",
+  "solutionCopy": "Cómo el negocio ayuda en 2-3 oraciones",
+  "proofCopy": "Texto de confianza basado solo en hechos observados; si no hay pruebas, explicar el siguiente paso sin riesgo",
+  "benefits": ["3 a 5 beneficios concretos y distintos"],
+  "trustPoints": ["3 señales de confianza verificables o pasos transparentes"],
+  "objections": [
+    {"question": "Objeción real 1", "answer": "Respuesta prudente"},
+    {"question": "Objeción real 2", "answer": "Respuesta prudente"},
+    {"question": "Objeción real 3", "answer": "Respuesta prudente"}
+  ],
   "colorScheme": {
-    "primary": "#XXXXXX color principal",
-    "secondary": "#XXXXXX color complementario",
-    "accent": "#XXXXXX color CTA"
+    "primary": "#RRGGBB",
+    "secondary": "#RRGGBB",
+    "accent": "#RRGGBB"
   }
 }`;
 
@@ -60,8 +106,9 @@ Responde SOLO JSON valido, sin markdown:
       body: JSON.stringify({
         model: "gpt-4o-mini",
         messages: [{ role: "user", content: prompt }],
-        max_tokens: 1024,
-        temperature: 0.7,
+        max_tokens: 1800,
+        temperature: 0.45,
+        response_format: { type: "json_object" },
       }),
     });
 
@@ -74,9 +121,14 @@ Responde SOLO JSON valido, sin markdown:
     const data = (await response.json()) as {
       choices: Array<{ message: { content: string } }>;
     };
-    const content = data.choices[0].message.content;
-
-    const result = JSON.parse(content) as GeneratedFunnel;
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) throw new Error("OpenAI no devolvió contenido para el embudo");
+    const result = JSON.parse(content.replace(/```json\s*|```/g, "").trim()) as GeneratedFunnel;
+    if (!result.headline || !result.subheadline || !result.ctaText || !result.colorScheme?.primary ||
+        !Array.isArray(result.benefits) || result.benefits.length < 3 ||
+        !Array.isArray(result.objections) || result.objections.length < 2) {
+      throw new Error("OpenAI devolvió un embudo incompleto");
+    }
     result.heroImage = `hero-${businessName.toLowerCase().replace(/\s+/g, "-")}.jpg`;
     return result;
   } catch (error) {

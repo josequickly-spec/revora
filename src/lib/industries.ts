@@ -29,6 +29,25 @@ export interface IndustryConfig {
 }
 
 export const INDUSTRIES: Record<string, IndustryConfig> = {
+  general: {
+    key: "general", label: "Otro / Cualquier negocio", emoji: "🏢", color: "#2563EB", accent: "#14B8A6",
+    defaultPlatform: "Sitio web", defaultNiche: "Negocio local o digital", defaultOffer: "Evaluación gratuita", defaultPrice: "Consultar",
+    defaultPainPoint: "El sitio recibe visitas pero no genera suficientes consultas o clientes",
+    funnelType: "lead_generation", liftPercent: 25,
+    funnelHeadline: (n, o) => `${o} en ${n}`,
+    funnelSubheadline: (n) => `Conoce cómo ${n} puede ayudarte y solicita información sin compromiso.`,
+    funnelCta: "Solicitar información", funnelBadge: "EVALUACIÓN SIN COMPROMISO", funnelBonus: "Recomendación personalizada incluida",
+    emailSubject: (n) => `Preparé una oportunidad de crecimiento para ${n}`,
+    emailBody: (biz, c, o, s) => `Hola ${c},\n\nAnalicé la presencia digital de ${biz} y encontré oportunidades concretas para generar más consultas y clientes.\n\nPreparé una propuesta aquí:\n/funnel/${s}\n\n¿Podemos hablar 10 minutos?\n\nSaludos,\nRevora`,
+    loomHook: (c, b, o) => `"Hola ${c}, analicé ${b} y encontré oportunidades para conseguir más clientes..."`,
+    loomDemo: (b) => `"Esta propuesta está creada específicamente para el modelo de negocio de ${b}..."`,
+    loomOffer: () => `"Implementamos y medimos la captación; la propuesta se adapta al resultado real del negocio."`,
+    loomCta: () => `"¿Podemos revisarlo durante 10 minutos esta semana?"`,
+    adHook: (b, o) => `${o} con ${b}. Solicita información hoy.`,
+    adCopy: (b, o) => `Descubre cómo ${b} puede ayudarte. ${o} sin compromiso.`,
+    adPlatform: "Google Ads + Meta Ads",
+    niches: ["Negocio local", "Servicios", "B2B", "B2C", "Comercio", "Fabricación", "Turismo", "Automoción", "Construcción", "Otro"],
+  },
   // E-commerce (any size)
   ecommerce: {
     key: "ecommerce", label: "E-Commerce / Tienda Online", emoji: "🛒", color: "#6366F1", accent: "#EC4899",
@@ -214,5 +233,5 @@ export const INDUSTRIES: Record<string, IndustryConfig> = {
 export const INDUSTRY_LIST = Object.values(INDUSTRIES);
 
 export function getIndustry(key: string): IndustryConfig {
-  return INDUSTRIES[key] || INDUSTRIES.ecommerce;
+  return INDUSTRIES[key] || INDUSTRIES.general;
 }

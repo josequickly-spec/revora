@@ -11,7 +11,7 @@ export async function initializeDatabase() {
     // Crear tabla campaigns
     await client.query(`
       CREATE TABLE IF NOT EXISTS campaigns (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        id TEXT PRIMARY KEY,
         business_name VARCHAR(255) NOT NULL,
         status VARCHAR(50) DEFAULT 'ready',
         landing_page_url VARCHAR(500),
@@ -29,8 +29,8 @@ export async function initializeDatabase() {
     // Crear tabla campaign_metrics
     await client.query(`
       CREATE TABLE IF NOT EXISTS campaign_metrics (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        campaign_id UUID REFERENCES campaigns(id) ON DELETE CASCADE,
+        id BIGSERIAL PRIMARY KEY,
+        campaign_id TEXT REFERENCES campaigns(id) ON DELETE CASCADE,
         landing_page_views INTEGER DEFAULT 0,
         unique_visitors INTEGER DEFAULT 0,
         email_opens INTEGER DEFAULT 0,
@@ -46,7 +46,7 @@ export async function initializeDatabase() {
         roi DECIMAL(5, 2) DEFAULT 0,
         bounce_rate DECIMAL(5, 2) DEFAULT 0,
         timestamp TIMESTAMP DEFAULT NOW(),
-        UNIQUE(campaign_id, DATE(timestamp))
+        UNIQUE(campaign_id, timestamp)
       );
     `);
 

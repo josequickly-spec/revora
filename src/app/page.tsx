@@ -6,14 +6,14 @@ import { INDUSTRY_LIST } from "@/lib/industries";
 import type { IndustryConfig } from "@/lib/industries";
 import { AutoDiscovery } from "@/components/AutoDiscovery";
 
-interface Business { id: number; name: string; domain: string; country: string; businessType: string; niche: string; monthlyRevenue: number; platform: string; logoUrl?: string | null; brandColor?: string | null; brandAccent?: string | null; status: string; heroOffer?: string | null; heroPrice?: string | null; painPoint?: string | null; }
+interface Business { id: number; name: string; domain: string; country: string; businessType: string; niche: string; monthlyRevenue: number; averageOrderValue?: number; conversionRate?: number; monthlyAdSpend?: number; platform: string; logoUrl?: string | null; brandColor?: string | null; brandAccent?: string | null; status: string; heroOffer?: string | null; heroPrice?: string | null; painPoint?: string | null; }
 interface Funnel { id: number; businessId: number | null; funnelName: string; templateType: string; headline: string; subheadline: string; ctaText: string; offerBadge: string | null; bonusOffer: string | null; customPrimaryColor: string | null; slug: string; viewCount: number | null; }
 interface Contact { id: number; businessId: number | null; name: string; role: string; email: string; linkedinUrl: string | null; confidenceScore: number | null; status: string | null; }
 
-const ICONS: Record<string,string> = { ecommerce:"🛒", restaurant:"🍽️", gym:"💪", professional:"👨‍💼", healthcare:"🏥", saas:"💻", realestate:"🏠", coaching:"🎓", agency:"🚀" };
+const ICONS: Record<string,string> = { general:"🏢", ecommerce:"🛒", restaurant:"🍽️", gym:"💪", professional:"👨‍💼", healthcare:"🏥", saas:"💻", realestate:"🏠", coaching:"🎓", agency:"🚀" };
 const IND_MAP: Record<string,IndustryConfig> = {};
 INDUSTRY_LIST.forEach(i => { IND_MAP[i.key] = i; });
-function getInd(k: string) { return IND_MAP[k] || IND_MAP.ecommerce; }
+function getInd(k: string) { return IND_MAP[k] || IND_MAP.general; }
 
 export default function HomePage() {
   const [bizs, setBizs] = useState<Business[]>([]);
@@ -35,9 +35,12 @@ export default function HomePage() {
   const [addOpen, setAddOpen] = useState(false);
   const [nName, setNName] = useState("");
   const [nDomain, setNDomain] = useState("");
-  const [nType, setNType] = useState("ecommerce");
+  const [nType, setNType] = useState("general");
   const [nNiche, setNNiche] = useState("");
   const [nRev, setNRev] = useState(10000);
+  const [nAov, setNAov] = useState(100);
+  const [nConversion, setNConversion] = useState(2);
+  const [nAdSpend, setNAdSpend] = useState(1000);
   const [nOffer, setNOffer] = useState("");
   const [nPrice, setNPrice] = useState("");
   const [nContact, setNContact] = useState("");
@@ -46,24 +49,36 @@ export default function HomePage() {
   const [calcShare, setCalcShare] = useState(25);
   const [copied, setCopied] = useState<string|null>(null);
   const [emailSent, setEmailSent] = useState(false);
+  const [emailError, setEmailError] = useState("");
+  const [outreachDraftId, setOutreachDraftId] = useState<number|null>(null);
+  const [blueprintError, setBlueprintError] = useState("");
+  const [blueprintCampaignId, setBlueprintCampaignId] = useState<string|null>(null);
+  const [funnelGenerating, setFunnelGenerating] = useState(false);
+  const [funnelError, setFunnelError] = useState("");
 
-  const fetchAll = async () => {
+  const fetchAll = React.useCallback(async () => {
     setLoading(true);
     try {
       const [bR, fR, cR] = await Promise.all([fetch("/api/businesses"), fetch("/api/funnels"), fetch("/api/contacts")]);
       const [bJ, fJ, cJ] = await Promise.all([bR.json(), fR.json(), cR.json()]);
-      if (bJ.success) { setBizs(bJ.businesses); if (!selId && bJ.businesses.length) setSelId(bJ.businesses[0].id); }
+      if (bJ.success) {
+        setBizs(bJ.businesses);
+        if (bJ.businesses.length) setSelId(current => current ?? bJ.businesses[0].id);
+      }
       if (fJ.success) setFuns(fJ.funnels);
       if (cJ.success) setCons(cJ.contacts);
     } catch(e) { console.error(e); }
     setLoading(false);
-  };
-  useEffect(() => { fetchAll(); }, []);
+  }, []);
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void fetchAll(); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [fetchAll]);
 
   const sel = bizs.find(b => b.id === selId) || bizs[0];
   const selFun = funs.find(f => f.businessId === sel?.id);
   const selCon = cons.find(c => c.businessId === sel?.id);
-  const selInd = sel ? getInd(sel.businessType) : getInd("ecommerce");
+  const selInd = sel ? getInd(sel.businessType) : getInd("general");
 
   const filtered = bizs.filter(b => {
     if (typeFilter !== "all" && b.businessType !== typeFilter) return false;
@@ -72,21 +87,133 @@ export default function HomePage() {
     return true;
   });
 
-  const runBlueprint = (b: Business) => {
+  const runBlueprint = async (b: Business) => {
     setSelId(b.id); setAutoName(b.name); setAutoRun(true); setAutoStep(1);
-    setTimeout(() => setAutoStep(2), 700);
-    setTimeout(() => setAutoStep(3), 1400);
-    setTimeout(() => setAutoStep(4), 2100);
-    setTimeout(() => { setAutoStep(5); setBizs(p => p.map(x => x.id===b.id?{...x,status:"pitch_sent"}:x)); }, 2800);
+    setBlueprintError("");
+    try {
+      const campaignId = `campaign_${Date.now()}`;
+      const generatedResponse = await fetch("/api/campaign-auto-generate", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          businessName:b.name,website:b.domain,industry:b.businessType,
+          monthlyRevenue:b.monthlyRevenue,averageOrderValue:b.averageOrderValue,
+          conversionRate:b.conversionRate,monthlyAdSpend:b.monthlyAdSpend
+        })
+      });
+      const generated = await generatedResponse.json();
+      if (!generatedResponse.ok || !generated.success) throw new Error(generated.error || "Falló el análisis");
+      setAutoStep(2);
+
+      const saved = await fetch("/api/campaigns", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({id:campaignId,businessName:b.name,status:"ready",...generated.campaign})
+      });
+      if (!saved.ok) throw new Error("No se pudo guardar la campaña");
+      setBlueprintCampaignId(campaignId);
+      setAutoStep(3);
+
+      const contact = cons.find(c => c.businessId === b.id);
+      if (!contact?.email) throw new Error("No hay un contacto real para este negocio");
+      const funnel = funs.find(f => f.businessId === b.id);
+      setAutoStep(4);
+      const outreachResponse = await fetch("/api/outreach/generate", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          businessId:b.id,contactId:contact.id,campaignId,
+          contactName:contact.name,businessName:b.name,recipientEmail:contact.email,
+          offerHeadline:b.heroOffer,painPoint:b.painPoint,bonusOffer:funnel?.bonusOffer
+        })
+      });
+      const outreach = await outreachResponse.json();
+      if (!outreachResponse.ok || !outreach.success) throw new Error(outreach.error || "Falló el outreach");
+      setOutreachDraftId(Number(outreach.outreach.id));
+
+      const proposal = await fetch("/api/revenue-share", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({businessId:b.id,monthlyRevenue:b.monthlyRevenue,expectedLiftPercent:25,commissionPercentage:25})
+      });
+      if (!proposal.ok) throw new Error("No se pudo guardar la propuesta");
+      setAutoStep(5);
+      await fetchAll();
+    } catch (error) {
+      setBlueprintError(error instanceof Error ? error.message : "Falló el Blueprint");
+    }
+  };
+
+  const sendCurrentOutreach = async () => {
+    setEmailError("");
+    setEmailSent(false);
+    try {
+      let draftId = outreachDraftId;
+      if (!draftId) {
+        if (!selCon?.email) throw new Error("No existe un contacto real para enviar");
+        const generated = await fetch("/api/outreach/generate", {
+          method:"POST", headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({
+            businessId:sel.id,contactId:selCon.id,contactName:selCon.name,
+            businessName:sel.name,recipientEmail:selCon.email,
+            offerHeadline:sel.heroOffer,painPoint:sel.painPoint,bonusOffer:selFun?.bonusOffer
+          })
+        });
+        const data = await generated.json();
+        if (!generated.ok) throw new Error(data.error || "No se pudo crear el borrador");
+        draftId = Number(data.outreach.id);
+        setOutreachDraftId(draftId);
+      }
+      const response = await fetch("/api/outreach", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({outreachId:draftId})
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "No se pudo enviar");
+      setEmailSent(true);
+    } catch (error) {
+      setEmailError(error instanceof Error ? error.message : "No se pudo enviar");
+    }
   };
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nName) return;
+    setFunnelGenerating(true);
+    setFunnelError("");
     const ind = getInd(nType);
-    const res = await fetch("/api/businesses", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ name:nName, domain:nDomain||`${nName.toLowerCase().replace(/\s+/g,"")}.com`, businessType:nType, niche:nNiche||ind.defaultNiche, monthlyRevenue:nRev, heroOffer:nOffer||ind.defaultOffer, heroPrice:nPrice||ind.defaultPrice, country:countryFilter==="all"?"España":countryFilter, contactName:nContact||"Director" }) });
-    const j = await res.json();
-    if (j.success) { setAddOpen(false); setNName(""); setNDomain(""); setNOffer(""); setNPrice(""); setNContact(""); await fetchAll(); if (j.business) setSelId(j.business.id); }
+    try {
+      const res = await fetch("/api/businesses", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ name:nName, domain:nDomain||`${nName.toLowerCase().replace(/\s+/g,"")}.com`, businessType:nType, niche:nNiche||ind.defaultNiche, monthlyRevenue:nRev, averageOrderValue:nAov, conversionRate:nConversion, monthlyAdSpend:nAdSpend, heroOffer:nOffer||ind.defaultOffer, heroPrice:nPrice||ind.defaultPrice, painPoint:ind.defaultPainPoint, country:countryFilter==="all"?"España":countryFilter, contactName:nContact||"Director" }) });
+      const j = await res.json();
+      if (!res.ok || !j.success) throw new Error(j.error || "No se pudo guardar el negocio");
+      const funnelRes = await fetch("/api/funnels/generate", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({businessId:j.business.id,businessName:nName,industryType:nType,niche:nNiche||ind.defaultNiche,painPoint:ind.defaultPainPoint})
+      });
+      const funnelJson = await funnelRes.json();
+      if (!funnelRes.ok || !funnelJson.success) throw new Error(funnelJson.error || "No se pudo generar el embudo");
+      setAddOpen(false); setNName(""); setNDomain(""); setNOffer(""); setNPrice(""); setNContact("");
+      await fetchAll(); setSelId(Number(j.business.id)); setTab("funnels");
+    } catch (error) {
+      setFunnelError(error instanceof Error ? error.message : "No se pudo generar el embudo");
+    } finally {
+      setFunnelGenerating(false);
+    }
+  };
+
+  const regenerateFunnel = async () => {
+    if (!sel) return;
+    setFunnelGenerating(true);
+    setFunnelError("");
+    try {
+      const response = await fetch("/api/funnels/generate", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({businessId:sel.id,businessName:sel.name,industryType:sel.businessType,niche:sel.niche,painPoint:sel.painPoint||selInd.defaultPainPoint})
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || "No se pudo generar el embudo");
+      await fetchAll();
+    } catch (error) {
+      setFunnelError(error instanceof Error ? error.message : "No se pudo generar el embudo");
+    } finally {
+      setFunnelGenerating(false);
+    }
   };
 
   const copy = (t: string, l: string) => { navigator.clipboard.writeText(t); setCopied(l); setTimeout(() => setCopied(null), 2500); };
@@ -270,12 +397,16 @@ export default function HomePage() {
                       {bizs.map(b => <option key={b.id} value={b.id}>{getInd(b.businessType).emoji} {b.name} (€{b.monthlyRevenue.toLocaleString()}/mes)</option>)}
                     </select>
                   </div>
-                  <div><label className="text-xs text-slate-400 font-semibold block mb-1">Titular:</label>
-                    <textarea rows={2} defaultValue={selFun?.headline||selInd.funnelHeadline(sel.name, sel.heroOffer||"")} className="w-full bg-slate-950 border border-slate-700 text-white text-xs rounded-xl p-3 focus:outline-none focus:border-emerald-500"/>
+                  <div><label className="text-xs text-slate-400 font-semibold block mb-1">Titular generado:</label>
+                    <textarea readOnly rows={2} value={selFun?.headline||selInd.funnelHeadline(sel.name, sel.heroOffer||"")} className="w-full bg-slate-950 border border-slate-700 text-white text-xs rounded-xl p-3"/>
                   </div>
-                  <div><label className="text-xs text-slate-400 font-semibold block mb-1">Oferta:</label>
-                    <input type="text" defaultValue={selFun?.offerBadge||selInd.funnelBadge} className="w-full bg-slate-950 border border-slate-700 text-white text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-500"/>
+                  <div><label className="text-xs text-slate-400 font-semibold block mb-1">Oferta generada:</label>
+                    <input readOnly type="text" value={selFun?.offerBadge||selInd.funnelBadge} className="w-full bg-slate-950 border border-slate-700 text-white text-xs rounded-xl px-3 py-2"/>
                   </div>
+                  {funnelError && <p className="text-xs text-red-400 bg-red-950/40 border border-red-900 rounded-xl p-3">{funnelError}</p>}
+                  <button onClick={regenerateFunnel} disabled={funnelGenerating} className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-xs py-3 rounded-xl flex items-center justify-center gap-2">
+                    <Sparkles className="w-4 h-4"/>{funnelGenerating ? "Generando con IA..." : selFun ? "Regenerar Embudo con IA" : "Generar Embudo con IA"}
+                  </button>
                   <div className="bg-slate-950 border border-emerald-900/60 rounded-xl p-3.5 space-y-2">
                     <span className="text-[11px] font-bold text-emerald-300 uppercase tracking-wider block">Enlace Público:</span>
                     <div className="flex items-center justify-between gap-2 bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs">
@@ -338,7 +469,7 @@ export default function HomePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {cons.map(c => {
                 const biz = bizs.find(b => b.id === c.businessId);
-                const ind = biz ? getInd(biz.businessType) : getInd("ecommerce");
+                const ind = biz ? getInd(biz.businessType) : getInd("general");
                 return (
                   <div key={c.id} className={`bg-slate-900/90 border rounded-2xl p-5 space-y-4 transition ${sel?.id===c.businessId?"border-emerald-500 shadow-xl ring-1 ring-emerald-500":"border-slate-800 hover:border-slate-700"}`}>
                     <div className="flex items-start justify-between gap-3">
@@ -390,10 +521,11 @@ export default function HomePage() {
                   <button onClick={() => copy(selInd.emailBody(sel.name,selCon?.name?.split(" ")[0]||"",sel.heroOffer||"",selFun?.slug||""),"email")} className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs py-2.5 px-4 rounded-xl flex items-center gap-2">
                     {copied==="email"?<Check className="w-3.5 h-3.5 text-emerald-400"/>:<Copy className="w-3.5 h-3.5"/>}{copied==="email"?"¡Copiado!":"Copiar Email"}
                   </button>
-                  <button onClick={() => {setEmailSent(true);setTimeout(()=>setEmailSent(false),4000);}} className="bg-gradient-to-r from-rose-600 to-indigo-600 text-white font-bold text-xs py-2.5 px-5 rounded-xl shadow-lg flex items-center gap-2">
-                    <Send className="w-3.5 h-3.5"/>{emailSent?"¡Enviado!":"Enviar Simulado"}
+                  <button onClick={sendCurrentOutreach} className="bg-gradient-to-r from-rose-600 to-indigo-600 text-white font-bold text-xs py-2.5 px-5 rounded-xl shadow-lg flex items-center gap-2">
+                    <Send className="w-3.5 h-3.5"/>{emailSent?"¡Enviado!":"Enviar con Resend"}
                   </button>
                 </div>
+                {emailError && <p className="text-xs text-red-400">{emailError}</p>}
               </div>
 
               {/* Loom Script */}
@@ -620,7 +752,8 @@ export default function HomePage() {
                 </div>
               ))}
             </div>
-            {autoStep>=5 && <button onClick={() => {setAutoRun(false);setTab("outreach");}} className="w-full bg-gradient-to-r from-emerald-600 to-indigo-600 text-white font-black text-xs py-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2">¡Blueprint Completado! Ver Dossier <ArrowRight className="w-4 h-4"/></button>}
+            {blueprintError && <div className="bg-red-950 border border-red-700 text-red-200 text-xs rounded-xl p-3">{blueprintError}</div>}
+            {autoStep>=5 && <button onClick={() => { if (blueprintCampaignId) window.location.href=`/campaign/${blueprintCampaignId}`; }} className="w-full bg-gradient-to-r from-emerald-600 to-indigo-600 text-white font-black text-xs py-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2">¡Blueprint Completado! Ver Dossier <ArrowRight className="w-4 h-4"/></button>}
           </div>
         </div>
       )}
@@ -748,6 +881,17 @@ export default function HomePage() {
                   <input type="number" value={nRev} onChange={e => setNRev(parseInt(e.target.value)||0)} className="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2"/>
                 </div>
               </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div><label className="text-slate-300 font-semibold block mb-1">Ticket medio (€):</label>
+                  <input type="number" value={nAov} onChange={e => setNAov(Number(e.target.value)||0)} className="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2"/>
+                </div>
+                <div><label className="text-slate-300 font-semibold block mb-1">Conversión (%):</label>
+                  <input type="number" step="0.1" value={nConversion} onChange={e => setNConversion(Number(e.target.value)||0)} className="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2"/>
+                </div>
+                <div><label className="text-slate-300 font-semibold block mb-1">Ads €/mes:</label>
+                  <input type="number" value={nAdSpend} onChange={e => setNAdSpend(Number(e.target.value)||0)} className="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2"/>
+                </div>
+              </div>
               <div><label className="text-slate-300 font-semibold block mb-1">Precio:</label>
                 <input type="text" placeholder={getInd(nType).defaultPrice} value={nPrice} onChange={e => setNPrice(e.target.value)} className="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2"/>
               </div>
@@ -756,8 +900,9 @@ export default function HomePage() {
               </div>
               <div className="pt-2 flex gap-3">
                 <button type="button" onClick={() => setAddOpen(false)} className="w-1/2 bg-slate-800 text-slate-300 py-2.5 rounded-xl font-semibold">Cancelar</button>
-                <button type="submit" className="w-1/2 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl font-bold">Añadir y Generar</button>
+                <button type="submit" disabled={funnelGenerating} className="w-1/2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white py-2.5 rounded-xl font-bold">{funnelGenerating ? "Generando..." : "Añadir y Generar"}</button>
               </div>
+              {funnelError && <p className="text-xs text-red-400 bg-red-950/40 border border-red-900 rounded-xl p-3">{funnelError}</p>}
             </form>
           </div>
         </div>

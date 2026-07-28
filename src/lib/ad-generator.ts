@@ -102,6 +102,7 @@ export async function generateAIBotOptimizations(
     clicks: number;
     conversions: number;
     spend: number;
+    revenue?: number;
   }
 ): Promise<{
   ctr: number;
@@ -113,7 +114,7 @@ export async function generateAIBotOptimizations(
   const ctr = (metrics.clicks / metrics.impressions) * 100;
   const conversionRate = (metrics.conversions / metrics.clicks) * 100;
   const cpc = metrics.spend / metrics.clicks;
-  const roas = Math.random() * 3 + 0.5; // Simulado
+  const roas = metrics.spend > 0 ? (metrics.revenue || 0) / metrics.spend : 0;
 
   const prompt = `Eres experto en optimizacion de campañas publicitarias.
 

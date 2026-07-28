@@ -5,7 +5,7 @@ import { Search, Zap, CheckCircle2, AlertCircle, Loader } from "lucide-react";
 export function AutoDiscovery() {
   const [domain, setDomain] = useState("");
   const [businessName, setBusinessName] = useState("");
-  const [industryType, setIndustryType] = useState("ecommerce");
+  const [industryType, setIndustryType] = useState("general");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [loading, setLoading] = useState(false);
@@ -101,6 +101,7 @@ export function AutoDiscovery() {
                 onChange={(e) => setIndustryType(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm"
               >
+                <option value="general">Otro / Cualquier negocio</option>
                 <option value="ecommerce">E-Commerce</option>
                 <option value="restaurant">Restaurante</option>
                 <option value="gym">Gimnasio</option>
@@ -212,7 +213,7 @@ export function AutoDiscovery() {
                     <div className="flex justify-between">
                       <span className="text-emerald-300">Confianza:</span>
                       <span className="bg-emerald-900 px-2 py-0.5 rounded text-xs font-bold text-emerald-200">
-                        {Math.round((result.contact?.confidenceScore || 0) / 100)}%
+                        {Math.round(result.contact?.confidenceScore || 0)}%
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -238,7 +239,7 @@ export function AutoDiscovery() {
           ) : (
             <div className="bg-slate-900/60 border-2 border-dashed border-slate-700 rounded-2xl p-8 flex flex-col items-center justify-center text-center min-h-[300px]">
               <Search className="w-12 h-12 text-slate-600 mb-3" />
-              <p className="text-slate-400 text-sm">Llena el formulario y haz clic "Descubrir Negocio"</p>
+              <p className="text-slate-400 text-sm">Llena el formulario y haz clic &quot;Descubrir Negocio&quot;</p>
               <p className="text-slate-500 text-xs mt-2">
                 Buscaremos automáticamente en Hunter.io el email del CEO/Fundador
               </p>

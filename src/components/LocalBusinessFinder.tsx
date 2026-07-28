@@ -22,11 +22,11 @@ export function LocalBusinessFinder() {
   const [searchValue, setSearchValue] = useState("");
   const [category, setCategory] = useState("");
   const [loading, setLoading] = useState(false);
-  const [businesses, setBusinesses] = useState([]);
+  const [businesses, setBusinesses] = useState<Business[]>([]);
   const [error, setError] = useState("");
   const [searched, setSearched] = useState(false);
 
-  const handleSearch = async (e) => {
+  const handleSearch = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!searchValue.trim()) {
       setError("Enter a search value");
@@ -38,7 +38,7 @@ export function LocalBusinessFinder() {
     setSearched(true);
 
     try {
-      const params = { [searchType]: searchValue };
+      const params: Record<string, string> = { [searchType]: searchValue };
       if (category) params.category = category;
 
       const res = await fetch("/api/local-businesses", {

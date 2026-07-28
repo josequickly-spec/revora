@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateFunnel } from "@/lib/funnel-generator";
 import { generateOutreachSequence } from "@/lib/outreach-generator";
+import { auditSite, type SiteAudit } from "@/lib/site-audit";
 
 interface AutoGenerateRequest {
   businessName: string;
   website?: string;
   industry?: string;
+  monthlyRevenue?: number;
+  averageOrderValue?: number;
+  conversionRate?: number;
+  monthlyAdSpend?: number;
 }
 
 interface CampaignPackage {
@@ -16,6 +21,7 @@ interface CampaignPackage {
     competitors: string[];
     keywords: string[];
     opportunities: string[];
+    audit?: SiteAudit | null;
   };
   landingPage: {
     headline: string;
@@ -49,12 +55,12 @@ interface CampaignPackage {
   };
   projections: {
     monthlyRevenue: number;
-    expectedROI: number;
-    breakEvenDays: number;
+    expectedROI: number | null;
+    breakEvenDays: number | null;
   };
 }
 
-async function generateSEOAnalysis(businessName: string): Promise<any> {
+async function generateSEOAnalysis(businessName: string, audit: SiteAudit | null): Promise<any> {
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -66,7 +72,8 @@ async function generateSEOAnalysis(businessName: string): Promise<any> {
       messages: [
         {
           role: "user",
-          content: `Eres experto en SEO. Analiza el negocio: "${businessName}".
+          content: `Eres experto en SEO. Analiza el negocio: "${businessName}" usando exclusivamente estos datos observados del sitio:
+${JSON.stringify(audit)}
 
 Proporciona SOLO JSON válido sin markdown:
 {
@@ -95,7 +102,7 @@ Proporciona SOLO JSON válido sin markdown:
 export async function POST(req: NextRequest) {
   try {
     const body: AutoGenerateRequest = await req.json();
-    const { businessName, website, industry = "Ecommerce" } = body;
+    const { businessName, website, industry = "Negocio general" } = body;
 
     if (!businessName) {
       return NextResponse.json(
@@ -108,7 +115,8 @@ export async function POST(req: NextRequest) {
 
     // PHASE 1: SEO Analysis (NEW)
     console.log("📊 Generating SEO Analysis...");
-    const seoAnalysis = await generateSEOAnalysis(businessName);
+    const siteAudit = website ? await auditSite(website) : null;
+    const seoAnalysis = await generateSEOAnalysis(businessName, siteAudit);
 
     // PHASE 2: Landing Page (REUTILIZA funnel-generator.ts)
     console.log("🎨 Generating Landing Page via Phase 2...");
@@ -150,33 +158,37 @@ export async function POST(req: NextRequest) {
     };
 
     // PHASE 5: Revenue Projections (based on SEO and market data)
-    const estimatedTraffic = seoAnalysis.estimatedTraffic || 100;
-    const conversionRate = 0.05; // 5% average conversion rate
-    const averageOrderValue = 200; // Average $200 per conversion
-    const monthlyRevenue = Math.floor(
-      estimatedTraffic * 30 * conversionRate * averageOrderValue
-    );
-    const adSpendEstimate = monthlyRevenue * 0.2; // 20% ad spend
-    const profitMargin = monthlyRevenue - adSpendEstimate;
+    const estimatedTraffic = Math.max(0, Number(seoAnalysis.estimatedTraffic) || 0);
+    const conversionRate = Math.max(0, Number(body.conversionRate) || 0) / 100;
+    const averageOrderValue = Math.max(0, Number(body.averageOrderValue) || 0);
+    const currentRevenue = Math.max(0, Number(body.monthlyRevenue) || 0);
+    const adSpendEstimate = Math.max(0, Number(body.monthlyAdSpend) || 0);
+    const projectedConversions = estimatedTraffic * conversionRate;
+    const projectedRevenue = projectedConversions * averageOrderValue;
+    const incrementalRevenue = Math.max(0, projectedRevenue - currentRevenue);
 
     const projections = {
-      monthlyRevenue: Math.max(monthlyRevenue, 5000),
-      expectedROI: Math.floor((profitMargin / adSpendEstimate) * 100),
-      breakEvenDays: Math.max(Math.floor((adSpendEstimate * 1.5) / (monthlyRevenue / 30)), 7),
+      monthlyRevenue: currentRevenue,
+      projectedRevenue: Math.round(projectedRevenue),
+      incrementalRevenue: Math.round(incrementalRevenue),
+      expectedROI: adSpendEstimate > 0 ? Math.round((incrementalRevenue / adSpendEstimate) * 100) : null,
+      breakEvenDays: incrementalRevenue > 0 && adSpendEstimate > 0
+        ? Math.ceil(adSpendEstimate / (incrementalRevenue / 30)) : null,
       estimatedTraffic,
-      conversionRate: (conversionRate * 100).toFixed(1),
+      conversionRate: conversionRate * 100,
       averageOrderValue,
-      monthlyAdSpend: Math.floor(adSpendEstimate),
+      monthlyAdSpend: adSpendEstimate,
     };
 
     const campaign: CampaignPackage = {
       businessName,
       status: "ready",
       analysis: {
-        seoScore: seoAnalysis.seoScore || 65,
+        seoScore: siteAudit?.score ?? seoAnalysis.seoScore ?? 0,
         competitors: seoAnalysis.competitors || [],
         keywords: seoAnalysis.topKeywords || [],
         opportunities: seoAnalysis.quickWins || [],
+        audit: siteAudit,
       },
       landingPage: {
         headline: landingPage.headline,

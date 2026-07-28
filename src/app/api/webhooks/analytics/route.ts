@@ -1,81 +1,43 @@
-import { NextRequest, NextResponse } from "next/server";
-import { Pool } from "pg";
+import { NextResponse } from "next/server";
+import { pool } from "@/lib/postgres";
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
-
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
+  const client = await pool.connect();
   try {
     const event = await req.json();
-    const {
-      campaignId,
-      eventType,
-      pageViews,
-      uniqueVisitors,
-      conversions,
-      revenue,
-      bounceRate,
-    } = event;
-
-    if (!campaignId || !eventType) {
-      return NextResponse.json(
-        { error: "Missing campaignId or eventType" },
-        { status: 400 }
+    if (!event.campaignId || !["page_view", "conversion"].includes(event.eventType)) {
+      return NextResponse.json({ success: false, error: "Valid campaignId and eventType are required" }, { status: 400 });
+    }
+    await client.query("BEGIN");
+    const existing = await client.query(
+      "SELECT id FROM campaign_metrics WHERE campaign_id=$1 AND DATE(timestamp)=CURRENT_DATE ORDER BY timestamp DESC LIMIT 1 FOR UPDATE",
+      [event.campaignId]
+    );
+    let id = existing.rows[0]?.id;
+    if (!id) {
+      const created = await client.query(
+        "INSERT INTO campaign_metrics (campaign_id,timestamp) VALUES ($1,NOW()) RETURNING id",
+        [event.campaignId]
+      );
+      id = created.rows[0].id;
+    }
+    if (event.eventType === "page_view") {
+      await client.query("UPDATE campaign_metrics SET landing_page_views=COALESCE(landing_page_views,0)+1 WHERE id=$1", [id]);
+    } else {
+      await client.query(
+        "UPDATE campaign_metrics SET conversions=COALESCE(conversions,0)+1,revenue=COALESCE(revenue,0)+$1 WHERE id=$2",
+        [Math.max(0, Number(event.revenue) || 0), id]
       );
     }
-
-    // Guardar o actualizar métricas
-    switch (eventType) {
-      case "page_view":
-        console.log(`👁️ Landing page view: campaign=${campaignId}`);
-        await pool.query(
-          `UPDATE campaign_metrics
-           SET landing_page_views = COALESCE(landing_page_views, 0) + 1
-           WHERE campaign_id = $1 AND DATE(timestamp) = CURRENT_DATE`,
-          [campaignId]
-        );
-        break;
-
-      case "conversion":
-        console.log(`🎯 Conversion: campaign=${campaignId}, revenue=$${revenue}`);
-        await pool.query(
-          `UPDATE campaign_metrics
-           SET conversions = COALESCE(conversions, 0) + 1,
-               revenue = COALESCE(revenue, 0) + $1
-           WHERE campaign_id = $2 AND DATE(timestamp) = CURRENT_DATE`,
-          [revenue || 0, campaignId]
-        );
-        break;
-
-      case "daily_summary":
-        console.log(
-          `📊 Daily analytics: views=${pageViews}, conversions=${conversions}`
-        );
-        await pool.query(
-          `INSERT INTO campaign_metrics
-           (campaign_id, landing_page_views, conversions, revenue, timestamp)
-           VALUES ($1, $2, $3, $4, NOW())
-           ON CONFLICT (campaign_id, DATE(timestamp)) DO UPDATE SET
-           landing_page_views = $2,
-           conversions = $3,
-           revenue = $4`,
-          [campaignId, pageViews || 0, conversions || 0, revenue || 0]
-        );
-        break;
-
-      default:
-        console.log(`Unknown analytics event: ${eventType}`);
-    }
-
-    return NextResponse.json({ success: true }, { status: 200 });
+    await client.query("COMMIT");
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Analytics webhook error:", error);
+    await client.query("ROLLBACK").catch(() => undefined);
     return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Webhook processing failed",
-      },
+      { success: false, error: error instanceof Error ? error.message : "Analytics failed" },
       { status: 500 }
     );
+  } finally {
+    client.release();
   }
 }

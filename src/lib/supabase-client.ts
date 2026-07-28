@@ -1,110 +1,48 @@
-import { createClient } from "@supabase/supabase-js";
+import { pool } from "@/lib/postgres";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-
-export const supabase = createClient(supabaseUrl, supabaseKey, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: false,
-  },
-});
-
-export async function saveCampaign(campaign: any) {
-  const { data, error } = await supabase
-    .from("campaigns")
-    .insert([
-      {
-        business_name: campaign.businessName,
-        status: campaign.status,
-        analysis: campaign.analysis,
-        landing_page: campaign.landingPage,
-        email_sequence: campaign.emailSequence,
-        video_script: campaign.videoScript,
-        ads_strategy: campaign.adsStrategy,
-        projections: campaign.projections,
-        created_at: new Date().toISOString(),
-      },
-    ])
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
+export async function saveCampaign(campaign: Record<string, unknown>) {
+  const result = await pool.query(
+    `INSERT INTO campaigns
+     (id,business_name,status,analysis,landing_page,email_sequence,video_script,ads_strategy,projections)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+     ON CONFLICT (id) DO UPDATE SET status=EXCLUDED.status,analysis=EXCLUDED.analysis,
+     landing_page=EXCLUDED.landing_page,email_sequence=EXCLUDED.email_sequence,
+     video_script=EXCLUDED.video_script,ads_strategy=EXCLUDED.ads_strategy,
+     projections=EXCLUDED.projections RETURNING *`,
+    [campaign.id, campaign.businessName, campaign.status || "ready", campaign.analysis,
+     campaign.landingPage, campaign.emailSequence, campaign.videoScript,
+     campaign.adsStrategy, campaign.projections]
+  );
+  return result.rows[0];
 }
 
 export async function getCampaigns(limit = 50) {
-  const { data, error } = await supabase
-    .from("campaigns")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(limit);
-
-  if (error) throw error;
-  return data;
+  return (await pool.query("SELECT * FROM campaigns ORDER BY created_at DESC LIMIT $1", [limit])).rows;
 }
 
 export async function getCampaign(id: string) {
-  const { data, error } = await supabase
-    .from("campaigns")
-    .select("*")
-    .eq("id", id)
-    .single();
-
-  if (error) throw error;
-  return data;
+  return (await pool.query("SELECT * FROM campaigns WHERE id=$1", [id])).rows[0] || null;
 }
 
-export async function updateCampaign(id: string, updates: any) {
-  const { data, error } = await supabase
-    .from("campaigns")
-    .update(updates)
-    .eq("id", id)
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
+export async function updateCampaign(id: string, updates: { status?: string }) {
+  return (await pool.query("UPDATE campaigns SET status=COALESCE($1,status),updated_at=NOW() WHERE id=$2 RETURNING *", [updates.status, id])).rows[0];
 }
 
 export async function deleteCampaign(id: string) {
-  const { error } = await supabase.from("campaigns").delete().eq("id", id);
-
-  if (error) throw error;
+  await pool.query("DELETE FROM campaigns WHERE id=$1", [id]);
 }
 
-export async function saveCampaignMetrics(campaignId: string, metrics: any) {
-  const { data, error } = await supabase
-    .from("campaign_metrics")
-    .insert([
-      {
-        campaign_id: campaignId,
-        landing_page_views: metrics.landingPageViews || 0,
-        email_opens: metrics.emailOpens || 0,
-        email_clicks: metrics.emailClicks || 0,
-        ad_impressions: metrics.adImpressions || 0,
-        ad_clicks: metrics.adClicks || 0,
-        conversions: metrics.conversions || 0,
-        revenue: metrics.revenue || 0,
-        roi: metrics.roi || 0,
-        timestamp: new Date().toISOString(),
-      },
-    ])
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
+export async function saveCampaignMetrics(campaignId: string, metrics: Record<string, number>) {
+  return (await pool.query(
+    `INSERT INTO campaign_metrics
+     (campaign_id,landing_page_views,email_opens,email_clicks,ad_impressions,ad_clicks,conversions,revenue,roi)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+    [campaignId,metrics.landingPageViews||0,metrics.emailOpens||0,metrics.emailClicks||0,
+     metrics.adImpressions||0,metrics.adClicks||0,metrics.conversions||0,
+     metrics.revenue||0,metrics.roi||0]
+  )).rows[0];
 }
 
 export async function getCampaignMetrics(campaignId: string) {
-  const { data, error } = await supabase
-    .from("campaign_metrics")
-    .select("*")
-    .eq("campaign_id", campaignId)
-    .order("timestamp", { ascending: false })
-    .limit(100);
-
-  if (error) throw error;
-  return data;
+  return (await pool.query("SELECT * FROM campaign_metrics WHERE campaign_id=$1 ORDER BY timestamp DESC LIMIT 100", [campaignId])).rows;
 }

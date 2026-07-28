@@ -23,6 +23,36 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<"overview" | "campaigns" | "analytics">("overview");
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
 
+  useEffect(() => {
+    const loadCampaigns = async () => {
+      try {
+        const response = await fetch("/api/campaigns");
+        if (!response.ok) throw new Error("No se pudieron cargar las campañas");
+
+        const data = await response.json();
+        setCampaigns(
+          (data.campaigns || []).map((campaign: any) => ({
+            id: campaign.id,
+            businessName: campaign.business_name,
+            status: campaign.status,
+            createdAt: campaign.created_at,
+            revenue: Number(campaign.revenue || 0),
+            metrics: {
+              landingPageViews: 0,
+              emailOpens: 0,
+              conversions: 0,
+              emailClickRate: 0,
+            },
+          }))
+        );
+      } catch (error) {
+        console.error("Campaign load error:", error);
+      }
+    };
+
+    loadCampaigns();
+  }, []);
+
   const handleAnalyze = async () => {
     if (!newBusinessName.trim()) return;
 
@@ -56,7 +86,7 @@ export default function DashboardPage() {
 
       if (data.success) {
         // Save to campaigns
-        await fetch("/api/campaigns", {
+        const saveResponse = await fetch("/api/campaigns", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -66,6 +96,9 @@ export default function DashboardPage() {
             ...data.campaign,
           }),
         });
+        if (!saveResponse.ok) {
+          throw new Error("La campaña se generó, pero no pudo guardarse");
+        }
 
         // Update UI
         setCampaigns(c =>
@@ -75,10 +108,10 @@ export default function DashboardPage() {
                   ...camp,
                   status: "ready",
                   metrics: {
-                    landingPageViews: Math.floor(Math.random() * 500),
-                    emailOpens: Math.floor(Math.random() * 150),
-                    conversions: Math.floor(Math.random() * 30),
-                    emailClickRate: Math.random() * 0.25,
+                    landingPageViews: 0,
+                    emailOpens: 0,
+                    conversions: 0,
+                    emailClickRate: 0,
                   },
                 }
               : camp
@@ -115,7 +148,7 @@ export default function DashboardPage() {
               ? {
                   ...camp,
                   status: "launched",
-                  revenue: Math.floor(Math.random() * 5000),
+                  revenue: 0,
                 }
               : camp
           )

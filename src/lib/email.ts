@@ -9,8 +9,7 @@ export async function sendOutreachEmail(
   fromEmail: string = "noreply@revora.io"
 ) {
   if (!process.env.RESEND_API_KEY) {
-    console.log("📧 Email simulado (Resend API no configurada):", { to, subject });
-    return { success: true, id: `simulated-${Date.now()}` };
+    throw new Error("RESEND_API_KEY no está configurada; no se envió ningún correo.");
   }
 
   try {
