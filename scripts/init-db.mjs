@@ -32,6 +32,7 @@ try {
     ALTER TABLE businesses ADD COLUMN IF NOT EXISTS city VARCHAR(150);
     ALTER TABLE businesses ADD COLUMN IF NOT EXISTS postal_code VARCHAR(40);
     ALTER TABLE businesses ADD COLUMN IF NOT EXISTS address TEXT;
+    ALTER TABLE businesses ADD COLUMN IF NOT EXISTS technology_data JSONB;
 
     CREATE TABLE IF NOT EXISTS contacts (
       id BIGSERIAL PRIMARY KEY,

@@ -7,7 +7,7 @@ import type { IndustryConfig } from "@/lib/industries";
 import { AutoDiscovery } from "@/components/AutoDiscovery";
 import { LocalBusinessFinder } from "@/components/LocalBusinessFinder";
 
-interface Business { id: number; name: string; domain: string; country: string; businessType: string; niche: string; monthlyRevenue: number; averageOrderValue?: number; conversionRate?: number; monthlyAdSpend?: number; platform: string; logoUrl?: string | null; brandColor?: string | null; brandAccent?: string | null; status: string; heroOffer?: string | null; heroPrice?: string | null; painPoint?: string | null; }
+interface Business { id: number; name: string; domain: string; country: string; businessType: string; niche: string; monthlyRevenue: number; averageOrderValue?: number; conversionRate?: number; monthlyAdSpend?: number; platform: string; technologyData?: {technologies?: Array<{name:string}>; techSpendUsd?: number | null} | null; logoUrl?: string | null; brandColor?: string | null; brandAccent?: string | null; status: string; heroOffer?: string | null; heroPrice?: string | null; painPoint?: string | null; }
 interface Funnel { id: number; businessId: number | null; funnelName: string; templateType: string; headline: string; subheadline: string; ctaText: string; offerBadge: string | null; bonusOffer: string | null; customPrimaryColor: string | null; slug: string; viewCount: number | null; }
 interface Contact { id: number; businessId: number | null; name: string; role: string; email: string; linkedinUrl: string | null; confidenceScore: number | null; status: string | null; }
 
@@ -353,6 +353,7 @@ export default function HomePage() {
                       <div className="space-y-1.5 py-3 border-y border-slate-800/80 my-3 text-xs">
                         <div className="flex justify-between"><span className="text-slate-400">Tipo:</span><span className="font-semibold" style={{color:ind.color}}>{ind.label.split("·")[0].trim()}</span></div>
                         <div className="flex justify-between"><span className="text-slate-400">Nicho:</span><span className="text-slate-200 font-medium">{b.niche}</span></div>
+                        <div className="flex justify-between"><span className="text-slate-400">Tecnología:</span><span className="text-cyan-300 font-medium">{b.platform || "Sitio web"}{b.technologyData?.technologies?.length ? ` · ${b.technologyData.technologies.length} señales` : ""}</span></div>
                         <div className="flex justify-between"><span className="text-slate-400">Facturación:</span><span className="font-bold text-emerald-400">€{b.monthlyRevenue.toLocaleString()}/mes</span></div>
                         <div className="flex justify-between"><span className="text-slate-400">Tamaño:</span><span className="text-slate-300 font-mono text-[11px]">{revLabel}</span></div>
                         <div className="flex justify-between"><span className="text-slate-400">Oferta:</span><span className="text-slate-200 truncate max-w-[170px]">{b.heroOffer}</span></div>

@@ -8,6 +8,13 @@ export const pool =
 
 if (process.env.NODE_ENV !== "production") globalForPg.revoraPool = pool;
 
+let technologyColumnReady = false;
+export async function ensureTechnologyDataColumn() {
+  if (technologyColumnReady) return;
+  await pool.query("ALTER TABLE businesses ADD COLUMN IF NOT EXISTS technology_data JSONB");
+  technologyColumnReady = true;
+}
+
 export const businessSelect = `id::int AS id, name, domain, country,
   city, postal_code AS "postalCode", address,
   business_type AS "businessType", niche, monthly_revenue AS "monthlyRevenue",
@@ -15,7 +22,8 @@ export const businessSelect = `id::int AS id, name, domain, country,
   monthly_ad_spend AS "monthlyAdSpend",
   platform, logo_url AS "logoUrl", brand_color AS "brandColor",
   brand_accent AS "brandAccent", status, hero_offer AS "heroOffer",
-  hero_price AS "heroPrice", pain_point AS "painPoint", created_at AS "createdAt"`;
+  hero_price AS "heroPrice", pain_point AS "painPoint",
+  technology_data AS "technologyData", created_at AS "createdAt"`;
 
 export const contactSelect = `id::int AS id, business_id::int AS "businessId", name, role, email,
   linkedin_url AS "linkedinUrl", confidence_score AS "confidenceScore",

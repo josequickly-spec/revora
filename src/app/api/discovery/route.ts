@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { findEmail, getDomainEmails, verifyEmail } from "@/lib/hunter";
 import { getIndustry } from "@/lib/industries";
-import { businessSelect, contactSelect, funnelSelect, pool } from "@/lib/postgres";
+import { businessSelect, contactSelect, ensureTechnologyDataColumn, funnelSelect, pool } from "@/lib/postgres";
 import { auditSite, detectWebsitePlatform } from "@/lib/site-audit";
 import { FunnelLanguageMode, generateLocalizedFunnel } from "@/lib/funnel-generator";
+import { lookupBuiltWith } from "@/lib/builtwith";
 
 interface DiscoveryRequest {
   domain?: string;
@@ -56,6 +57,7 @@ export async function POST(req: Request) {
   const client = await pool.connect();
   try {
     const body: DiscoveryRequest = await req.json();
+    await ensureTechnologyDataColumn();
     if (!body.businessName || (!body.domain && !body.city && !body.zipcode)) {
       return NextResponse.json(
         { success: false, error: "Indica el negocio y un dominio, ciudad o código postal" },
@@ -92,11 +94,18 @@ export async function POST(req: Request) {
     }
 
     const html = await siteResponse.text();
-    const platform = detectWebsitePlatform(html);
+    const localPlatform = detectWebsitePlatform(html);
     const industryType = body.industryType || "general";
     const ind = getIndustry(industryType);
     const niche = body.businessCategory?.trim() || ind.defaultNiche;
-    const audit = await auditSite(siteResponse.url || domain).catch(() => null);
+    const [audit, builtWith] = await Promise.all([
+      auditSite(siteResponse.url || domain).catch(() => null),
+      lookupBuiltWith(domain).catch(error => {
+        console.error("BuiltWith lookup failed:", error);
+        return null;
+      }),
+    ]);
+    const platform = builtWith?.primaryPlatform || localPlatform;
     const generatedFunnel = await generateLocalizedFunnel(
       body.businessName,
       industryType,
@@ -106,7 +115,7 @@ export async function POST(req: Request) {
         website: siteResponse.url || domain,
         country: locationMatch?.address?.country,
         platform,
-        audit,
+        audit: { site: audit, technologyProfile: builtWith },
       },
       body.languageMode || "bilingual"
     );
@@ -122,11 +131,12 @@ export async function POST(req: Request) {
     await client.query("BEGIN");
     const businessResult = await client.query(
       `INSERT INTO businesses
-       (name,domain,country,city,postal_code,address,business_type,niche,monthly_revenue,platform,brand_color,brand_accent,status,hero_offer,hero_price,pain_point)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,0,$9,$10,$11,'discovered',$12,$13,$14)
+       (name,domain,country,city,postal_code,address,business_type,niche,monthly_revenue,platform,brand_color,brand_accent,status,hero_offer,hero_price,pain_point,technology_data)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,0,$9,$10,$11,'discovered',$12,$13,$14,$15)
        ON CONFLICT (domain) DO UPDATE SET name=EXCLUDED.name,business_type=EXCLUDED.business_type,
        niche=EXCLUDED.niche,platform=EXCLUDED.platform,city=EXCLUDED.city,
-       postal_code=EXCLUDED.postal_code,address=EXCLUDED.address,status='discovered'
+       postal_code=EXCLUDED.postal_code,address=EXCLUDED.address,
+       technology_data=COALESCE(EXCLUDED.technology_data,businesses.technology_data),status='discovered'
        RETURNING ${businessSelect}`,
       [
         body.businessName, domain, address.country || domainData?.country || "Unknown",
@@ -134,6 +144,7 @@ export async function POST(req: Request) {
         body.zipcode || address.postcode || null, locationMatch?.display_name || null,
         industryType, niche, platform, ind.color, ind.accent,
         ind.defaultOffer, ind.defaultPrice, ind.defaultPainPoint,
+        builtWith ? JSON.stringify(builtWith) : null,
       ]
     );
     const business = businessResult.rows[0];
@@ -173,6 +184,14 @@ export async function POST(req: Request) {
       emailFound: Boolean(bestContact?.value), emailVerified, platformDetected: platform,
       domainDiscovered: !body.domain, locationMatched: locationMatch?.display_name || null,
       availableLanguages: generatedFunnel.availableLanguages,
+      builtWith: builtWith ? {
+        connected: true,
+        technologyCount: builtWith.technologies.length,
+        primaryPlatform: builtWith.primaryPlatform,
+        techSpendUsd: builtWith.techSpendUsd,
+        creditsRemaining: builtWith.creditsRemaining,
+        technologies: builtWith.technologies.slice(0, 20),
+      } : { connected: false, configured: Boolean(process.env.BUILTWITH_API_KEY) },
     });
   } catch (error) {
     await client.query("ROLLBACK").catch(() => undefined);

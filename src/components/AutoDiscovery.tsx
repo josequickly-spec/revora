@@ -284,6 +284,36 @@ export function AutoDiscovery() {
                 </div>
               </div>
 
+              <div className="bg-cyan-950/50 border border-cyan-800/70 rounded-2xl p-5 shadow-xl">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="font-bold text-white">Tecnología · BuiltWith</h3>
+                  <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${
+                    result.builtWith?.connected ? "bg-emerald-900 text-emerald-200" : "bg-slate-800 text-slate-300"
+                  }`}>
+                    {result.builtWith?.connected ? "CONECTADO" : result.builtWith?.configured ? "SIN RESULTADOS" : "FALTA API KEY"}
+                  </span>
+                </div>
+                {result.builtWith?.connected ? (
+                  <div className="mt-3 space-y-3">
+                    <p className="text-sm text-cyan-100">
+                      {result.builtWith.technologyCount} tecnologías detectadas
+                      {result.builtWith.primaryPlatform ? ` · Plataforma: ${result.builtWith.primaryPlatform}` : ""}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {(result.builtWith.technologies || []).slice(0, 10).map((technology: {name:string}) => (
+                        <span key={technology.name} className="bg-slate-900 border border-slate-700 text-slate-200 text-[11px] px-2 py-1 rounded-lg">
+                          {technology.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 mt-2">
+                    Añade BUILTWITH_API_KEY en las variables de entorno para activar el análisis tecnológico profundo.
+                  </p>
+                )}
+              </div>
+
               {result.contact && (
                 <div className="bg-emerald-950/60 border border-emerald-700/80 rounded-2xl p-6 shadow-2xl space-y-3">
                   <div className="flex items-center gap-2 pb-3 border-b border-emerald-700/60">

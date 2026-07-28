@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { businessSelect, pool } from "@/lib/postgres";
+import { businessSelect, ensureTechnologyDataColumn, pool } from "@/lib/postgres";
 
 export async function GET() {
   try {
+    await ensureTechnologyDataColumn();
     const result = await pool.query(`SELECT ${businessSelect} FROM businesses ORDER BY created_at DESC`);
     return NextResponse.json({ success: true, businesses: result.rows });
   } catch (error) {
@@ -12,6 +13,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    await ensureTechnologyDataColumn();
     const body = await req.json();
     if (!body.name || !body.domain) {
       return NextResponse.json({ success: false, error: "name and domain are required" }, { status: 400 });

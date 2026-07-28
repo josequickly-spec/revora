@@ -5,6 +5,7 @@ export async function GET() {
     database: { ready: Boolean(process.env.DATABASE_URL), required: ["DATABASE_URL"] },
     openai: { ready: Boolean(process.env.OPENAI_API_KEY), required: ["OPENAI_API_KEY"] },
     hunter: { ready: Boolean(process.env.HUNTER_API_KEY), required: ["HUNTER_API_KEY"] },
+    builtWith: { ready: Boolean(process.env.BUILTWITH_API_KEY), required: ["BUILTWITH_API_KEY"] },
     resend: {
       ready: Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL),
       required: ["RESEND_API_KEY", "RESEND_FROM_EMAIL"],
