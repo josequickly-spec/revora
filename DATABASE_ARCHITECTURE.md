@@ -322,3 +322,14 @@ It stores lifecycle state, request/context fingerprints, version metadata, valid
 report JSON, safe failure fields, warnings and provider usage metadata. The canonical
 idempotent migration is `scripts/migrate-phase4-ai-consultant.sql`; rollback drops only
 this Phase 4 table and is destructive to consultant-report history.
+# Phase 5 addendum: Proposal Builder
+
+The operational Proposal Builder owns `proposal_documents`, immutable `proposal_versions`, and append-only `proposal_events`. These tables are additive and intentionally separate from the preserved legacy revenue-share `proposals` table.
+
+- `proposal_documents.business_id → businesses.id` (`RESTRICT`)
+- `proposal_documents.audit_id → funnelspy_audits.id` (`RESTRICT`)
+- `proposal_documents.consultant_report_id → ai_consultant_reports.id` (`RESTRICT`, nullable)
+- `proposal_versions.proposal_id → proposal_documents.id` (`RESTRICT`)
+- `proposal_events.proposal_id → proposal_documents.id` (`RESTRICT`)
+
+Money is persisted as integer minor units; percentage values are basis points. Public tokens are 256-bit random values whose raw representation is returned only at creation/rotation; PostgreSQL stores only a SHA-256 hash and a short non-secret prefix. The public route reads the immutable `published_version`.

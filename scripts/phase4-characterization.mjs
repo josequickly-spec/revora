@@ -142,7 +142,7 @@ const generateSource = await readFile(new URL("../src/lib/ai-consultant/generate
 assert.match(generateRoute, /export async function POST/);
 assert.doesNotMatch(consultantPage, new RegExp("useEffect\\([\\s\\S]{0,300}ai-consultant/generate"));
 assert.match(consultantPage, /Generate AI Strategy/);
-assert.match(consultantPage, /Create Proposal · Phase 5/);
+assert.match(consultantPage, /Create Proposal Draft/);
 assert.doesNotMatch(generateRoute, /createFunnel|proposal|outreach|analyzeFunnel/);
 assert.match(legacyAiRoute, /responses\.parse/);
 assert.match(funnelScoreSource, /export function calculateFunnelScore/);

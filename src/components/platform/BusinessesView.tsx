@@ -24,6 +24,7 @@ type Contact = { id: number; businessId: number | null; name: string; email: str
 type Funnel = { id: number; businessId: number | null; funnelName: string; slug: string; viewCount: number | null };
 type Audit = { id: string; businessId: number | null; domain: string; score: number; createdAt: string; opportunityCount: number };
 type ConsultantReport = { id: string; status: string; objective: string; createdAt: string };
+type ProposalSummary = { id: string; title: string; status: string };
 
 export default function BusinessesView({ selectedId }: { selectedId?: number }) {
   const [businesses, setBusinesses] = useState<Business[]>([]);
@@ -31,6 +32,7 @@ export default function BusinessesView({ selectedId }: { selectedId?: number }) 
   const [funnels, setFunnels] = useState<Funnel[]>([]);
   const [audits, setAudits] = useState<Audit[]>([]);
   const [consultantReports, setConsultantReports] = useState<ConsultantReport[]>([]);
+  const [proposals, setProposals] = useState<ProposalSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -52,10 +54,12 @@ export default function BusinessesView({ selectedId }: { selectedId?: number }) 
     Promise.all([
       fetch(`/api/funnelspy/history?businessId=${selectedId}`).then(response => response.ok ? response.json() : Promise.reject(new Error("Audit history unavailable"))),
       fetch(`/api/businesses/${selectedId}/consultant-reports`).then(response => response.ok ? response.json() : { reports: [] }),
-    ]).then(([auditData, consultantData]) => {
+      fetch(`/api/proposals?businessId=${selectedId}`).then(response => response.ok ? response.json() : { proposals: [] }),
+    ]).then(([auditData, consultantData, proposalData]) => {
       setAudits(auditData.audits || []);
       setConsultantReports(consultantData.reports || []);
-    }).catch(() => { setAudits([]); setConsultantReports([]); });
+      setProposals(proposalData.proposals || []);
+    }).catch(() => { setAudits([]); setConsultantReports([]); setProposals([]); });
   }, [selectedId]);
 
   const selected = useMemo(() => businesses.find((business) => business.id === selectedId), [businesses, selectedId]);
@@ -118,6 +122,10 @@ export default function BusinessesView({ selectedId }: { selectedId?: number }) 
           <section className="mt-6 border-t border-white/[.07] pt-6">
             <div className="flex items-center justify-between gap-3"><h3 className="font-black text-white">Funnel audits</h3><Link href={`/businesses/${selected.id}/opportunities`} className="text-xs font-bold text-violet-300">View opportunities</Link></div>
             {audits.length ? <ul className="mt-3 space-y-2">{audits.map(audit => <li key={audit.id}><Link href={`/audits/${audit.id}`} className="flex items-center justify-between rounded-xl bg-black/20 p-3 text-sm"><span className="text-slate-300">{new Date(audit.createdAt).toLocaleString()}</span><span className="text-cyan-300">{audit.score} score · {audit.opportunityCount} opportunities</span></Link></li>)}</ul> : <p className="mt-3 text-sm text-slate-500">No associated audit. Opening this profile does not run one automatically.</p>}
+          </section>
+          <section className="mt-6 border-t border-white/[.07] pt-6">
+            <div className="flex items-center justify-between gap-3"><h3 className="font-black text-white">Proposals</h3><Link href={audits[0] ? `/proposals/new?businessId=${selected.id}&auditId=${audits[0].id}` : `/funnelspy?url=${encodeURIComponent(selected.domain)}&businessId=${selected.id}`} className="text-xs font-bold text-cyan-300">{audits.length ? "Create draft" : "Audit required"}</Link></div>
+            {proposals.length ? <ul className="mt-3 space-y-2">{proposals.map(proposal => <li key={proposal.id}><Link href={`/proposals/${proposal.id}`} className="flex items-center justify-between rounded-xl bg-black/20 p-3 text-sm"><span className="text-slate-300">{proposal.title}</span><span className="text-violet-200">{proposal.status}</span></Link></li>)}</ul> : <p className="mt-3 text-sm text-slate-500">No proposal drafts. Opening this profile never creates one automatically.</p>}
           </section>
         </section>
         <div className="space-y-6">

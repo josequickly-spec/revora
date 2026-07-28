@@ -1,22 +1,7 @@
 import type { Metadata } from "next";
 import PageHeader from "@/components/app-shell/PageHeader";
-import RecordsView from "@/components/platform/RecordsView";
-
-export const metadata: Metadata = {
-  title: "Proposals",
-  description: "Persisted proposal and revenue-share records.",
-};
-
+import { ProposalListView } from "@/components/proposals/ProposalViews";
+export const metadata: Metadata = { title: "Proposals", description: "Evidence-based versioned commercial proposals." };
 export default function ProposalsPage() {
-  return (
-    <>
-      <PageHeader
-        eyebrow="Proposal Generator"
-        title="Proposals"
-        description="Review proposal records already stored by the current revenue-share workflow."
-        actions={[{ label: "Open current generator", href: "/legacy" }]}
-      />
-      <RecordsView type="proposals" />
-    </>
-  );
+  return <><PageHeader eyebrow="Proposal Builder" title="Proposals" description="Human-controlled drafts, immutable versions and explicit publication." actions={[{ label: "Create Proposal", href: "/proposals/new" }]} /><ProposalListView /></>;
 }

@@ -30,12 +30,14 @@ type AuditDetail = {
 };
 type OpportunityResult = { opportunities: Opportunity[]; warnings: string[]; rulesVersion: string };
 type ConsultantReport = { id: string; status: string; objective: string; createdAt: string };
+type ProposalSummary = { id: string; title: string; status: string };
 
 export default function AuditsView({ selectedId }: { selectedId?: string }) {
   const [audits, setAudits] = useState<AuditSummary[]>([]);
   const [detail, setDetail] = useState<AuditDetail | null>(null);
   const [opportunityResult, setOpportunityResult] = useState<OpportunityResult | null>(null);
   const [consultantReports, setConsultantReports] = useState<ConsultantReport[]>([]);
+  const [proposals, setProposals] = useState<ProposalSummary[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -54,10 +56,13 @@ export default function AuditsView({ selectedId }: { selectedId?: string }) {
 
   useEffect(() => {
     if (!selectedId) return;
-    fetch(`/api/ai-consultant?auditId=${encodeURIComponent(selectedId)}`)
-      .then(response => response.ok ? response.json() : { reports: [] })
-      .then(data => setConsultantReports(data.reports || []))
-      .catch(() => setConsultantReports([]));
+    Promise.all([
+      fetch(`/api/ai-consultant?auditId=${encodeURIComponent(selectedId)}`).then(response => response.ok ? response.json() : { reports: [] }),
+      fetch(`/api/proposals?auditId=${encodeURIComponent(selectedId)}`).then(response => response.ok ? response.json() : { proposals: [] }),
+    ]).then(([consultantData, proposalData]) => {
+      setConsultantReports(consultantData.reports || []);
+      setProposals(proposalData.proposals || []);
+    }).catch(() => { setConsultantReports([]); setProposals([]); });
   }, [selectedId]);
 
   if (loading) return <div className="h-72 animate-pulse rounded-3xl bg-white/[.05]" aria-label="Loading audits" />;
@@ -77,7 +82,8 @@ export default function AuditsView({ selectedId }: { selectedId?: string }) {
       {!!detail.analysis.warnings.length && <Section title="Warnings and limitations"><ul className="list-disc space-y-2 pl-5 text-sm text-amber-100">{detail.analysis.warnings.map(warning => <li key={warning}>{warning}</li>)}</ul></Section>}
       {detail.report && <Section title={detail.report.primaryObjective || "Existing AI report"}><p className="text-sm text-slate-400">{detail.report.executiveSummary}</p></Section>}
       <Section title="AI Consultant reports"><p className="text-sm text-slate-500">AI-generated strategy is advisory and remains separate from deterministic opportunities.</p>{consultantReports.length ? <ul className="mt-3 space-y-2">{consultantReports.map(item => <li key={item.id}><Link href={`/consultant/${item.id}`} className="flex justify-between rounded-xl bg-violet-400/[.06] p-3 text-sm text-violet-100"><span>{item.objective.replaceAll("_", " ")} · {new Date(item.createdAt).toLocaleString()}</span><span>{item.status}</span></Link></li>)}</ul> : <p className="mt-3 text-sm text-slate-500">No consultant report exists for this audit.</p>}</Section>
-      <div className="flex flex-wrap gap-2"><Link href={`/shared/funnelspy/${detail.shareToken}`} target="_blank" className="inline-flex items-center gap-2 rounded-xl bg-violet-400/10 px-4 py-2.5 text-sm font-bold text-violet-200">Shared report <ExternalLink className="size-4" /></Link><a href={`/api/funnelspy/export?id=${detail.id}&format=csv`} className="rounded-xl border border-white/10 px-4 py-2.5 text-sm font-bold text-slate-300">Export CSV</a><button type="button" onClick={() => window.location.reload()} className="rounded-xl border border-violet-300/20 px-4 py-2.5 text-sm font-bold text-violet-200">Regenerate opportunities</button><Link href={`/funnelspy?url=${encodeURIComponent(detail.domain)}${detail.businessId ? `&businessId=${detail.businessId}` : ""}`} className="rounded-xl border border-cyan-300/20 px-4 py-2.5 text-sm font-bold text-cyan-200">Run fresh audit</Link><Link href={`/funnelspy?url=${encodeURIComponent(detail.domain)}`} className="rounded-xl border border-white/10 px-4 py-2.5 text-sm font-bold text-slate-300">Create funnel via FunnelSpy</Link>{detail.businessId ? <Link href={`/businesses/${detail.businessId}/consultant?auditId=${detail.id}`} className="rounded-xl bg-violet-400/10 px-4 py-2.5 text-sm font-bold text-violet-200">Generate AI Strategy</Link> : <span className="rounded-xl border border-white/10 px-4 py-2.5 text-sm text-slate-600">Associate this audit with a business to use AI Consultant</span>}</div>
+      <Section title="Proposals">{proposals.length ? <ul className="space-y-2">{proposals.map(proposal => <li key={proposal.id}><Link href={`/proposals/${proposal.id}`} className="flex items-center justify-between rounded-xl bg-black/20 p-3 text-sm"><span>{proposal.title}</span><span className="text-violet-200">{proposal.status}</span></Link></li>)}</ul> : <p className="text-sm text-slate-500">No proposal is associated with this audit. Viewing an audit never creates one.</p>}</Section>
+      <div className="flex flex-wrap gap-2"><Link href={`/shared/funnelspy/${detail.shareToken}`} target="_blank" className="inline-flex items-center gap-2 rounded-xl bg-violet-400/10 px-4 py-2.5 text-sm font-bold text-violet-200">Shared report <ExternalLink className="size-4" /></Link><a href={`/api/funnelspy/export?id=${detail.id}&format=csv`} className="rounded-xl border border-white/10 px-4 py-2.5 text-sm font-bold text-slate-300">Export CSV</a><button type="button" onClick={() => window.location.reload()} className="rounded-xl border border-violet-300/20 px-4 py-2.5 text-sm font-bold text-violet-200">Regenerate opportunities</button><Link href={`/funnelspy?url=${encodeURIComponent(detail.domain)}${detail.businessId ? `&businessId=${detail.businessId}` : ""}`} className="rounded-xl border border-cyan-300/20 px-4 py-2.5 text-sm font-bold text-cyan-200">Run fresh audit</Link>{detail.businessId ? <><Link href={`/businesses/${detail.businessId}/consultant?auditId=${detail.id}`} className="rounded-xl bg-violet-400/10 px-4 py-2.5 text-sm font-bold text-violet-200">Generate AI Strategy</Link><Link href={`/proposals/new?businessId=${detail.businessId}&auditId=${detail.id}`} className="rounded-xl border border-cyan-300/20 px-4 py-2.5 text-sm font-bold text-cyan-200">Create Proposal Draft</Link></> : <span className="rounded-xl border border-white/10 px-4 py-2.5 text-sm text-slate-600">Associate this audit with a business to continue</span>}</div>
     </div>;
   }
   if (!audits.length) return <Notice>No audits have been saved. Start a FunnelSpy audit explicitly to create the first evidence record.</Notice>;
