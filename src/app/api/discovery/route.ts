@@ -8,6 +8,7 @@ interface DiscoveryRequest {
   domain?: string;
   businessName: string;
   industryType?: string;
+  businessCategory?: string;
   city?: string;
   zipcode?: string;
   contactName?: string;
@@ -92,6 +93,7 @@ export async function POST(req: Request) {
     const platform = detectWebsitePlatform(html);
     const industryType = body.industryType || "general";
     const ind = getIndustry(industryType);
+    const niche = body.businessCategory?.trim() || ind.defaultNiche;
     const domainData = await getDomainEmails(domain);
     let bestContact = domainData?.emails?.slice().sort((a, b) => b.confidence - a.confidence)[0] || null;
     if (!bestContact && (body.firstName || body.lastName)) {
@@ -114,7 +116,7 @@ export async function POST(req: Request) {
         body.businessName, domain, address.country || domainData?.country || "Unknown",
         body.city || address.city || address.town || address.village || null,
         body.zipcode || address.postcode || null, locationMatch?.display_name || null,
-        industryType, ind.defaultNiche, platform, ind.color, ind.accent,
+        industryType, niche, platform, ind.color, ind.accent,
         ind.defaultOffer, ind.defaultPrice, ind.defaultPainPoint,
       ]
     );

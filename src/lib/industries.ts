@@ -46,7 +46,7 @@ export const INDUSTRIES: Record<string, IndustryConfig> = {
     adHook: (b, o) => `${o} con ${b}. Solicita información hoy.`,
     adCopy: (b, o) => `Descubre cómo ${b} puede ayudarte. ${o} sin compromiso.`,
     adPlatform: "Google Ads + Meta Ads",
-    niches: ["Negocio local", "Servicios", "B2B", "B2C", "Comercio", "Fabricación", "Turismo", "Automoción", "Construcción", "Otro"],
+    niches: ["Automoción / Concesionario", "Belleza / Peluquería / Spa", "Construcción / Contratista", "Limpieza", "Servicios para el hogar", "Comercio minorista", "Turismo / Hotel", "Fabricación", "Reparaciones / Taller", "Finanzas / Seguros", "Educación / Academia", "Logística / Transporte", "Otro"],
   },
   // E-commerce (any size)
   ecommerce: {

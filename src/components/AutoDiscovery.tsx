@@ -8,6 +8,7 @@ export function AutoDiscovery() {
   const [city, setCity] = useState("");
   const [zipcode, setZipcode] = useState("");
   const [industryType, setIndustryType] = useState("general");
+  const [businessCategory, setBusinessCategory] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [loading, setLoading] = useState(false);
@@ -33,6 +34,7 @@ export function AutoDiscovery() {
           domain,
           businessName,
           industryType,
+          businessCategory: businessCategory || undefined,
           city: city || undefined,
           zipcode: zipcode || undefined,
           firstName: firstName || undefined,
@@ -48,6 +50,7 @@ export function AutoDiscovery() {
         setBusinessName("");
         setCity("");
         setZipcode("");
+        setBusinessCategory("");
         setFirstName("");
         setLastName("");
       } else {
@@ -143,6 +146,40 @@ export function AutoDiscovery() {
                 <option value="agency">Agencia</option>
               </select>
             </div>
+
+            {industryType === "general" && (
+              <div>
+                <label className="text-xs text-slate-400 font-semibold block mb-1">
+                  Categoría específica *
+                </label>
+                <input
+                  required
+                  type="text"
+                  list="general-business-categories"
+                  placeholder="ej. Concesionario, Peluquería, Construcción..."
+                  value={businessCategory}
+                  onChange={(e) => setBusinessCategory(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2 focus:outline-none focus:border-purple-500 text-sm"
+                />
+                <datalist id="general-business-categories">
+                  <option value="Automoción / Concesionario" />
+                  <option value="Belleza / Peluquería / Spa" />
+                  <option value="Construcción / Contratista" />
+                  <option value="Limpieza" />
+                  <option value="Servicios para el hogar" />
+                  <option value="Comercio minorista" />
+                  <option value="Turismo / Hotel" />
+                  <option value="Fabricación" />
+                  <option value="Reparaciones / Taller" />
+                  <option value="Finanzas / Seguros" />
+                  <option value="Educación / Academia" />
+                  <option value="Logística / Transporte" />
+                </datalist>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Puedes elegir una sugerencia o escribir cualquier otra actividad.
+                </p>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <div>
