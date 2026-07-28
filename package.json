@@ -13,7 +13,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test:phase2": "node --experimental-strip-types scripts/phase2-characterization.mjs",
-    "test:phase3": "node --experimental-strip-types scripts/phase3-characterization.mjs"
+    "test:phase3": "node --experimental-strip-types scripts/phase3-characterization.mjs",
+    "test:phase4": "node --experimental-strip-types scripts/phase4-characterization.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",

@@ -18,7 +18,7 @@ export default async function BusinessDetailPage({ params }: { params: Promise<{
         description="A consolidated view over the existing business, contact and funnel records."
         actions={[
           { label: "All businesses", href: "/businesses", tone: "secondary" },
-          { label: "New audit", href: "/funnelspy" },
+          { label: "Generate AI Strategy", href: `/businesses/${numericId}/consultant` },
         ]}
       />
       <BusinessesView selectedId={numericId} />

@@ -1,7 +1,7 @@
 export type PlatformNavItem = {
   label: string;
   href: string;
-  icon: "overview" | "leads" | "intelligence" | "audits" | "opportunities" | "proposals" | "outreach" | "crm" | "settings";
+  icon: "overview" | "leads" | "intelligence" | "audits" | "opportunities" | "consultant" | "proposals" | "outreach" | "crm" | "settings";
   description: string;
 };
 
@@ -11,6 +11,7 @@ export const platformNavigation: PlatformNavItem[] = [
   { label: "Intelligence", href: "/businesses", icon: "intelligence", description: "Business and contact intelligence" },
   { label: "Audits", href: "/audits", icon: "audits", description: "Funnel analysis and evidence" },
   { label: "Opportunities", href: "/opportunities", icon: "opportunities", description: "Prioritized conversion opportunities" },
+  { label: "AI Consultant", href: "/consultant", icon: "consultant", description: "Evidence-grounded advisory strategy" },
   { label: "Proposals", href: "/proposals", icon: "proposals", description: "Commercial proposals and revenue share" },
   { label: "Outreach", href: "/outreach", icon: "outreach", description: "Message drafts and delivery state" },
   { label: "CRM", href: "/crm", icon: "crm", description: "Pipeline, campaigns and activity" },

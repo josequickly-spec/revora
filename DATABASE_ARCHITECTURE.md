@@ -313,3 +313,12 @@ Data lifecycle:
 - Cross-context reporting uses read models.
 - Production migrations never run implicitly on request startup.
 - Destructive migrations require explicit approval, backup evidence, and a rollback plan.
+
+## 13. Implemented Phase 4 additive table
+
+`ai_consultant_reports` owns immutable AI Consultant runs linked to
+`businesses(id BIGINT)` and `funnelspy_audits(id UUID)` with `ON DELETE RESTRICT`.
+It stores lifecycle state, request/context fingerprints, version metadata, validated
+report JSON, safe failure fields, warnings and provider usage metadata. The canonical
+idempotent migration is `scripts/migrate-phase4-ai-consultant.sql`; rollback drops only
+this Phase 4 table and is destructive to consultant-report history.

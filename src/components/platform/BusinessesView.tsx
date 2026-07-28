@@ -23,12 +23,14 @@ type Business = {
 type Contact = { id: number; businessId: number | null; name: string; email: string; status: string | null };
 type Funnel = { id: number; businessId: number | null; funnelName: string; slug: string; viewCount: number | null };
 type Audit = { id: string; businessId: number | null; domain: string; score: number; createdAt: string; opportunityCount: number };
+type ConsultantReport = { id: string; status: string; objective: string; createdAt: string };
 
 export default function BusinessesView({ selectedId }: { selectedId?: number }) {
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [funnels, setFunnels] = useState<Funnel[]>([]);
   const [audits, setAudits] = useState<Audit[]>([]);
+  const [consultantReports, setConsultantReports] = useState<ConsultantReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -47,10 +49,13 @@ export default function BusinessesView({ selectedId }: { selectedId?: number }) 
 
   useEffect(() => {
     if (!selectedId) return;
-    fetch(`/api/funnelspy/history?businessId=${selectedId}`)
-      .then(response => response.ok ? response.json() : Promise.reject(new Error("Audit history unavailable")))
-      .then(data => setAudits(data.audits || []))
-      .catch(() => setAudits([]));
+    Promise.all([
+      fetch(`/api/funnelspy/history?businessId=${selectedId}`).then(response => response.ok ? response.json() : Promise.reject(new Error("Audit history unavailable"))),
+      fetch(`/api/businesses/${selectedId}/consultant-reports`).then(response => response.ok ? response.json() : { reports: [] }),
+    ]).then(([auditData, consultantData]) => {
+      setAudits(auditData.audits || []);
+      setConsultantReports(consultantData.reports || []);
+    }).catch(() => { setAudits([]); setConsultantReports([]); });
   }, [selectedId]);
 
   const selected = useMemo(() => businesses.find((business) => business.id === selectedId), [businesses, selectedId]);
@@ -102,6 +107,13 @@ export default function BusinessesView({ selectedId }: { selectedId?: number }) 
             {selected.technologyData?.technologies?.length
               ? <ul className="mt-3 flex flex-wrap gap-2">{selected.technologyData.technologies.map(technology => <li key={technology.name} className="rounded-lg bg-white/[.05] px-3 py-1.5 text-xs text-slate-300">{technology.name}{technology.category ? ` · ${technology.category}` : ""}</li>)}</ul>
               : <p className="mt-3 text-sm text-slate-500">Technology evidence is unavailable.</p>}
+          </section>
+          <section className="mt-6 border-t border-white/[.07] pt-6">
+            <div className="flex items-center justify-between gap-3"><h3 className="font-black text-white">AI Consultant</h3><Link href={`/businesses/${selected.id}/consultant`} className="text-xs font-bold text-violet-300">Report history</Link></div>
+            {consultantReports[0]
+              ? <Link href={`/consultant/${consultantReports[0].id}`} className="mt-3 flex items-center justify-between rounded-xl bg-violet-400/[.06] p-3 text-sm"><span className="text-slate-300">{consultantReports[0].objective.replaceAll("_", " ")} · {new Date(consultantReports[0].createdAt).toLocaleString()}</span><span className="text-violet-200">{consultantReports[0].status}</span></Link>
+              : <p className="mt-3 text-sm text-slate-500">{audits.length ? "No AI strategy has been generated. Opening this profile never calls AI." : "A persisted associated audit is required before strategy generation."}</p>}
+            <Link href={audits.length ? `/businesses/${selected.id}/consultant?auditId=${audits[0].id}` : `/funnelspy?url=${encodeURIComponent(selected.domain)}&businessId=${selected.id}`} className="mt-3 inline-flex rounded-xl border border-violet-300/20 px-4 py-2 text-sm font-bold text-violet-200">{audits.length ? "Generate AI Strategy" : "Run Funnel Audit"}</Link>
           </section>
           <section className="mt-6 border-t border-white/[.07] pt-6">
             <div className="flex items-center justify-between gap-3"><h3 className="font-black text-white">Funnel audits</h3><Link href={`/businesses/${selected.id}/opportunities`} className="text-xs font-bold text-violet-300">View opportunities</Link></div>

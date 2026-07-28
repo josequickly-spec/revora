@@ -2,6 +2,12 @@
 
 Status: **Normative**
 
+Implemented Phase 4 profile (2026-07-28): AI Consultant uses `ai-consultant-prompt-v1`,
+`ai-consultant-schema-v1`, and `ai-consultant-context-v1`. It is invoked only by an
+explicit POST, uses a server-selected OpenAI Responses model with strict Zod output,
+and requires precomputed evidence IDs for every recommendation. Legacy FunnelSpy AI
+remains a separate compatibility flow.
+
 ## 1. Purpose
 
 AI in Revora interprets verified intelligence and produces structured consulting artifacts. It must not become the source of truth for public business facts, performance measurements, contact verification, delivery outcomes, or revenue.
