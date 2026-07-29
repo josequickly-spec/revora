@@ -62,6 +62,7 @@ check(migration.includes("platform_legacy_dataset_owner"), "legacy dataset owner
 
 const rootLayout = await readFile(new URL("../src/app/layout.tsx", import.meta.url), "utf8");
 check(rootLayout.includes('dynamic = "force-dynamic"'), "nonce CSP uses dynamic rendering");
+check(rootLayout.includes("<GlobalNavigationControls />"), "all pages include global navigation controls");
 const authForm = await readFile(new URL("../src/components/enterprise/AuthForm.tsx", import.meta.url), "utf8");
 check(authForm.includes('<form method="post"'), "auth fallback never places credentials in the URL");
 const buildScript = await readFile(new URL("./build.mjs", import.meta.url), "utf8");
