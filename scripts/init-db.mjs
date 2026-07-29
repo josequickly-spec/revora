@@ -270,6 +270,8 @@ try {
   await client.query(enterpriseMigration);
   const intelligenceMigration = await readFile(new URL("./migrate-phase8-intelligence.sql", import.meta.url), "utf8");
   await client.query(intelligenceMigration);
+  const securityRemediationMigration = await readFile(new URL("./migrate-security-remediation.sql", import.meta.url), "utf8");
+  await client.query(securityRemediationMigration);
   console.log("Database initialized successfully");
 } finally {
   client.release();

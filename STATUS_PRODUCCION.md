@@ -9,14 +9,14 @@
 
 ### ✅ Base de Datos
 - **Servicio:** Supabase PostgreSQL
-- **Host:** db.qqpojuchrkfipxyqncpp.supabase.co
+- **Host:** configured privately through `DATABASE_URL`
 - **Tablas:** 5 (businesses, funnels, contacts, outreach_campaigns, proposals)
 - **Status:** Conectado y funcionando
 
 ### ✅ Autenticación
 - **Servicio:** Clerk
 - **Type:** Email + OAuth ready
-- **Key:** pk_test_dW5pcXVlLWhlcnJpbmctNTcuY2xlcmsuYWNjb3VudHMuZGV2JA
+- **Authentication:** native Revora sessions, RBAC and MFA
 - **Status:** Configurado
 
 ### ✅ Email

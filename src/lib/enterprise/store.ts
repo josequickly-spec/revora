@@ -117,6 +117,7 @@ export async function registerEnterprise(request: Request, input: {email:string;
     return {user:{id:userId,email:input.email.trim(),displayName:input.displayName},organization:{id:organizationId,name:input.organizationName,slug},workspaceId,...session};
   } catch (error) {
     await client.query("ROLLBACK");
+    await audit(client,{},"auth.register","failure");
     throw error;
   } finally { client.release(); }
 }
@@ -149,6 +150,7 @@ export async function loginEnterprise(request: Request, input: {email:string;pas
     return {user:{id:row.id,email:row.email,displayName:row.displayName},organizationId:row.organization_id,...session};
   } catch (error) {
     await client.query("ROLLBACK");
+    await audit(client,{},"auth.login","failure");
     throw error;
   } finally { client.release(); }
 }
@@ -292,6 +294,39 @@ export async function requirePermission(request: Request, permission: Permission
     if (!(result.rows[0]?.permissions as string[]).includes(permission)) throw new EnterpriseError("API key lacks permission.",403,"api_key_permission_denied");
   }
   return context;
+}
+
+export async function requireLegacyDatasetAccess(context: AuthContext) {
+  const client = await pool.connect();
+  let denied = false;
+  try {
+    await client.query("BEGIN");
+    await client.query(
+      `INSERT INTO platform_legacy_dataset_owner(singleton,organization_id,claimed_by)
+       VALUES(TRUE,$1,$2) ON CONFLICT(singleton) DO NOTHING`,
+      [context.organizationId, context.userId],
+    );
+    const owner = await client.query(
+      "SELECT organization_id FROM platform_legacy_dataset_owner WHERE singleton=TRUE FOR SHARE",
+    );
+    if (owner.rows[0]?.organization_id !== context.organizationId) {
+      await audit(client,context,"legacy.dataset.access","denied","legacy_dataset","singleton");
+      denied = true;
+    }
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+  if (denied) {
+    throw new EnterpriseError(
+      "This organization does not own the quarantined legacy dataset.",
+      403,
+      "legacy_dataset_access_denied",
+    );
+  }
 }
 
 export async function listSessions(context: AuthContext) {

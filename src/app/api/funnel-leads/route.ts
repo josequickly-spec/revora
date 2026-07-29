@@ -1,24 +1,29 @@
 import { NextResponse } from "next/server";
 import { pool } from "@/lib/postgres";
 import { sendOutreachEmail } from "@/lib/email";
+import { z } from "zod";
+
+const leadSchema = z.object({
+  funnelId: z.coerce.number().int().positive(),
+  name: z.string().trim().min(1).max(120),
+  email: z.string().trim().email().max(320),
+  phone: z.string().trim().max(40).optional(),
+  consent: z.literal(true),
+  language: z.enum(["en", "es"]).default("es"),
+  website: z.string().max(0).optional(),
+}).strict();
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    if (!body.funnelId || !body.name || !body.email || body.consent !== true) {
-      return NextResponse.json(
-        { success: false, error: "funnelId, name, email and consent are required" },
-        { status: 400 }
-      );
-    }
-    const language = body.language === "en" ? "en" : "es";
+    const body = leadSchema.parse(await req.json());
+    const language = body.language;
     await pool.query("ALTER TABLE funnel_leads ADD COLUMN IF NOT EXISTS language VARCHAR(5) DEFAULT 'es'");
     const result = await pool.query(
       `INSERT INTO funnel_leads (funnel_id,name,email,phone,consent,language)
        VALUES ($1,$2,$3,$4,TRUE,$5)
        ON CONFLICT (funnel_id,email) DO UPDATE SET name=EXCLUDED.name,phone=EXCLUDED.phone,consent=TRUE,language=EXCLUDED.language
        RETURNING id,created_at`,
-      [body.funnelId, body.name.trim(), body.email.trim().toLowerCase(), body.phone?.trim() || null, language]
+      [body.funnelId, body.name, body.email.toLowerCase(), body.phone || null, language]
     );
     let emailDelivered = false;
     if (process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL) {
@@ -41,7 +46,7 @@ export async function POST(req: Request) {
         ].filter(Boolean).join("\n\n");
         try {
           await sendOutreachEmail(
-            body.email.trim().toLowerCase(),
+            body.email.toLowerCase(),
             welcome.subject,
             emailBody,
             process.env.RESEND_FROM_EMAIL
@@ -53,10 +58,10 @@ export async function POST(req: Request) {
       }
     }
     return NextResponse.json({ success: true, lead: result.rows[0], language, emailDelivered }, { status: 201 });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Lead capture failed" },
-      { status: 500 }
+      { success: false, error: "Lead capture failed" },
+      { status: 400 }
     );
   }
 }

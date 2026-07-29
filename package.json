@@ -18,7 +18,9 @@
     "test:phase5": "node --experimental-strip-types scripts/phase5-characterization.mjs",
     "test:phase6": "node --experimental-strip-types scripts/phase6-characterization.mjs",
     "test:phase7": "node --experimental-strip-types scripts/phase7-characterization.mjs",
-    "test:phase8": "node --experimental-strip-types scripts/phase8-characterization.mjs"
+    "test:phase8": "node --experimental-strip-types scripts/phase8-characterization.mjs",
+    "test:security": "node --experimental-strip-types scripts/security-remediation-characterization.mjs",
+    "scan:secrets": "node scripts/scan-secrets.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",
@@ -42,11 +44,18 @@
     "@types/pg": "^8.20.0",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
-    "drizzle-kit": "0.31.10",
-    "eslint": "9.39.4",
+    "eslint": "^9.39.4",
     "eslint-config-next": "16.2.6",
     "postcss": "8.5.23",
     "tailwindcss": "4.1.17",
     "typescript": "5.9.3"
+  },
+  "overrides": {
+    "minimatch": "10.2.6",
+    "brace-expansion": "5.0.8",
+    "next": {
+      "postcss": "8.5.24",
+      "sharp": "0.35.3"
+    }
   }
 }

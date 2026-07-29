@@ -20,11 +20,12 @@ export async function POST(request: Request) {
 }
 
 export async function GET(request: Request) {
-  if (process.env.CRON_SECRET) {
-    const authorization = request.headers.get("authorization");
-    if (authorization !== `Bearer ${process.env.CRON_SECRET}`) {
-      return NextResponse.json({ error: "No autorizado." }, { status: 401 });
-    }
+  if (!process.env.CRON_SECRET) {
+    return NextResponse.json({ error: "Monitor authentication is not configured." }, { status: 503 });
+  }
+  const authorization = request.headers.get("authorization");
+  if (authorization !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   }
   const monitors = await listDueMonitors();
   const completed: Array<{ domain: string; auditId: string; score: number }> = [];

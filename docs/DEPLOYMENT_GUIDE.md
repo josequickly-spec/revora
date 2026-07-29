@@ -14,3 +14,18 @@ Never deploy directly from a developer `.env`.
 Kubernetes manifests are under `infrastructure/kubernetes`; AWS resources are under `infrastructure/terraform`. Replace example domains/images and create `revora-secrets` out-of-band. Terraform state must use an encrypted, locked remote backend.
 
 Required production configuration includes database, authentication/encryption, worker, metrics, Stripe/OAuth/email as enabled, cache and OTLP endpoints. CDN may cache immutable `/_next/static` assets only; authenticated API responses remain private.
+
+Signed ingestion additionally requires `RESEND_WEBHOOK_SECRET`,
+`META_WEBHOOK_SECRET`, `META_WEBHOOK_VERIFY_TOKEN`,
+`GOOGLE_ADS_WEBHOOK_SECRET` and `ANALYTICS_INGEST_SECRET` for the integrations
+that are enabled. Set `TRUST_PROXY=true` only behind a controlled reverse proxy
+that overwrites forwarded-client headers.
+
+Before promotion, verify:
+
+- `npm audit --omit=dev` reports zero production vulnerabilities.
+- An anonymous legacy API request returns `401`.
+- A second organization receives `403` for the quarantined legacy dataset.
+- Invalid and stale webhook signatures return `401`.
+- `/api/observability/health` returns `503` if authentication configuration is missing.
+- The maintenance CronJob enqueues a due schedule exactly once.
