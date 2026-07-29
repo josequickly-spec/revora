@@ -1,0 +1,3 @@
+const blocked=/email|token|secret|password|authorization|cookie|credential|payload/i;
+function sanitize(value:unknown):unknown{if(Array.isArray(value))return value.map(sanitize);if(value&&typeof value==="object")return Object.fromEntries(Object.entries(value as Record<string,unknown>).filter(([key])=>!blocked.test(key)).map(([key,item])=>[key,sanitize(item)]));if(typeof value==="string")return value.slice(0,1000);return value;}
+export function structuredLog(level:"info"|"warn"|"error",message:string,metadata:Record<string,unknown>={}){const record={timestamp:new Date().toISOString(),level,message,...sanitize(metadata) as object};(level==="error"?console.error:level==="warn"?console.warn:console.info)(JSON.stringify(record));}

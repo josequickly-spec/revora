@@ -1,12 +1,13 @@
 export type PlatformNavItem = {
   label: string;
   href: string;
-  icon: "overview" | "leads" | "intelligence" | "audits" | "opportunities" | "consultant" | "proposals" | "outreach" | "crm" | "accounts" | "tasks" | "security" | "billing" | "workflows" | "settings";
+  icon: "overview" | "executive" | "leads" | "intelligence" | "audits" | "opportunities" | "consultant" | "proposals" | "outreach" | "crm" | "accounts" | "tasks" | "security" | "billing" | "workflows" | "settings";
   description: string;
 };
 
 export const platformNavigation: PlatformNavItem[] = [
   { label: "Overview", href: "/", icon: "overview", description: "Workspace health and recent activity" },
+  { label: "Executive", href: "/executive", icon: "executive", description: "Historical KPIs, forecasts and advisors" },
   { label: "Leads", href: "/leads", icon: "leads", description: "Find and qualify businesses" },
   { label: "Intelligence", href: "/businesses", icon: "intelligence", description: "Business and contact intelligence" },
   { label: "Audits", href: "/audits", icon: "audits", description: "Funnel analysis and evidence" },

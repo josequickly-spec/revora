@@ -1,0 +1,9 @@
+global:
+  scrape_interval: 30s
+scrape_configs:
+  - job_name: revora
+    metrics_path: /api/observability/metrics
+    authorization:
+      credentials_file: /run/secrets/metrics_token
+    static_configs:
+      - targets: ["app:3000"]

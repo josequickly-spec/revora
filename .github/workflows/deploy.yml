@@ -1,0 +1,27 @@
+name: Production deployment
+on:
+  workflow_dispatch:
+    inputs:
+      strategy:
+        type: choice
+        options: [canary, blue-green]
+        required: true
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+concurrency: {group: production, cancel-in-progress: false}
+jobs:
+  publish:
+    environment: production
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with: {registry: ghcr.io, username: "${{ github.actor }}", password: "${{ secrets.GITHUB_TOKEN }}"}
+      - uses: docker/build-push-action@v6
+        with: {context: ., push: true, tags: "ghcr.io/${{ github.repository }}:${{ github.sha }}"}
+      - name: Migration approval gate
+        run: echo "Run the immutable image as the migration Job before shifting traffic."
+      - name: Deployment handoff
+        run: echo "Deploy ${{ github.sha }} using the reviewed ${{ inputs.strategy }} overlay and verify health before traffic promotion."

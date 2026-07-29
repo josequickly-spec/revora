@@ -1,0 +1,73 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: revora
+      POSTGRES_USER: revora
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets: [postgres_password]
+    volumes: [postgres_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL","pg_isready -U revora -d revora"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server","--appendonly","yes"]
+    volumes: [redis_data:/data]
+    healthcheck:
+      test: ["CMD","redis-cli","ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  migrate:
+    build: .
+    command: ["node","scripts/init-db.mjs"]
+    env_file:
+      - path: .env.production
+        required: false
+    depends_on:
+      postgres: {condition: service_healthy}
+    profiles: [operations]
+  app:
+    build: .
+    env_file:
+      - path: .env.production
+        required: false
+    environment:
+      REDIS_URL: redis://redis:6379
+    ports: ["3000:3000"]
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    command: ["--config.file=/etc/prometheus/prometheus.yml"]
+    volumes: ["./infrastructure/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro"]
+    secrets: [metrics_token]
+    depends_on: [app]
+  grafana:
+    image: grafana/grafana:11.4.0
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana_password
+    secrets: [grafana_password]
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infrastructure/observability/grafana-datasources.yml:/etc/grafana/provisioning/datasources/revora.yml:ro
+    depends_on: [prometheus]
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password.txt
+  grafana_password:
+    file: ./secrets/grafana_password.txt
+  metrics_token:
+    file: ./secrets/metrics_token.txt
+volumes:
+  postgres_data:
+  redis_data:
+  grafana_data:

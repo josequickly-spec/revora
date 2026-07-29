@@ -1,0 +1,1 @@
+import PageHeader from "@/components/app-shell/PageHeader";import ExecutiveDashboard from "@/components/executive/ExecutiveDashboard";export default function Page(){return <><PageHeader eyebrow="Executive Analytics" title="Sales performance" description="Opportunity, win-rate, deal-size and forecast evidence from CRM warehouse facts."/><ExecutiveDashboard dashboard="sales"/></>}

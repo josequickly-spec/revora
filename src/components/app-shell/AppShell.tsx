@@ -46,6 +46,7 @@ const icons: Record<PlatformNavItem["icon"], typeof Gauge> = {
   workflows: Workflow,
   security: ShieldCheck,
   billing: CreditCard,
+  executive: BarChart3,
   settings: Settings,
 };
 

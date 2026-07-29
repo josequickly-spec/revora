@@ -1,0 +1,15 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: revora-canary
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: revora, track: canary}
+  template:
+    metadata:
+      labels: {app: revora, track: canary}
+    spec:
+      containers:
+        - name: app
+          image: ghcr.io/replace-with-owner/revora:replace-with-canary-sha

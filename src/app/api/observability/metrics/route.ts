@@ -1,0 +1,2 @@
+import {renderPrometheus} from "@/lib/observability/metrics";
+export async function GET(request:Request){if(!process.env.METRICS_BEARER_TOKEN||request.headers.get("authorization")!==`Bearer ${process.env.METRICS_BEARER_TOKEN}`)return new Response("Unauthorized\n",{status:401,headers:{"Content-Type":"text/plain"}});return new Response(renderPrometheus(),{headers:{"Content-Type":"text/plain; version=0.0.4","Cache-Control":"no-store"}});}

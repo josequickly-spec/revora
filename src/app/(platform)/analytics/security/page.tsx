@@ -1,0 +1,1 @@
+import PageHeader from "@/components/app-shell/PageHeader";import ExecutiveDashboard from "@/components/executive/ExecutiveDashboard";export default function Page(){return <><PageHeader eyebrow="Executive Analytics" title="Security posture" description="Users, sessions, MFA, API keys, OAuth identities and denied-action evidence."/><ExecutiveDashboard dashboard="security"/></>}

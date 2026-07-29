@@ -1,0 +1,2 @@
+import PageHeader from "@/components/app-shell/PageHeader";import ExecutiveDashboard from "@/components/executive/ExecutiveDashboard";
+export default function ExecutivePage(){return <><PageHeader eyebrow="Executive Intelligence" title="Enterprise performance" description="Historical KPIs from warehouse snapshots only. Missing sources remain visibly unavailable." actions={[{label:"AI advisors",href:"/executive/advisors"},{label:"Sales analytics",href:"/analytics/sales",tone:"secondary"}]}/><ExecutiveDashboard dashboard="executive"/></>}

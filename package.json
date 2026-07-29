@@ -17,7 +17,8 @@
     "test:phase4": "node --experimental-strip-types scripts/phase4-characterization.mjs",
     "test:phase5": "node --experimental-strip-types scripts/phase5-characterization.mjs",
     "test:phase6": "node --experimental-strip-types scripts/phase6-characterization.mjs",
-    "test:phase7": "node --experimental-strip-types scripts/phase7-characterization.mjs"
+    "test:phase7": "node --experimental-strip-types scripts/phase7-characterization.mjs",
+    "test:phase8": "node --experimental-strip-types scripts/phase8-characterization.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",

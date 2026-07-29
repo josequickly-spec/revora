@@ -268,6 +268,8 @@ try {
   await client.query(outreachMigration);
   const enterpriseMigration = await readFile(new URL("./migrate-phase7-enterprise.sql", import.meta.url), "utf8");
   await client.query(enterpriseMigration);
+  const intelligenceMigration = await readFile(new URL("./migrate-phase8-intelligence.sql", import.meta.url), "utf8");
+  await client.query(intelligenceMigration);
   console.log("Database initialized successfully");
 } finally {
   client.release();
