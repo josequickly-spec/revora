@@ -1,5 +1,5 @@
 import { NextRequest,NextResponse } from "next/server";
-import { enterpriseFailure } from "@/lib/enterprise/http";
+import { enterpriseFailure,shouldUseSecureCookies } from "@/lib/enterprise/http";
 import { EnterpriseError,oauthEnterprise } from "@/lib/enterprise/store";
 import { createOpaqueToken,sha256,signJwt,verifyJwt } from "@/lib/enterprise/security";
 
@@ -28,7 +28,7 @@ export async function GET(request:NextRequest,{params}:{params:Promise<{provider
       const target=new URL(config.authorize);
       target.search=new URLSearchParams({client_id:clientId,redirect_uri:callback,response_type:"code",scope:config.scope,state,nonce,prompt:"select_account"}).toString();
       const response=NextResponse.redirect(target);
-      response.cookies.set("revora_oauth_state",sha256(nonce),{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:`/api/auth/oauth/${provider}`,maxAge:600});
+      response.cookies.set("revora_oauth_state",sha256(nonce),{httpOnly:true,secure:shouldUseSecureCookies(request),sameSite:"lax",path:`/api/auth/oauth/${provider}`,maxAge:600});
       return response;
     }
     if(action==="callback"){
@@ -46,8 +46,9 @@ export async function GET(request:NextRequest,{params}:{params:Promise<{provider
       if(!profile.sub||!profile.email)throw new EnterpriseError("OAuth profile lacks required identity claims.",409,"oauth_profile_incomplete");
       const session=await oauthEnterprise(request,{provider:key,subject:profile.sub,email:profile.email,displayName:profile.name||profile.email.split("@")[0]});
       const response=NextResponse.redirect(new URL("/",request.nextUrl.origin));
-      response.cookies.set("revora_access",session.accessToken,{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:"/",maxAge:900});
-      response.cookies.set("revora_refresh",session.refreshToken,{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:"/api/auth",maxAge:2_592_000});
+      const secure=shouldUseSecureCookies(request);
+      response.cookies.set("revora_access",session.accessToken,{httpOnly:true,secure,sameSite:"lax",path:"/",maxAge:900});
+      response.cookies.set("revora_refresh",session.refreshToken,{httpOnly:true,secure,sameSite:"lax",path:"/api/auth",maxAge:2_592_000});
       response.cookies.delete("revora_oauth_state");
       return response;
     }

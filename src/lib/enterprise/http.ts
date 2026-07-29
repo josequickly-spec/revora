@@ -13,3 +13,10 @@ export async function safeJson(request: Request) {
   try { return await request.json(); }
   catch { throw new EnterpriseError("Request body must be valid JSON.",400,"invalid_json"); }
 }
+
+export function shouldUseSecureCookies(request: Request) {
+  const directProtocol = new URL(request.url).protocol;
+  if (directProtocol === "https:") return true;
+  return process.env.TRUST_PROXY === "true" &&
+    request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() === "https";
+}

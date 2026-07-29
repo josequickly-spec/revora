@@ -1,7 +1,7 @@
 import { NextRequest,NextResponse } from "next/server";
 import { z } from "zod";
 import { loginSchema,refreshSchema,registrationSchema } from "@/lib/enterprise/contracts";
-import { enterpriseFailure,safeJson } from "@/lib/enterprise/http";
+import { enterpriseFailure,safeJson,shouldUseSecureCookies } from "@/lib/enterprise/http";
 import {
   authenticateRequest,loginEnterprise,refreshEnterprise,registerEnterprise,
   revokeSession,requestPasswordReset,confirmPasswordReset,
@@ -15,8 +15,9 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{action:
         ? await registerEnterprise(request,registrationSchema.parse(await safeJson(request)))
         : await loginEnterprise(request,loginSchema.parse(await safeJson(request)));
       const response=NextResponse.json(session,{status:action==="register"?201:200});
-      response.cookies.set("revora_access",session.accessToken,{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:"/",maxAge:900});
-      response.cookies.set("revora_refresh",session.refreshToken,{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:"/api/auth",maxAge:2_592_000});
+      const secure=shouldUseSecureCookies(request);
+      response.cookies.set("revora_access",session.accessToken,{httpOnly:true,secure,sameSite:"lax",path:"/",maxAge:900});
+      response.cookies.set("revora_refresh",session.refreshToken,{httpOnly:true,secure,sameSite:"lax",path:"/api/auth",maxAge:2_592_000});
       return response;
     }
     if(action==="refresh") {
@@ -24,8 +25,9 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{action:
       const input=refreshSchema.parse({refreshToken:(body as {refreshToken?:string}).refreshToken||request.cookies.get("revora_refresh")?.value});
       const session=await refreshEnterprise(request,input.refreshToken);
       const response=NextResponse.json(session);
-      response.cookies.set("revora_access",session.accessToken,{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:"/",maxAge:900});
-      response.cookies.set("revora_refresh",session.refreshToken,{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:"/api/auth",maxAge:2_592_000});
+      const secure=shouldUseSecureCookies(request);
+      response.cookies.set("revora_access",session.accessToken,{httpOnly:true,secure,sameSite:"lax",path:"/",maxAge:900});
+      response.cookies.set("revora_refresh",session.refreshToken,{httpOnly:true,secure,sameSite:"lax",path:"/api/auth",maxAge:2_592_000});
       return response;
     }
     if(action==="logout") {
