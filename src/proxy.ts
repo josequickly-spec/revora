@@ -62,6 +62,17 @@ function isPublicPage(pathname: string) {
     /^\/unsubscribe\/[^/]+$/.test(pathname);
 }
 
+function hasSameOrigin(request: NextRequest, origin: string | null) {
+  if (!origin) return false;
+  const host = request.headers.get("host");
+  if (!host) return origin === request.nextUrl.origin;
+  const forwardedProtocol = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+  const protocol = process.env.TRUST_PROXY === "true" && forwardedProtocol
+    ? forwardedProtocol
+    : new URL(request.url).protocol.replace(":", "");
+  return origin === `${protocol}://${host}`;
+}
+
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
@@ -116,7 +127,7 @@ export async function proxy(request: NextRequest) {
     const hasBearer = request.headers.has("authorization");
     if (unsafe && hasSessionCookie && !hasBearer) {
       const origin = request.headers.get("origin");
-      if (!origin || origin !== request.nextUrl.origin) return reject({ error: "CSRF validation failed.", code: "csrf_failed" }, 403);
+      if (!hasSameOrigin(request, origin)) return reject({ error: "CSRF validation failed.", code: "csrf_failed" }, 403);
     }
     if (!isPublicApi(request)) {
       try {

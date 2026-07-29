@@ -27,6 +27,38 @@ export class LeadSearchError extends Error {
   constructor(message: string, public status = 502) { super(message); }
 }
 
+const overpassEndpoints = [
+  "https://overpass-api.de/api/interpreter",
+  "https://gall.openstreetmap.de/api/interpreter",
+  "https://lambert.openstreetmap.de/api/interpreter",
+];
+
+async function queryOverpass(query: string) {
+  let lastStatus = 502;
+  for (const endpoint of overpassEndpoints) {
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        body: new URLSearchParams({ data: query }),
+        signal: AbortSignal.timeout(25_000),
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "User-Agent": "RevoraLeadResearch/1.0 (business discovery)",
+        },
+      });
+      if (response.ok) return { response, usedFallback: endpoint !== overpassEndpoints[0] };
+      lastStatus = response.status;
+      if (![429, 502, 503, 504].includes(response.status)) break;
+    } catch {
+      lastStatus = 504;
+    }
+  }
+  throw new LeadSearchError(
+    `Business search providers are temporarily unavailable (${lastStatus})`,
+    lastStatus === 429 ? 429 : 502,
+  );
+}
+
 export async function searchLeads(input: ValidLeadSearchRequest): Promise<LeadSearchResponse> {
   const geocodeUrl = new URL("https://nominatim.openstreetmap.org/search");
   geocodeUrl.searchParams.set("q", input.query || input.location.value);
@@ -44,12 +76,7 @@ export async function searchLeads(input: ValidLeadSearchRequest): Promise<LeadSe
     ["node", "way", "relation"].map(type => `${type}(around:${input.radius},${lat},${lon})${filter};`)
   ).join("");
   const query = `[out:json][timeout:25];(${statements});out center tags ${input.limit};`;
-  const overpassResponse = await fetch("https://overpass-api.de/api/interpreter", {
-    method: "POST", body: new URLSearchParams({ data: query }),
-    signal: AbortSignal.timeout(35000),
-    headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": "RevoraLeadResearch/1.0 (business discovery)" },
-  });
-  if (!overpassResponse.ok) throw new LeadSearchError(`Business search responded ${overpassResponse.status}`, overpassResponse.status === 429 ? 429 : 502);
+  const { response: overpassResponse, usedFallback } = await queryOverpass(query);
   const overpass = await overpassResponse.json() as { elements: OverpassElement[] };
   const excluded = input.excludeExisting
     ? new Set<string>((await pool.query("SELECT b.domain FROM businesses b JOIN funnels f ON f.business_id=b.id")).rows.map(row => candidateDomain(row.domain)).filter(Boolean) as string[])
@@ -60,10 +87,14 @@ export async function searchLeads(input: ValidLeadSearchRequest): Promise<LeadSe
     searchArea,
   }, excluded);
   const partial = overpass.elements.length >= input.limit;
+  const warnings = [
+    ...(partial ? [`Results were limited to ${input.limit}; refine the search for complete coverage.`] : []),
+    ...(usedFallback ? ["The primary OpenStreetMap search server was unavailable; results came from its official fallback server."] : []),
+  ];
   return {
     candidates,
     providerStatus: { nominatim: "success", overpass: partial ? "partial" : "success" },
-    warnings: partial ? [`Results were limited to ${input.limit}; refine the search for complete coverage.`] : [],
+    warnings,
     requestMetadata: { searchArea, radius: input.radius, limit: input.limit, returned: candidates.length, partial },
   };
 }

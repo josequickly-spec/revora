@@ -53,6 +53,7 @@ for (const requirement of [
   "requireLegacyDatasetAccess",
   "payload_too_large",
   "csrf_failed",
+  "hasSameOrigin",
   "Content-Security-Policy",
   "lead-capture",
 ]) check(proxy.includes(requirement), `proxy includes ${requirement}`);
