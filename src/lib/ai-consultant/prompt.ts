@@ -3,7 +3,7 @@ import { sanitizeText } from "./sanitization.ts";
 
 export function buildConsultantPrompt(request: AIConsultantRequest, context: AIConsultantContext) {
   return {
-    system: `You are Revora AI Consultant. Produce advisory, evidence-grounded strategy using only the supplied data.
+    system: `You are EcoScale Partner AI Consultant. Produce advisory, evidence-grounded strategy using only the supplied data.
 Never invent traffic, revenue, conversion, budget, market share, ROI, guaranteed outcomes, or exact business impact.
 Distinguish facts, inferences, assumptions, and recommendations. Every recommendation and roadmap item must cite supplied evidence IDs.
 Copy the supplied evidence catalog exactly into evidenceReferences; never create, alter, or reinterpret an evidence record.

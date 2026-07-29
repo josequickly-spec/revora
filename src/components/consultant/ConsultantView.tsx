@@ -18,10 +18,10 @@ function Status({ status }: { status: string }) {
   return <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${tone}`}>{status}</span>;
 }
 
-export function ConsultantListView() {
+export function ConsultantListView({ initialBusinessId = "" }: { initialBusinessId?: string }) {
   const [reports, setReports] = useState<AIConsultantReportRecord[]>([]);
   const [status, setStatus] = useState("");
-  const [businessId, setBusinessId] = useState("");
+  const [businessId, setBusinessId] = useState(initialBusinessId);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -42,13 +42,16 @@ export function ConsultantListView() {
   return (
     <div className="space-y-5">
       <Card>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
           <label className="text-sm text-slate-300">Business ID<input value={businessId} onChange={event => setBusinessId(event.target.value.replace(/\D/g, ""))} className="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 outline-none focus:border-cyan-300" placeholder="All businesses" /></label>
           <label className="text-sm text-slate-300">Status<select value={status} onChange={event => setStatus(event.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-[#0c1220] px-3 py-2 outline-none focus:border-cyan-300"><option value="">All statuses</option><option>completed</option><option>failed</option><option>generating</option><option>pending</option></select></label>
+          <Link href={businessId ? `/businesses/${businessId}/consultant` : "/businesses"} className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-cyan-400 px-5 py-2.5 text-sm font-black text-slate-950">
+            <Sparkles className="size-4" />{businessId ? "Open AI Consultant" : "Choose business"}
+          </Link>
         </div>
       </Card>
       {error && <Card className="border-rose-400/20 text-rose-200">{error}</Card>}
-      {!error && reports.length === 0 && <Card><p className="text-slate-400">No AI Consultant reports match these filters. Reports are generated only after an explicit action from a business or audit.</p></Card>}
+      {!error && reports.length === 0 && <Card><p className="text-slate-400">No AI Consultant reports match these filters. Reports are generated only after an explicit action from a business or audit.</p><Link href={businessId ? `/businesses/${businessId}/consultant` : "/businesses"} className="mt-4 inline-flex rounded-xl border border-violet-300/20 px-4 py-2 text-sm font-bold text-violet-200">{businessId ? `Create strategy for Business #${businessId}` : "Choose a business to begin"}</Link></Card>}
       <div className="grid gap-4 lg:grid-cols-2">
         {reports.map(report => (
           <Link key={report.id} href={`/consultant/${report.id}`} className="rounded-2xl border border-white/[.08] bg-white/[.03] p-5 outline-none transition hover:border-cyan-300/30 focus-visible:ring-2 focus-visible:ring-cyan-300">

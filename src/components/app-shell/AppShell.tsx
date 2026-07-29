@@ -30,6 +30,7 @@ import {
   platformNavigation,
   type PlatformNavItem,
 } from "@/lib/platform-navigation";
+import { brand } from "@/lib/brand";
 
 const icons: Record<PlatformNavItem["icon"], typeof Gauge> = {
   overview: Gauge,
@@ -86,8 +87,8 @@ function Brand() {
         <Sparkles className="size-5" aria-hidden="true" />
       </span>
       <span>
-        <strong className="block text-base font-black tracking-tight text-white">Revora</strong>
-        <span className="block text-[10px] font-bold uppercase tracking-[.18em] text-cyan-300">Lead Intelligence</span>
+        <strong className="block text-base font-black tracking-tight text-white">{brand.name}</strong>
+        <span className="block text-[10px] font-bold uppercase tracking-[.18em] text-cyan-300">{brand.product}</span>
       </span>
     </Link>
   );

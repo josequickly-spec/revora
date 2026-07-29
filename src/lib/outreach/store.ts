@@ -7,9 +7,9 @@ import { isEmailSyntaxValid, normalizeEmail } from "./recipient";
 import { OUTREACH_COMPLIANCE_VERSION, OUTREACH_SEQUENCE_VERSION } from "./versions";
 import { validateCompliance } from "./compliance";
 import { messageIdempotencyKey } from "./idempotency";
-import { nextAllowedTime } from "./scheduling";
+import { isWithinSendingWindow, nextAllowedTime, retryDelaysMinutes } from "./scheduling";
 import { renderTemplate } from "./template";
-import { getOutreachProvider } from "./provider";
+import { getOutreachProvider, mailboxAddress } from "./provider";
 
 let ready=false;
 export async function ensureOutreachSchema() {
@@ -22,7 +22,7 @@ async function addEvent(campaignId:string|null,eventType:string,metadata:Record<
   await pool.query("INSERT INTO outreach_events(id,campaign_id,recipient_id,message_id,event_type,metadata) VALUES($1,$2,$3,$4,$5,$6)",[randomUUID(),campaignId,recipientId,messageId,eventType,JSON.stringify(metadata)]);
 }
 function campaign(row:Record<string,unknown>) {
-  return { id:String(row.id),name:String(row.name),status:String(row.status),businessId:Number(row.business_id),proposalId:row.proposal_id?String(row.proposal_id):null,auditId:row.audit_id?String(row.audit_id):null,consultantReportId:row.consultant_report_id?String(row.consultant_report_id):null,objective:String(row.objective),senderIdentityId:String(row.sender_identity_id),providerConnectionId:String(row.provider_connection_id),timezone:String(row.timezone),sendingWindow:row.sending_window,dailyLimit:Number(row.daily_limit),hourlyLimit:Number(row.hourly_limit),version:Number(row.version),contentVersion:Number(row.content_version),warnings:row.warnings||[],approvedAt:row.approved_at,scheduledAt:row.scheduled_at,createdAt:row.created_at,updatedAt:row.updated_at };
+  return { id:String(row.id),name:String(row.name),status:String(row.status),businessId:Number(row.business_id),proposalId:row.proposal_id?String(row.proposal_id):null,auditId:row.audit_id?String(row.audit_id):null,consultantReportId:row.consultant_report_id?String(row.consultant_report_id):null,objective:String(row.objective),senderIdentityId:String(row.sender_identity_id),providerConnectionId:String(row.provider_connection_id),providerName:row.provider_name?String(row.provider_name):null,providerStatus:row.provider_status?String(row.provider_status):null,senderStatus:row.sender_status?String(row.sender_status):null,timezone:String(row.timezone),sendingWindow:row.sending_window,dailyLimit:Number(row.daily_limit),hourlyLimit:Number(row.hourly_limit),version:Number(row.version),contentVersion:Number(row.content_version),warnings:row.warnings||[],approvedAt:row.approved_at,scheduledAt:row.scheduled_at,createdAt:row.created_at,updatedAt:row.updated_at };
 }
 export async function createCampaign(input:CampaignCreate) {
   await ensureOutreachSchema();
@@ -38,7 +38,8 @@ export async function createCampaign(input:CampaignCreate) {
   const result=await pool.query(`INSERT INTO outreach_campaigns(id,name,status,business_id,proposal_id,audit_id,consultant_report_id,objective,sender_identity_id,provider_connection_id,timezone,sending_window,daily_limit,hourly_limit,sequence_version,compliance_version)
     VALUES($1,$2,'draft',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
     [id,input.name,input.businessId,input.proposalId||null,input.auditId||null,input.consultantReportId||null,input.objective,input.senderIdentityId,input.providerConnectionId,input.timezone,JSON.stringify(input.sendingWindow),input.dailyLimit,input.hourlyLimit,OUTREACH_SEQUENCE_VERSION,OUTREACH_COMPLIANCE_VERSION]);
-  await addEvent(id,"created",{explicit:true,providerMode:"dry-run"});
+  const provider=await pool.query("SELECT provider FROM outreach_provider_connections WHERE id=$1",[input.providerConnectionId]);
+  await addEvent(id,"created",{explicit:true,providerMode:provider.rows[0]?.provider||"unknown"});
   return campaign(result.rows[0]);
 }
 export async function listCampaigns(filters:{businessId?:number;status?:string;limit?:number}={}) {
@@ -52,7 +53,10 @@ export async function listCampaigns(filters:{businessId?:number;status?:string;l
 export async function getCampaign(id:string) {
   await ensureOutreachSchema();
   const [c,r,s,m,e]=await Promise.all([
-    pool.query("SELECT * FROM outreach_campaigns WHERE id=$1",[id]),
+    pool.query(`SELECT c.*,pc.provider AS provider_name,pc.verification_status AS provider_status,
+      si.verification_status AS sender_status
+      FROM outreach_campaigns c JOIN outreach_provider_connections pc ON pc.id=c.provider_connection_id
+      JOIN outreach_sender_identities si ON si.id=c.sender_identity_id WHERE c.id=$1`,[id]),
     pool.query("SELECT id,contact_id,verification_status,provenance,risky_approved,sequence_state,current_step,last_sent_at,next_scheduled_at,bounce_status,unsubscribe_status,reply_status,created_at FROM outreach_recipients WHERE campaign_id=$1 ORDER BY created_at",[id]),
     pool.query("SELECT * FROM outreach_sequence_steps WHERE campaign_id=$1 ORDER BY position",[id]),
     pool.query("SELECT id,recipient_id,sequence_step_id,status,scheduled_at,sent_at,delivered_at,safe_error_code,created_at FROM outbound_messages WHERE campaign_id=$1 ORDER BY created_at DESC LIMIT 100",[id]),
@@ -97,21 +101,26 @@ export async function checkSuppression(email:string,campaignId?:string) {
 export async function addSuppression(email:string,type:string,scope="global",campaignId?:string,source="manual",reason="Manually suppressed") {
   await ensureOutreachSchema(); const normalized=normalizeEmail(email); if(!isEmailSyntaxValid(normalized)) throw new Error("invalid_email");
   const hash=createHash("sha256").update(normalized).digest("hex");
-  await pool.query("INSERT INTO outreach_suppressions(id,normalized_email,normalized_email_hash,scope,campaign_id,suppression_type,source,reason) VALUES($1,$2,$3,$4,$5,$6,$7,$8)",[randomUUID(),normalized,hash,scope,campaignId||null,type,source,reason]);
-  if(campaignId) await pool.query("UPDATE outbound_messages SET status='suppressed',cancelled_at=NOW() WHERE campaign_id=$1 AND recipient_id IN (SELECT id FROM outreach_recipients WHERE normalized_email=$2) AND status IN ('scheduled','queued','pending')",[campaignId,normalized]);
+  await pool.query(`INSERT INTO outreach_suppressions(id,normalized_email,normalized_email_hash,scope,campaign_id,suppression_type,source,reason)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT DO NOTHING`,[randomUUID(),normalized,hash,scope,campaignId||null,type,source,reason]);
+  await pool.query(`UPDATE outbound_messages SET status='suppressed',cancelled_at=NOW(),updated_at=NOW()
+    WHERE recipient_id IN (SELECT id FROM outreach_recipients WHERE normalized_email=$2)
+      AND ($1::uuid IS NULL OR campaign_id=$1) AND status IN ('scheduled','queued','deferred')`,[campaignId||null,normalized]);
   await addEvent(campaignId||null,"suppressed",{type,scope,source});
 }
 export async function transitionCampaign(id:string,to:CampaignStatus,expectedVersion:number) {
   const current=await pool.query("SELECT * FROM outreach_campaigns WHERE id=$1",[id]); if(!current.rows[0]) return null;
   if(Number(current.rows[0].version)!==expectedVersion) throw new Error("optimistic_conflict");
   assertCampaignTransition(current.rows[0].status,to);
-  const result=await pool.query(`UPDATE outreach_campaigns SET status=$2,version=version+1,updated_at=NOW(),
-    approved_at=CASE WHEN $2='approved' THEN NOW() ELSE approved_at END,
-    scheduled_at=CASE WHEN $2='scheduled' THEN NOW() ELSE scheduled_at END,
-    paused_at=CASE WHEN $2='paused' THEN NOW() ELSE paused_at END,
-    completed_at=CASE WHEN $2='completed' THEN NOW() ELSE completed_at END,
-    cancelled_at=CASE WHEN $2='cancelled' THEN NOW() ELSE cancelled_at END,
-    archived_at=CASE WHEN $2='archived' THEN NOW() ELSE archived_at END WHERE id=$1 RETURNING *`,[id,to]);
+  const result=await pool.query(`WITH requested AS (SELECT $2::varchar AS status)
+    UPDATE outreach_campaigns SET status=requested.status,version=version+1,updated_at=NOW(),
+    approved_at=CASE WHEN requested.status='approved' THEN NOW() ELSE approved_at END,
+    scheduled_at=CASE WHEN requested.status='scheduled' THEN NOW() ELSE scheduled_at END,
+    paused_at=CASE WHEN requested.status='paused' THEN NOW() ELSE paused_at END,
+    completed_at=CASE WHEN requested.status='completed' THEN NOW() ELSE completed_at END,
+    cancelled_at=CASE WHEN requested.status='cancelled' THEN NOW() ELSE cancelled_at END,
+    archived_at=CASE WHEN requested.status='archived' THEN NOW() ELSE archived_at END
+    FROM requested WHERE id=$1 RETURNING outreach_campaigns.*`,[id,to]);
   await addEvent(id,to==="review_required"?"review_requested":to,{explicit:true}); return campaign(result.rows[0]);
 }
 export async function unsubscribeByToken(token:string,global=true) {
@@ -130,10 +139,40 @@ export async function createDryRunDefaults() {
   const providerId="00000000-0000-4000-8000-000000000006", senderId="00000000-0000-4000-8000-000000000016";
   await pool.query(`INSERT INTO outreach_provider_connections(id,provider,display_label,verification_status,configuration) VALUES($1,'dry-run','Dry-run provider','verified','{"liveSending":false}') ON CONFLICT(id) DO NOTHING`,[providerId]);
   await pool.query(`INSERT INTO outreach_sender_identities(id,display_name,from_email,reply_to,business_name,physical_address,domain,verification_status,provider_connection_id)
-    VALUES($1,'Revora Review','review@example.invalid','reply@example.invalid','Revora','Configure a verified physical address before live delivery','example.invalid','verified',$2) ON CONFLICT(id) DO NOTHING`,[senderId,providerId]);
+    VALUES($1,'EcoScale Partner Review','review@example.invalid','reply@example.invalid','EcoScale Partner','Configure a verified physical address before live delivery','example.invalid','verified',$2) ON CONFLICT(id) DO NOTHING`,[senderId,providerId]);
   return {providerId,senderId};
 }
-export async function listSenderIdentities() { await ensureOutreachSchema(); const r=await pool.query("SELECT id,display_name,from_email,reply_to,business_name,physical_address,domain,verification_status,provider_connection_id,created_at FROM outreach_sender_identities ORDER BY created_at"); return r.rows; }
+const resendProviderId="00000000-0000-4000-8000-000000000007";
+export async function ensureConfiguredOutreachProviders() {
+  await createDryRunDefaults();
+  const fromEmail=mailboxAddress(process.env.RESEND_FROM_EMAIL);
+  const domain=fromEmail.split("@")[1]||"";
+  let resendStatus:{verified:boolean;providerStatus:string}|null=null;
+  if(process.env.RESEND_API_KEY&&domain) {
+    try {
+      const status=await getOutreachProvider("resend").domainStatus!(domain);
+      resendStatus={verified:status.verified&&status.sendingEnabled,providerStatus:status.providerStatus};
+    } catch {
+      resendStatus={verified:false,providerStatus:"unavailable"};
+    }
+    await pool.query(`INSERT INTO outreach_provider_connections(id,provider,display_label,credential_reference_key,verification_status,configuration)
+      VALUES($1,'resend','Resend','RESEND_API_KEY',$2,$3)
+      ON CONFLICT(id) DO UPDATE SET verification_status=EXCLUDED.verification_status,configuration=EXCLUDED.configuration,updated_at=NOW()`,
+      [resendProviderId,resendStatus.verified?"verified":"pending",JSON.stringify({liveSending:true,domain,providerStatus:resendStatus.providerStatus})]);
+    await pool.query(`UPDATE outreach_sender_identities SET verification_status=$2,updated_at=NOW()
+      WHERE provider_connection_id=$1 AND LOWER(domain)=LOWER($3)`,
+      [resendProviderId,resendStatus.verified?"provider_verified":"unverified",domain]);
+  }
+  const providers=await pool.query("SELECT id,provider,display_label,verification_status,configuration FROM outreach_provider_connections ORDER BY provider");
+  return {providers:providers.rows,configuredFromEmail:fromEmail||null,resendStatus};
+}
+export async function listSenderIdentities() {
+  await ensureOutreachSchema();
+  const r=await pool.query(`SELECT si.id,si.display_name,si.from_email,si.reply_to,si.business_name,si.physical_address,si.domain,
+    si.verification_status,si.provider_connection_id,pc.provider,pc.display_label AS provider_label,pc.verification_status AS provider_status,si.created_at
+    FROM outreach_sender_identities si JOIN outreach_provider_connections pc ON pc.id=si.provider_connection_id ORDER BY si.created_at`);
+  return r.rows;
+}
 
 export async function reviewCampaign(id:string,expectedVersion:number) {
   const details=await getCampaign(id); if(!details) return null;
@@ -149,7 +188,7 @@ export async function reviewCampaign(id:string,expectedVersion:number) {
     for(const step of active) validateCompliance({
       campaignStatus:"review_required",recipientEmail:email,verificationStatus:recipient.verification_status,
       riskyApproved:Boolean(recipient.risky_approved),suppressed,unsubscribed:recipient.unsubscribe_status==="unsubscribed",
-      hardBounced:recipient.bounce_status==="hard",senderVerified:context.rows[0].sender_status==="verified",
+      hardBounced:recipient.bounce_status==="hard",senderVerified:["verified","provider_verified"].includes(context.rows[0].sender_status),
       providerVerified:context.rows[0].provider_status==="verified",physicalAddress:context.rows[0].physical_address,
       subject:step.subject_template,body:step.body_template,timezone:details.timezone,activeSteps:active.length,
     });
@@ -162,17 +201,33 @@ export async function scheduleCampaign(id:string,expectedVersion:number,startAt:
   if(details.version!==expectedVersion) throw new Error("optimistic_conflict");
   if(details.status!=="approved") throw new Error("campaign_not_approved");
   const start=new Date(startAt); if(Number.isNaN(start.getTime())) throw new Error("invalid_schedule");
+  const appUrl=process.env.APP_URL?.replace(/\/+$/,"");
+  if(!appUrl) throw new Error("app_url_required_for_unsubscribe");
   const policy={...(details.sendingWindow as {weekdays:number[];startHour:number;endHour:number}),timezone:details.timezone,dailyLimit:details.dailyLimit,hourlyLimit:details.hourlyLimit};
   const client=await pool.connect();
   try {
     await client.query("BEGIN");
     for(const recipient of details.recipients) {
-      const privateRecipient=await client.query(`SELECT r.normalized_email,r.unsubscribe_token_prefix,c.name contact_name,b.name business_name,si.display_name sender_name,si.physical_address
+      const privateRecipient=await client.query(`SELECT r.normalized_email,c.name contact_name,b.name business_name,si.display_name sender_name,si.business_name sender_business,si.physical_address
         FROM outreach_recipients r JOIN contacts c ON c.id=r.contact_id JOIN businesses b ON b.id=r.business_id
         JOIN outreach_campaigns oc ON oc.id=r.campaign_id JOIN outreach_sender_identities si ON si.id=oc.sender_identity_id WHERE r.id=$1`,[recipient.id]);
       if(await checkSuppression(privateRecipient.rows[0].normalized_email,id)) throw new Error("suppressed_at_schedule");
       if(recipient.unsubscribe_status==="unsubscribed"||recipient.bounce_status==="hard") throw new Error("recipient_ineligible_at_schedule");
-      const vars={business_name:privateRecipient.rows[0].business_name,contact_greeting:privateRecipient.rows[0].contact_name?` ${String(privateRecipient.rows[0].contact_name).split(/\s+/)[0]}`:"",sender_name:privateRecipient.rows[0].sender_name,sender_business:privateRecipient.rows[0].business_name,physical_address:privateRecipient.rows[0].physical_address,unsubscribe_url:"[generated securely at delivery]",audit_insight:"See the reviewed campaign context.",proposal_url:"[published proposal link]"};
+      const token=createUnsubscribeToken();
+      await client.query("UPDATE outreach_recipients SET unsubscribe_token_hash=$2,unsubscribe_token_prefix=$3,updated_at=NOW() WHERE id=$1",[recipient.id,token.hash,token.prefix]);
+      const contactName=String(privateRecipient.rows[0].contact_name||"").trim();
+      const senderName=String(privateRecipient.rows[0].sender_name||"").trim();
+      const senderBusiness=String(privateRecipient.rows[0].sender_business||"").trim();
+      const vars={
+        business_name:privateRecipient.rows[0].business_name,
+        contact_greeting:contactName?` ${contactName}`:"",
+        sender_name:senderName.toLowerCase()===senderBusiness.toLowerCase()?"":senderName,
+        sender_business:senderBusiness,
+        physical_address:privateRecipient.rows[0].physical_address,
+        unsubscribe_url:`${appUrl}/unsubscribe/${encodeURIComponent(token.token)}`,
+        audit_insight:"See the reviewed campaign context.",
+        proposal_url:"[published proposal link]",
+      };
       let occurrence=nextAllowedTime(start,policy);
       for(const step of details.steps.filter((item:Record<string,unknown>)=>item.enabled)) {
         occurrence=new Date(occurrence.getTime()+Number(step.delay_value)*(step.delay_unit==="day"?86_400_000:3_600_000));
@@ -188,27 +243,134 @@ export async function scheduleCampaign(id:string,expectedVersion:number,startAt:
   return transitionCampaign(id,"scheduled",expectedVersion);
 }
 
-export async function processDryRunBatch(limit=10) {
-  await ensureOutreachSchema(); const provider=getOutreachProvider(); const client=await pool.connect(); const processed:string[]=[];
+function htmlFromText(value:string) {
+  const escaped=value.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  return `<div style="font-family:Arial,sans-serif;line-height:1.6;white-space:pre-wrap">${escaped}</div>`;
+}
+
+export async function processOutreachBatch(limit=10,providerFilter:string|null=null) {
+  await ensureOutreachSchema();
+  const client=await pool.connect();
+  const workerId=`outreach-${randomUUID()}`;
+  const reserved:Record<string,unknown>[]=[];
+  const processed:string[]=[];
+  let liveMessagesSent=0;
   try {
     await client.query("BEGIN");
-    const result=await client.query(`SELECT om.*,r.normalized_email,si.from_email,si.reply_to
+    const result=await client.query(`SELECT om.*,r.normalized_email,r.unsubscribe_status,r.bounce_status,
+      si.from_email,si.reply_to,si.verification_status AS sender_status,
+      pc.provider,pc.verification_status AS provider_status,
+      c.daily_limit,c.hourly_limit,c.timezone,c.sending_window
       FROM outbound_messages om JOIN outreach_recipients r ON r.id=om.recipient_id
-      JOIN outreach_campaigns c ON c.id=om.campaign_id JOIN outreach_sender_identities si ON si.id=c.sender_identity_id
-      WHERE om.status IN ('scheduled','deferred') AND om.next_attempt_at<=NOW() AND c.status IN ('scheduled','running')
-      ORDER BY om.scheduled_at FOR UPDATE OF om SKIP LOCKED LIMIT $1`,[Math.min(Math.max(limit,1),25)]);
+      JOIN outreach_campaigns c ON c.id=om.campaign_id
+      JOIN outreach_sender_identities si ON si.id=c.sender_identity_id
+      JOIN outreach_provider_connections pc ON pc.id=c.provider_connection_id
+      WHERE om.status IN ('scheduled','deferred') AND om.next_attempt_at<=NOW()
+        AND (om.lease_expires_at IS NULL OR om.lease_expires_at<NOW())
+        AND c.status IN ('scheduled','running')
+        AND ($2::text IS NULL OR pc.provider=$2)
+      ORDER BY om.scheduled_at FOR UPDATE OF om SKIP LOCKED LIMIT $1`,[Math.min(Math.max(limit,1),25),providerFilter]);
+    const quota=new Map<string,{day:number;hour:number;reserved:number}>();
     for(const row of result.rows) {
-      const suppression=await checkSuppression(row.normalized_email,row.campaign_id);
-      if(suppression) {
-        await client.query("UPDATE outbound_messages SET status='suppressed',cancelled_at=NOW(),updated_at=NOW() WHERE id=$1",[row.id]);
-      } else {
-        const sent=await provider.send({to:row.normalized_email,from:row.from_email,replyTo:row.reply_to,subject:row.subject,html:row.body_html,text:row.body_text,idempotencyKey:row.idempotency_key});
-        await client.query("UPDATE outbound_messages SET status='unknown',provider_message_id=$2,provider_metadata=$3,attempt_count=attempt_count+1,updated_at=NOW() WHERE id=$1",[row.id,sent.providerMessageId,JSON.stringify({provider:sent.provider,status:sent.status,warnings:sent.warnings})]);
+      const id=String(row.id);
+      const suppression=await checkSuppression(String(row.normalized_email),String(row.campaign_id));
+      if(suppression||row.unsubscribe_status==="unsubscribed"||row.bounce_status==="hard") {
+        await client.query("UPDATE outbound_messages SET status='suppressed',cancelled_at=NOW(),safe_error_code=$2,updated_at=NOW() WHERE id=$1",[id,suppression||"recipient_ineligible"]);
+        processed.push(id);
+        continue;
       }
-      processed.push(row.id);
+      const policy={...(row.sending_window as {weekdays:number[];startHour:number;endHour:number}),timezone:String(row.timezone),dailyLimit:Number(row.daily_limit),hourlyLimit:Number(row.hourly_limit)};
+      if(!isWithinSendingWindow(new Date(),policy)) {
+        await client.query("UPDATE outbound_messages SET status='deferred',next_attempt_at=$2,updated_at=NOW() WHERE id=$1",[id,nextAllowedTime(new Date(Date.now()+60_000),policy)]);
+        continue;
+      }
+      let usage=quota.get(String(row.campaign_id));
+      if(!usage) {
+        const counts=await client.query(`SELECT
+          COUNT(*) FILTER(WHERE sent_at>=NOW()-INTERVAL '24 hours')::int AS day,
+          COUNT(*) FILTER(WHERE sent_at>=NOW()-INTERVAL '1 hour')::int AS hour
+          FROM outbound_messages WHERE campaign_id=$1`,[row.campaign_id]);
+        usage={day:Number(counts.rows[0].day),hour:Number(counts.rows[0].hour),reserved:0};
+        quota.set(String(row.campaign_id),usage);
+      }
+      if(usage.day+usage.reserved>=Number(row.daily_limit)||usage.hour+usage.reserved>=Number(row.hourly_limit)) {
+        await client.query("UPDATE outbound_messages SET status='deferred',next_attempt_at=NOW()+INTERVAL '1 hour',updated_at=NOW() WHERE id=$1",[id]);
+        continue;
+      }
+      if(row.provider!=="dry-run"&&(row.provider_status!=="verified"||row.sender_status!=="provider_verified")) {
+        await client.query("UPDATE outbound_messages SET status='failed',failed_at=NOW(),safe_error_code='provider_unavailable',updated_at=NOW() WHERE id=$1",[id]);
+        processed.push(id);
+        continue;
+      }
+      await client.query(`UPDATE outbound_messages SET status='queued',queued_at=NOW(),locked_at=NOW(),locked_by=$2,
+        lease_expires_at=NOW()+INTERVAL '5 minutes',updated_at=NOW() WHERE id=$1`,[id,workerId]);
+      usage.reserved++;
+      reserved.push(row);
     }
-    await client.query("COMMIT"); return {processed,provider:"dry-run",liveMessagesSent:0};
-  } catch(error){await client.query("ROLLBACK");throw error} finally{client.release()}
+    await client.query("COMMIT");
+  } catch(error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+
+  for(const row of reserved) {
+    const id=String(row.id),campaignId=String(row.campaign_id),recipientId=String(row.recipient_id);
+    const attemptNumber=Number(row.attempt_count)+1;
+    const started=new Date();
+    try {
+      const suppression=await checkSuppression(String(row.normalized_email),campaignId);
+      if(suppression) {
+        await pool.query("UPDATE outbound_messages SET status='suppressed',cancelled_at=NOW(),safe_error_code=$2,locked_at=NULL,locked_by=NULL,lease_expires_at=NULL,updated_at=NOW() WHERE id=$1",[id,suppression]);
+        processed.push(id);
+        continue;
+      }
+      if(row.provider!=="dry-run") {
+        await pool.query("UPDATE outbound_messages SET status='sending',updated_at=NOW() WHERE id=$1 AND status='queued'",[id]);
+      }
+      const provider=getOutreachProvider(String(row.provider));
+      const sent=await provider.send({
+        to:String(row.normalized_email),from:String(row.from_email),replyTo:String(row.reply_to),
+        subject:String(row.subject),html:htmlFromText(String(row.body_html)),text:String(row.body_text),
+        idempotencyKey:String(row.idempotency_key),
+      });
+      const retryAt=sent.retryable&&attemptNumber<=retryDelaysMinutes.length
+        ? new Date(Date.now()+retryDelaysMinutes[attemptNumber-1]*60_000)
+        : null;
+      const finalStatus=sent.accepted?"sent":sent.status==="dry_run"?"unknown":retryAt?"deferred":sent.status==="unknown"?"unknown":"failed";
+      await pool.query(`INSERT INTO outreach_delivery_attempts(id,message_id,attempt_number,provider,status,provider_request_id,safe_error_code,latency_ms,started_at,completed_at,next_retry_at,metadata)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW(),$10,$11)
+        ON CONFLICT(message_id,attempt_number) DO NOTHING`,
+        [randomUUID(),id,attemptNumber,sent.provider,sent.status,sent.requestId,sent.safeErrorCode,sent.latencyMs,started,retryAt,JSON.stringify({accepted:sent.accepted,warnings:sent.warnings})]);
+      await pool.query(`WITH requested AS (SELECT $2::varchar AS status)
+        UPDATE outbound_messages SET status=requested.status,provider_message_id=$3,provider_metadata=$4,
+        attempt_count=attempt_count+1,next_attempt_at=$5,sent_at=CASE WHEN requested.status='sent' THEN NOW() ELSE sent_at END,
+        failed_at=CASE WHEN requested.status='failed' THEN NOW() ELSE failed_at END,safe_error_code=$6,
+        locked_at=NULL,locked_by=NULL,lease_expires_at=NULL,updated_at=NOW()
+        FROM requested WHERE id=$1`,
+        [id,finalStatus,sent.providerMessageId,JSON.stringify({provider:sent.provider,status:sent.status,warnings:sent.warnings}),retryAt,sent.safeErrorCode]);
+      if(sent.accepted) {
+        liveMessagesSent++;
+        await pool.query("UPDATE outreach_recipients SET last_sent_at=NOW(),sequence_state='active',current_step=current_step+1,updated_at=NOW() WHERE id=$1",[recipientId]);
+        await pool.query("UPDATE outreach_campaigns SET status='running',updated_at=NOW() WHERE id=$1 AND status='scheduled'",[campaignId]);
+      }
+      await addEvent(campaignId,sent.accepted?"sent":sent.status==="dry_run"?"dry_run_processed":"delivery_failed",
+        {provider:sent.provider,status:sent.status,safeErrorCode:sent.safeErrorCode},recipientId,id);
+      processed.push(id);
+    } catch {
+      await pool.query(`UPDATE outbound_messages SET status='unknown',safe_error_code='worker_delivery_unknown',
+        locked_at=NULL,locked_by=NULL,lease_expires_at=NULL,updated_at=NOW() WHERE id=$1`,[id]);
+      await addEvent(campaignId,"delivery_unknown",{provider:String(row.provider)},recipientId,id);
+      processed.push(id);
+    }
+  }
+  return {processed,provider:reserved.length?[...new Set(reserved.map(row=>String(row.provider)))].join(","):"none",liveMessagesSent};
+}
+
+export async function processDryRunBatch(limit=10) {
+  const result=await processOutreachBatch(limit,"dry-run");
+  return {...result,liveMessagesSent:0};
 }
 export async function duplicateCampaign(id:string) {
   const source=await getCampaign(id); if(!source) return null;
@@ -234,5 +396,22 @@ export async function markRecipientReplied(campaignId:string,recipientId:string)
   await addEvent(campaignId,"replied",{source:"manual"},recipientId);
 }
 export async function createSenderIdentity(input:{displayName:string;fromEmail:string;replyTo:string;businessName:string;physicalAddress:string;domain:string;providerConnectionId:string}) {
-  const id=randomUUID(); await pool.query(`INSERT INTO outreach_sender_identities(id,display_name,from_email,reply_to,business_name,physical_address,domain,verification_status,provider_connection_id) VALUES($1,$2,$3,$4,$5,$6,$7,'unverified',$8)`,[id,input.displayName,input.fromEmail,input.replyTo,input.businessName,input.physicalAddress,input.domain,input.providerConnectionId]); return {id,verificationStatus:"unverified"};
+  await ensureOutreachSchema();
+  const providerResult=await pool.query("SELECT provider,verification_status FROM outreach_provider_connections WHERE id=$1",[input.providerConnectionId]);
+  const provider=providerResult.rows[0];
+  if(!provider) throw new Error("provider_connection_not_found");
+  const normalizedDomain=input.domain.trim().toLowerCase();
+  if(mailboxAddress(input.fromEmail).split("@")[1]!==normalizedDomain) throw new Error("sender_domain_mismatch");
+  let verificationStatus="unverified";
+  if(provider.provider==="resend") {
+    if(provider.verification_status!=="verified") throw new Error("provider_domain_not_verified");
+    const status=await getOutreachProvider("resend").domainStatus!(normalizedDomain);
+    if(!status.verified||!status.sendingEnabled) throw new Error("sender_domain_not_verified");
+    verificationStatus="provider_verified";
+  }
+  const id=randomUUID();
+  await pool.query(`INSERT INTO outreach_sender_identities(id,display_name,from_email,reply_to,business_name,physical_address,domain,verification_status,provider_connection_id)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+    [id,input.displayName,input.fromEmail,input.replyTo,input.businessName,input.physicalAddress,normalizedDomain,verificationStatus,input.providerConnectionId]);
+  return {id,verificationStatus};
 }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { pool } from "@/lib/postgres";
+import { brand } from "@/lib/brand";
 
 export async function generateMetadata({
   params,
@@ -15,7 +16,7 @@ export async function generateMetadata({
   const row = result.rows[0];
   const content = row?.content_json?.translations?.[language] || row?.content_json;
   return {
-    title: content?.headline ? `${content.headline} | ${row?.name || "Revora"}` : row?.name || "Revora",
+    title: content?.headline ? `${content.headline} | ${row?.name || brand.name}` : row?.name || brand.name,
     description: content?.subheadline,
     alternates: {
       canonical: `/${language}/funnel/${slug}`,

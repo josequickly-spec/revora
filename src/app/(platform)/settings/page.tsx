@@ -4,7 +4,7 @@ import ModuleState from "@/components/app-shell/ModuleState";
 
 export const metadata: Metadata = {
   title: "Settings",
-  description: "Revora platform and integration settings.",
+  description: "EcoScale Partner platform and integration settings.",
 };
 
 export default function SettingsPage() {

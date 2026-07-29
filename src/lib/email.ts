@@ -6,7 +6,7 @@ export async function sendOutreachEmail(
   to: string,
   subject: string,
   body: string,
-  fromEmail: string = "noreply@revora.io"
+  fromEmail: string = process.env.RESEND_FROM_EMAIL || "noreply@ecoscalepartner.com"
 ) {
   if (!process.env.RESEND_API_KEY) {
     throw new Error("RESEND_API_KEY no está configurada; no se envió ningún correo.");
@@ -23,7 +23,7 @@ export async function sendOutreachEmail(
             ${body.replace(/\n/g, "<br>")}
             <hr style="margin-top: 30px; border: none; border-top: 1px solid #ddd;">
             <p style="font-size: 12px; color: #999; text-align: center;">
-              Enviado por <strong>Revora</strong> — Revenue OS para Agencias
+              Enviado por <strong>EcoScale Partner</strong> — Commerce Intelligence Platform
             </p>
           </div>
         </div>

@@ -40,6 +40,7 @@ jobs:
       - run: npm run test:phase6
       - run: npm run test:phase7
       - run: npm run test:phase8
+      - run: npm run test:outreach-live
       - run: npm run test:security
       - run: npm run build
       - run: kubectl kustomize infrastructure/kubernetes/base > /dev/null

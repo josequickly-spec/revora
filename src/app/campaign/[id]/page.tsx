@@ -26,7 +26,7 @@ export default async function CampaignDossier({ params }: { params: Promise<{ id
             <h1 className="text-3xl font-black">{campaign.business_name}</h1>
             <p className="text-slate-400 text-sm">Campaña {campaign.id} · {campaign.status}</p>
           </div>
-          <Link href="/" className="bg-slate-800 px-4 py-2 rounded-xl h-fit">Volver a Revora</Link>
+          <Link href="/" className="bg-slate-800 px-4 py-2 rounded-xl h-fit">Volver a EcoScale Partner</Link>
         </div>
 
         <section className="grid md:grid-cols-4 gap-4">

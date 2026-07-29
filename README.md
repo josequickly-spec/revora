@@ -1,6 +1,6 @@
-# Revora
+# EcoScale Partner
 
-Revora is a Next.js and PostgreSQL Lead Intelligence platform. It connects:
+EcoScale Partner is a Next.js and PostgreSQL Commerce Intelligence platform. It connects:
 
 ```text
 Lead Finder → Business Intelligence → Funnel Analysis → Opportunities
@@ -51,7 +51,7 @@ running migrations and run them once as a deployment job.
 
 ## Security boundaries
 
-- Private `/api/**` routes require a valid Revora session or scoped API key.
+- Private `/api/**` routes require a valid EcoScale Partner session or scoped API key.
 - Public routes are limited to authentication, signed webhooks, health,
   published proposals, unsubscribe and public funnel lead capture.
 - The operational dataset predating organizations is quarantined to the first
@@ -88,7 +88,15 @@ See:
 
 ## Current limitations
 
-- Outreach remains dry-run unless a separately reviewed live provider is added.
+- Outreach can use Resend only after the domain and sender identity are
+  provider-verified, a physical business address is supplied, and the campaign
+  is explicitly reviewed, approved and scheduled. Without those controls it
+  remains dry-run or fails closed.
+- Resend delivery events require a public HTTPS webhook at
+  `/api/webhooks/resend` and `RESEND_WEBHOOK_SECRET`.
+- The Outreach worker must be invoked by an authenticated scheduler using a
+  dedicated `OUTREACH_WORKER_SECRET`, or `CRON_SECRET` as a local fallback;
+  campaign creation never sends automatically.
 - External AI, email, billing and enrichment providers require approved
   credentials.
 - Characterization suites do not replace integration, browser E2E, load,

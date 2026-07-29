@@ -4,7 +4,7 @@ import IntegrationsView from "@/components/platform/IntegrationsView";
 
 export const metadata: Metadata = {
   title: "Integrations",
-  description: "Read-only readiness status for existing Revora integrations.",
+  description: "Read-only readiness status for existing EcoScale Partner integrations.",
 };
 
 export default function IntegrationsPage() {

@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import GlobalNavigationControls from "@/components/app-shell/GlobalNavigationControls";
+import { brand } from "@/lib/brand";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Revora Lead Intelligence",
-    template: "%s | Revora",
+    default: `${brand.name} | ${brand.product}`,
+    template: `%s | ${brand.name}`,
   },
-  description: "Lead intelligence, funnel analysis, proposals, outreach and CRM in one connected workspace.",
+  description: brand.description,
 };
 
 // Next.js can attach the request nonce to framework scripts only when HTML is

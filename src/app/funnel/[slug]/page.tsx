@@ -80,7 +80,7 @@ export default function PublicFunnelPage() {
     receivedBody: "Your request was saved. The business can now contact you.", emailBody: "Check your email for the next step.", challenge: "The challenge", solution: "The solution",
     how: "How it works", steps: "A clear step-by-step process", next: "A transparent next step",
     faq: "Frequently asked questions",
-    published: "Offer published by the business", built: "Funnel by Revora", designed: "Designed for",
+    published: "Offer published by the business", built: "Funnel by EcoScale Partner", designed: "Designed for",
     views: "Recorded visits", special: "SPECIAL OFFER", available: "Available", disclaimer: `This page does not publish invented reviews, ratings or availability. Confirm details directly with ${name}.`,
     price: "Offer price", availability: "Availability", consult: "Ask about availability", bonus: "YES, INCLUDE THIS BONUS",
     secure: "Secure", protected: "Data protected",
@@ -91,7 +91,7 @@ export default function PublicFunnelPage() {
     receivedBody: "Tu solicitud quedó registrada. El negocio ya puede contactarte.", emailBody: "Revisa tu correo para conocer el siguiente paso.", challenge: "El reto", solution: "La solución",
     how: "Cómo funciona", steps: "Un proceso claro, paso a paso", next: "Un siguiente paso transparente",
     faq: "Preguntas frecuentes",
-    published: "Oferta publicada por el negocio", built: "Embudo por Revora", designed: "Diseñado para",
+    published: "Oferta publicada por el negocio", built: "Embudo por EcoScale Partner", designed: "Diseñado para",
     views: "Visitas registradas", special: "OFERTA ESPECIAL", available: "Disponible", disclaimer: `Esta página no publica reseñas, puntuaciones ni disponibilidad inventadas. Confirma los detalles directamente con ${name}.`,
     price: "Precio oferta", availability: "Disponibilidad", consult: "Consulta disponibilidad", bonus: "SÍ, AÑADIR ESTE BONUS",
     secure: "Seguro", protected: "Datos protegidos",
@@ -135,7 +135,7 @@ export default function PublicFunnelPage() {
             {lang === "en" ? "Back to FunnelSpy" : "Volver a FunnelSpy"} <ChevronRight className="w-3.5 h-3.5" />
           </Link>
           <Link href="/" className="text-slate-400 hover:text-white font-medium transition">
-            {lang === "en" ? "Open Revora" : "Abrir Revora"}
+            {lang === "en" ? "Open EcoScale Partner" : "Abrir EcoScale Partner"}
           </Link>
         </div>
       </div>

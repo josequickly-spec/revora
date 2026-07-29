@@ -46,7 +46,7 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{action:
       if(reset) {
         const response=await fetch("https://api.resend.com/emails",{
           method:"POST",headers:{Authorization:`Bearer ${process.env.RESEND_API_KEY}`,"Content-Type":"application/json"},
-          body:JSON.stringify({from:process.env.AUTH_EMAIL_FROM,to:[reset.email],subject:"Reset your Revora password",html:`<p>A password reset was requested for your Revora account.</p><p><a href="${process.env.APP_URL}/login?reset=${encodeURIComponent(reset.token)}">Reset password</a></p><p>This link expires in 30 minutes.</p>`}),
+          body:JSON.stringify({from:process.env.AUTH_EMAIL_FROM,to:[reset.email],subject:"Reset your EcoScale Partner password",html:`<p>A password reset was requested for your EcoScale Partner account.</p><p><a href="${process.env.APP_URL}/login?reset=${encodeURIComponent(reset.token)}">Reset password</a></p><p>This link expires in 30 minutes.</p>`}),
         });
         if(!response.ok)return NextResponse.json({error:"Password reset delivery failed.",code:"reset_delivery_failed"},{status:502});
       }

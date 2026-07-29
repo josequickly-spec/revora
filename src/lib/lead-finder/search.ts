@@ -18,8 +18,7 @@ const categoryFilters: Record<string, string[]> = {
 function filtersFor(category = "") {
   const normalized = category.toLowerCase();
   return Object.entries(categoryFilters).find(([key]) => normalized.includes(key))?.[1] || [
-    '["amenity"]["name"]', '["shop"]["name"]', '["office"]["name"]',
-    '["craft"]["name"]', '["tourism"]["name"]', '["healthcare"]["name"]',
+    '["amenity"]["name"]',
   ];
 }
 
@@ -60,6 +59,8 @@ async function queryOverpass(query: string) {
 }
 
 export async function searchLeads(input: ValidLeadSearchRequest): Promise<LeadSearchResponse> {
+  const hasSpecificCategory = Object.keys(categoryFilters)
+    .some(key => input.category?.toLowerCase().includes(key));
   const geocodeUrl = new URL("https://nominatim.openstreetmap.org/search");
   geocodeUrl.searchParams.set("q", input.query || input.location.value);
   geocodeUrl.searchParams.set("format", "jsonv2");
@@ -73,7 +74,7 @@ export async function searchLeads(input: ValidLeadSearchRequest): Promise<LeadSe
   if (!geocodes[0]) throw new LeadSearchError("Location not found. Try city and region or a postal code.", 404);
   const { lat, lon, display_name: searchArea } = geocodes[0];
   const statements = filtersFor(input.category).flatMap(filter =>
-    ["node", "way", "relation"].map(type => `${type}(around:${input.radius},${lat},${lon})${filter};`)
+    ["node", "way", "relation"].map(type => `${type}${filter}(around:${input.radius},${lat},${lon});`)
   ).join("");
   const query = `[out:json][timeout:25];(${statements});out center tags ${input.limit};`;
   const { response: overpassResponse, usedFallback } = await queryOverpass(query);
@@ -89,6 +90,7 @@ export async function searchLeads(input: ValidLeadSearchRequest): Promise<LeadSe
   const partial = overpass.elements.length >= input.limit;
   const warnings = [
     ...(partial ? [`Results were limited to ${input.limit}; refine the search for complete coverage.`] : []),
+    ...(!hasSpecificCategory ? ["Broad searches prioritize named public amenities. Add a supported category for more targeted business coverage."] : []),
     ...(usedFallback ? ["The primary OpenStreetMap search server was unavailable; results came from its official fallback server."] : []),
   ];
   return {

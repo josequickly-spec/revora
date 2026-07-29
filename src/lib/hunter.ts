@@ -34,6 +34,20 @@ export interface HunterDomainSearch {
   facebook_url: string;
 }
 
+interface HunterVerificationResult {
+  result?: string;
+  status?: string;
+}
+
+export function isVerifiedHunterResult(
+  verification: HunterVerificationResult | null | undefined
+): boolean {
+  return (
+    verification?.status === "valid" ||
+    verification?.result === "deliverable"
+  );
+}
+
 /**
  * Find email for a person at a domain
  * @param domain - Company domain (e.g., "google.com")
@@ -127,7 +141,7 @@ export async function verifyEmail(email: string): Promise<boolean> {
     }
 
     const data = await response.json();
-    return data.data?.result === "valid";
+    return isVerifiedHunterResult(data.data);
   } catch (error) {
     console.error("Error verifying email:", error);
     return false;

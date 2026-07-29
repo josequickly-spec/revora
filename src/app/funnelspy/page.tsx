@@ -147,7 +147,7 @@ export default function FunnelSpyPage() {
             <div><div className="text-lg font-black tracking-tight">Funnel<span className="text-violet-400">Spy</span></div><div className="text-[9px] uppercase tracking-[.28em] text-slate-500">Competitive intelligence</div></div>
           </Link>
           <nav className="hidden items-center gap-7 text-sm text-slate-400 md:flex">
-            <a href="#scanner" className="hover:text-white">Analizar</a><Link href="/funnelspy/compare" className="hover:text-white">Comparar</Link><Link href="/funnelspy/history" className="hover:text-white">Historial</Link><Link href="/" className="hover:text-white">Revora</Link>
+            <a href="#scanner" className="hover:text-white">Analizar</a><Link href="/funnelspy/compare" className="hover:text-white">Comparar</Link><Link href="/funnelspy/history" className="hover:text-white">Historial</Link><Link href="/" className="hover:text-white">EcoScale Partner</Link>
           </nav>
           <a href="#scanner" className="rounded-xl border border-violet-400/30 bg-violet-500/10 px-4 py-2 text-sm font-bold text-violet-200">Nueva auditoría</a>
         </div>

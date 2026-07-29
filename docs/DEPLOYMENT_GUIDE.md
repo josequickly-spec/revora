@@ -21,6 +21,37 @@ Signed ingestion additionally requires `RESEND_WEBHOOK_SECRET`,
 that are enabled. Set `TRUST_PROXY=true` only behind a controlled reverse proxy
 that overwrites forwarded-client headers.
 
+## Hostinger Web App
+
+Hostinger Business Web Hosting can run this project as a managed Next.js Web
+App. Use a dedicated hostname such as `app.ecoscalepartner.com` so deployment
+does not replace an existing marketing site.
+
+1. Push a reviewed branch to GitHub. Never commit `.env.local` or
+   `.env.production`.
+2. In hPanel, choose **Websites → Add website → Web App → GitHub** and select
+   the repository and reviewed branch.
+3. Select Node.js 22 and Next.js. Use `npm ci` for installation,
+   `npm run build` for the build, and `npm run start` for the start command.
+4. Configure the variables from `.env.production.example` in hPanel. Set
+   `APP_URL` to the final public HTTPS origin and `TRUST_PROXY=true`.
+5. Use externally managed PostgreSQL and Redis/Upstash. Do not use a local
+   container hostname in `DATABASE_URL` or `REDIS_URL`. Production health and
+   API rate limiting fail closed when Redis is not configured.
+6. Run `npm run init` once against the production database before promotion.
+   Re-running it is safe because migrations are additive, but take a backup
+   first.
+7. Point the selected hostname to the Web App, enable managed SSL, and confirm
+   that `/api/observability/health` reports `ready`.
+8. Configure Resend to send signed events to
+   `https://app.ecoscalepartner.com/api/webhooks/resend`, then configure the
+   scheduler to invoke the Outreach and workflow worker endpoints with their
+   dedicated secrets.
+
+Do not promote the deployment while health is `degraded`, authentication cannot
+complete, unsubscribe links contain `localhost`, or provider webhooks and
+workers have not been exercised with controlled test data.
+
 Before promotion, verify:
 
 - `npm audit --omit=dev` reports zero production vulnerabilities.

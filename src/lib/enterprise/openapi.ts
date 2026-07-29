@@ -1,6 +1,6 @@
 export const enterpriseOpenApi = {
   openapi:"3.1.0",
-  info:{title:"Revora Enterprise Operations API",version:"1.0.0",description:"Tenant-scoped CRM, security, billing and workflow API. CRM stage changes are always explicit commands."},
+  info:{title:"EcoScale Partner Operations API",version:"1.0.0",description:"Tenant-scoped CRM, security, billing and workflow API. CRM stage changes are always explicit commands."},
   servers:[{url:"/"}],
   security:[{bearerAuth:[]}],
   paths:{

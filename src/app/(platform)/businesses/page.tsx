@@ -4,7 +4,7 @@ import BusinessesView from "@/components/platform/BusinessesView";
 
 export const metadata: Metadata = {
   title: "Business Intelligence",
-  description: "Saved businesses, contacts and funnel assets from the current Revora workspace.",
+  description: "Saved businesses, contacts and funnel assets from the current EcoScale Partner workspace.",
 };
 
 export default function BusinessesPage() {

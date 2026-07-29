@@ -216,7 +216,7 @@ export async function beginMfa(context: AuthContext) {
   await pool.query(`UPDATE enterprise_mfa_factors SET disabled_at=NOW() WHERE user_id=$1 AND disabled_at IS NULL`,[context.userId]);
   await pool.query(`INSERT INTO enterprise_mfa_factors(id,user_id,encrypted_secret) VALUES($1,$2,$3)`,[id,context.userId,encryptSecret(secret)]);
   const user=await pool.query(`SELECT email FROM enterprise_users WHERE id=$1`,[context.userId]);
-  return {factorId:id,secret,otpauthUri:`otpauth://totp/Revora:${encodeURIComponent(user.rows[0].email)}?secret=${secret}&issuer=Revora&digits=6&period=30`};
+  return {factorId:id,secret,otpauthUri:`otpauth://totp/EcoScale%20Partner:${encodeURIComponent(user.rows[0].email)}?secret=${secret}&issuer=EcoScale%20Partner&digits=6&period=30`};
 }
 
 export async function confirmMfa(context: AuthContext, factorId: string, code: string) {

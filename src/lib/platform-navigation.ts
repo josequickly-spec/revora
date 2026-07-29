@@ -6,8 +6,8 @@ export type PlatformNavItem = {
 };
 
 export const platformNavigation: PlatformNavItem[] = [
-  { label: "Overview", href: "/", icon: "overview", description: "Workspace health and recent activity" },
-  { label: "Executive", href: "/executive", icon: "executive", description: "Historical KPIs, forecasts and advisors" },
+  { label: "Dashboard", href: "/", icon: "overview", description: "Workspace health and recent activity" },
+  { label: "Analytics", href: "/executive", icon: "executive", description: "Historical KPIs, forecasts and advisors" },
   { label: "Leads", href: "/leads", icon: "leads", description: "Find and qualify businesses" },
   { label: "Intelligence", href: "/businesses", icon: "intelligence", description: "Business and contact intelligence" },
   { label: "Audits", href: "/audits", icon: "audits", description: "Funnel analysis and evidence" },
@@ -31,7 +31,7 @@ export function isPlatformRouteActive(pathname: string, href: string) {
 
 export function getPlatformBreadcrumbs(pathname: string) {
   const parts = pathname.split("/").filter(Boolean);
-  const crumbs = [{ label: "Overview", href: "/" }];
+  const crumbs = [{ label: "Dashboard", href: "/" }];
   let href = "";
 
   for (const part of parts) {

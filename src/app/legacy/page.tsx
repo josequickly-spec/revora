@@ -311,8 +311,8 @@ export default function LegacyWorkspacePage() {
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 via-purple-600 to-rose-500 flex items-center justify-center shadow-lg"><Target className="w-5 h-5 text-white" /></div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="font-black text-xl tracking-tight text-white">Revora</h1>
-                <span className="bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Revenue OS</span>
+                <h1 className="font-black text-xl tracking-tight text-white">EcoScale Partner</h1>
+                <span className="bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Commerce Intelligence</span>
               </div>
               <p className="text-xs text-slate-400">Cualquier negocio. Cualquier ingreso. Embudos + Ads que generan facturación extra.</p>
             </div>
@@ -800,7 +800,7 @@ export default function LegacyWorkspacePage() {
           <div className="space-y-6">
             <div className="bg-gradient-to-r from-cyan-950/80 via-slate-900 to-purple-950/80 border border-cyan-500/40 rounded-2xl p-6 shadow-xl">
               <h2 className="text-2xl font-black text-white mb-1">✨ Análisis Automático 1-Click</h2>
-              <p className="text-sm text-slate-300">Escribe el nombre de cualquier negocio y REVORA generará automáticamente: análisis SEO, landing page, emails, video script, ads strategy y proyecciones de ingresos.</p>
+              <p className="text-sm text-slate-300">Escribe el nombre de cualquier negocio y EcoScale Partner generará automáticamente: análisis SEO, landing page, emails, video script, ads strategy y proyecciones de ingresos.</p>
             </div>
 
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
@@ -844,12 +844,12 @@ export default function LegacyWorkspacePage() {
           <div className="bg-slate-900 border border-emerald-500 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-6">
             <div className="text-center space-y-2">
               <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-emerald-600 via-purple-600 to-rose-500 flex items-center justify-center shadow-lg"><Target className="w-7 h-7 text-white animate-pulse"/></div>
-              <h3 className="text-xl font-black text-white">Blueprint 1-Click con Revora</h3>
+              <h3 className="text-xl font-black text-white">Blueprint 1-Click con EcoScale Partner</h3>
               <p className="text-xs text-slate-400">Automatizando para: <strong className="text-white">{autoName}</strong></p>
             </div>
             <div className="space-y-3 text-xs">
               {[
-                {s:1,t:`${selInd.emoji} 1. Analizando con Revora`},
+                {s:1,t:`${selInd.emoji} 1. Analizando con EcoScale Partner`},
                 {s:2,t:`🎨 2. Generando embudo adaptado a ${selInd.label.split("·")[0].trim()}`},
                 {s:3,t:`👤 3. Extrayendo email verificado`},
                 {s:4,t:`✉️ 4. Redactando pitch + Loom 90s`},
