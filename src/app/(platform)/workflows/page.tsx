@@ -1,0 +1,2 @@
+import PageHeader from "@/components/app-shell/PageHeader";import EnterpriseRecords from "@/components/enterprise/EnterpriseRecords";
+export default function WorkflowsPage(){return <><PageHeader eyebrow="Workflow engine" title="Durable jobs & schedules" description="At-least-once queues use leases, idempotency keys, bounded retries and dead-letter states."/><EnterpriseRecords endpoint="/api/workflows" collection="jobs" empty="No durable jobs are currently recorded."/></>}

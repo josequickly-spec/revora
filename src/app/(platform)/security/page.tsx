@@ -1,0 +1,2 @@
+import PageHeader from "@/components/app-shell/PageHeader";import EnterpriseRecords from "@/components/enterprise/EnterpriseRecords";
+export default function SecurityPage(){return <><PageHeader eyebrow="Enterprise security" title="Sessions, MFA & API keys" description="Review device sessions and manage scoped machine credentials. Raw API keys are returned only once." actions={[{label:"API documentation",href:"/docs/api"}]}/><EnterpriseRecords endpoint="/api/security/sessions" collection="sessions" empty="No active device sessions were returned."/></>}

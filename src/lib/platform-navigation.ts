@@ -1,7 +1,7 @@
 export type PlatformNavItem = {
   label: string;
   href: string;
-  icon: "overview" | "leads" | "intelligence" | "audits" | "opportunities" | "consultant" | "proposals" | "outreach" | "crm" | "settings";
+  icon: "overview" | "leads" | "intelligence" | "audits" | "opportunities" | "consultant" | "proposals" | "outreach" | "crm" | "accounts" | "tasks" | "security" | "billing" | "workflows" | "settings";
   description: string;
 };
 
@@ -15,6 +15,11 @@ export const platformNavigation: PlatformNavItem[] = [
   { label: "Proposals", href: "/proposals", icon: "proposals", description: "Commercial proposals and revenue share" },
   { label: "Outreach", href: "/outreach", icon: "outreach", description: "Message drafts and delivery state" },
   { label: "CRM", href: "/crm", icon: "crm", description: "Pipeline, campaigns and activity" },
+  { label: "Accounts", href: "/accounts", icon: "accounts", description: "CRM account projections" },
+  { label: "Tasks", href: "/tasks", icon: "tasks", description: "Tasks and calendar" },
+  { label: "Workflows", href: "/workflows", icon: "workflows", description: "Jobs, schedules and notifications" },
+  { label: "Security", href: "/security", icon: "security", description: "Sessions, MFA and API keys" },
+  { label: "Billing", href: "/billing", icon: "billing", description: "Plans, usage and invoices" },
   { label: "Settings", href: "/settings", icon: "settings", description: "Integrations and platform configuration" },
 ];
 

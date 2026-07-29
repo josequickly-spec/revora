@@ -17,6 +17,10 @@ import {
   Search,
   Settings,
   ShieldCheck,
+  Users,
+  ListTodo,
+  Workflow,
+  CreditCard,
   Sparkles,
   X,
 } from "lucide-react";
@@ -37,6 +41,11 @@ const icons: Record<PlatformNavItem["icon"], typeof Gauge> = {
   proposals: FileText,
   outreach: Mail,
   crm: BriefcaseBusiness,
+  accounts: Users,
+  tasks: ListTodo,
+  workflows: Workflow,
+  security: ShieldCheck,
+  billing: CreditCard,
   settings: Settings,
 };
 

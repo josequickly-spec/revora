@@ -1,0 +1,2 @@
+import PageHeader from "@/components/app-shell/PageHeader";import EnterpriseRecords from "@/components/enterprise/EnterpriseRecords";
+export default function AccountsPage(){return <><PageHeader eyebrow="CRM Intelligence" title="Accounts" description="Tenant-scoped CRM projections linked to Business Intelligence records. Business facts remain owned by Business Intelligence."/><EnterpriseRecords endpoint="/api/v1/accounts" collection="data" empty="No CRM accounts have been linked. Link an existing business through the REST API."/></>}

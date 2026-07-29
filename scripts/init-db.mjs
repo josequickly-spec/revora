@@ -266,6 +266,8 @@ try {
   `);
   const outreachMigration = await readFile(new URL("./migrate-phase6-outreach.sql", import.meta.url), "utf8");
   await client.query(outreachMigration);
+  const enterpriseMigration = await readFile(new URL("./migrate-phase7-enterprise.sql", import.meta.url), "utf8");
+  await client.query(enterpriseMigration);
   console.log("Database initialized successfully");
 } finally {
   client.release();

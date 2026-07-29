@@ -1,0 +1,2 @@
+import AuthForm from "@/components/enterprise/AuthForm";
+export default function LoginPage(){return <main className="min-h-screen bg-[#070b14] px-4 py-12 text-slate-100"><div className="mx-auto mb-8 max-w-lg text-center"><p className="text-xs font-black uppercase tracking-[.2em] text-cyan-300">Revora Enterprise</p><h1 className="mt-3 text-4xl font-black">Secure operations workspace</h1><p className="mt-3 text-sm leading-6 text-slate-400">JWT sessions, refresh rotation, MFA-ready identity and organization-scoped access.</p></div><AuthForm/></main>}
