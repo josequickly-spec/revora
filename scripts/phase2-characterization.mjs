@@ -36,9 +36,12 @@ assert.equal(legacyBusiness(candidates[0]).source, "OpenStreetMap Overpass");
 const discovery = await readFile(new URL("../src/app/api/discovery/route.ts", import.meta.url), "utf8");
 const autoDiscovery = await readFile(new URL("../src/components/AutoDiscovery.tsx", import.meta.url), "utf8");
 const localFinder = await readFile(new URL("../src/components/LocalBusinessFinder.tsx", import.meta.url), "utf8");
+const funnelsRoute = await readFile(new URL("../src/app/api/funnels/route.ts", import.meta.url), "utf8");
 assert.match(discovery, /parseCreateFunnel\(body\)/);
 assert.match(autoDiscovery, /createFunnel: true/);
 assert.match(localFinder, /createFunnel: true/);
 assert.doesNotMatch(discovery, /const generatedFunnel = await generateLocalizedFunnel/);
+assert.match(funnelsRoute, /`BORRAR EMBUDO \$\{funnelId\}`/);
+assert.match(funnelsRoute, /WHERE funnel_id=\$1/);
 
-console.log("Phase 2 characterization: 18 assertions passed; no network or provider credentials used.");
+console.log("Phase 2 characterization: 20 assertions passed; no network or provider credentials used.");

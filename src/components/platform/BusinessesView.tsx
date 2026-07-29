@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, Building2, Globe2, Mail, Network } from "lucide-react";
+import { ArrowRight, Building2, Globe2, Mail, Network, Trash2 } from "lucide-react";
 
 type Business = {
   id: number;
@@ -35,6 +35,8 @@ export default function BusinessesView({ selectedId }: { selectedId?: number }) 
   const [consultantReports, setConsultantReports] = useState<ConsultantReport[]>([]);
   const [proposals, setProposals] = useState<ProposalSummary[]>([]);
   const [campaigns, setCampaigns] = useState<CampaignSummary[]>([]);
+  const [deletingFunnelId, setDeletingFunnelId] = useState<number | null>(null);
+  const [pendingDeleteFunnelId, setPendingDeleteFunnelId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -67,6 +69,26 @@ export default function BusinessesView({ selectedId }: { selectedId?: number }) 
   }, [selectedId]);
 
   const selected = useMemo(() => businesses.find((business) => business.id === selectedId), [businesses, selectedId]);
+
+  async function deleteFunnel(funnel: Funnel) {
+    if (deletingFunnelId !== null) return;
+    setDeletingFunnelId(funnel.id);
+    try {
+      const response = await fetch("/api/funnels", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: funnel.id, confirmation: `BORRAR EMBUDO ${funnel.id}` }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || "The funnel could not be deleted.");
+      setFunnels(current => current.filter(item => item.id !== funnel.id));
+      setPendingDeleteFunnelId(null);
+    } catch (reason) {
+      window.alert(reason instanceof Error ? reason.message : "The funnel could not be deleted.");
+    } finally {
+      setDeletingFunnelId(null);
+    }
+  }
 
   if (loading) return <div className="h-72 animate-pulse rounded-3xl bg-white/[.05]" aria-label="Loading businesses" />;
   if (error) return <Notice>{error} No substitute business data is shown.</Notice>;
@@ -139,7 +161,17 @@ export default function BusinessesView({ selectedId }: { selectedId?: number }) 
         </section>
         <div className="space-y-6">
           <RelatedList title="Contacts" icon={Mail} empty="No contacts recorded." items={businessContacts.map((contact) => ({ id: contact.id, title: contact.name, detail: contact.email }))} />
-          <RelatedList title="Funnels" icon={Network} empty="No funnels recorded." items={businessFunnels.map((funnel) => ({ id: funnel.id, title: funnel.funnelName, detail: `${funnel.viewCount || 0} views`, href: `/es/funnel/${funnel.slug}` }))} />
+          <RelatedList title="Funnels" icon={Network} empty="No funnels recorded." items={businessFunnels.map((funnel) => ({
+            id: funnel.id,
+            title: funnel.funnelName,
+            detail: `${funnel.viewCount || 0} views`,
+            href: `/es/funnel/${funnel.slug}`,
+            onDelete: () => setPendingDeleteFunnelId(funnel.id),
+            onConfirmDelete: () => deleteFunnel(funnel),
+            onCancelDelete: () => setPendingDeleteFunnelId(null),
+            confirming: pendingDeleteFunnelId === funnel.id,
+            deleting: deletingFunnelId === funnel.id,
+          }))} />
         </div>
       </div>
     );
@@ -169,11 +201,11 @@ export default function BusinessesView({ selectedId }: { selectedId?: number }) 
   );
 }
 
-function RelatedList({ title, icon: Icon, items, empty }: { title: string; icon: typeof Mail; items: Array<{ id: number; title: string; detail: string; href?: string }>; empty: string }) {
+function RelatedList({ title, icon: Icon, items, empty }: { title: string; icon: typeof Mail; items: Array<{ id: number; title: string; detail: string; href?: string; onDelete?: () => void; onConfirmDelete?: () => void; onCancelDelete?: () => void; confirming?: boolean; deleting?: boolean }>; empty: string }) {
   return (
     <section className="rounded-3xl border border-white/[.07] bg-white/[.025] p-5">
       <h2 className="flex items-center gap-2 font-black text-white"><Icon className="size-4 text-cyan-300" />{title}</h2>
-      {items.length ? <ul className="mt-4 space-y-3">{items.map((item) => <li key={item.id} className="text-sm"><div className="font-semibold text-slate-200">{item.href ? <Link href={item.href} target="_blank" className="hover:text-cyan-300">{item.title}</Link> : item.title}</div><div className="mt-1 text-xs text-slate-500">{item.detail}</div></li>)}</ul> : <p className="mt-4 text-sm text-slate-500">{empty}</p>}
+      {items.length ? <ul className="mt-4 space-y-3">{items.map((item) => <li key={item.id} className="flex items-center justify-between gap-3 text-sm"><div className="min-w-0"><div className="truncate font-semibold text-slate-200">{item.href ? <Link href={item.href} target="_blank" className="hover:text-cyan-300">{item.title}</Link> : item.title}</div><div className="mt-1 text-xs text-slate-500">{item.detail}</div></div>{item.confirming ? <div className="flex shrink-0 items-center gap-1"><button type="button" onClick={item.onCancelDelete} disabled={item.deleting} className="rounded-lg border border-white/10 px-2.5 py-2 text-xs font-bold text-slate-300 hover:bg-white/5">Cancel</button><button type="button" onClick={item.onConfirmDelete} disabled={item.deleting} className="rounded-lg bg-red-500 px-2.5 py-2 text-xs font-black text-white disabled:opacity-40">{item.deleting ? "Deleting…" : `Delete #${item.id}`}</button></div> : item.onDelete && <button type="button" onClick={item.onDelete} disabled={item.deleting} aria-label={`Delete ${item.title} #${item.id}`} className="shrink-0 rounded-lg border border-red-400/20 p-2 text-red-300 outline-none hover:bg-red-400/10 focus-visible:ring-2 focus-visible:ring-red-300 disabled:opacity-40"><Trash2 className="size-4" aria-hidden="true" /></button>}</li>)}</ul> : <p className="mt-4 text-sm text-slate-500">{empty}</p>}
     </section>
   );
 }

@@ -255,6 +255,36 @@ export default function LegacyWorkspacePage() {
     }
   };
 
+  const deleteSelectedFunnel = async () => {
+    if (!selFun || deletingFunnels) return;
+    const confirmed = window.confirm(
+      `Vas a borrar únicamente "${selFun.funnelName}" y sus leads capturados. El negocio, contactos y auditorías se conservarán. ¿Deseas continuar?`,
+    );
+    if (!confirmed) return;
+    const typed = window.prompt(`Para confirmar, escribe exactamente: BORRAR EMBUDO ${selFun.id}`);
+    if (typed !== `BORRAR EMBUDO ${selFun.id}`) {
+      setFunnelError("La confirmación no coincide. No se borró nada.");
+      return;
+    }
+    setDeletingFunnels(true);
+    setFunnelError("");
+    try {
+      const response = await fetch("/api/funnels", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: selFun.id, confirmation: typed }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || "No se pudo borrar el embudo");
+      setFuns(current => current.filter(funnel => funnel.id !== selFun.id));
+      window.alert(`Se borró "${selFun.funnelName}" y ${data.deletedLeads || 0} lead(s).`);
+    } catch (error) {
+      setFunnelError(error instanceof Error ? error.message : "No se pudo borrar el embudo");
+    } finally {
+      setDeletingFunnels(false);
+    }
+  };
+
   const copy = (t: string, l: string) => { navigator.clipboard.writeText(t); setCopied(l); setTimeout(() => setCopied(null), 2500); };
 
   const calcExtra = Math.round(calcRev * (calcLift / 100));
@@ -445,6 +475,15 @@ export default function LegacyWorkspacePage() {
                   {selFun && <Link href={`/es/funnel/${selFun.slug}`} target="_blank" className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-3 rounded-xl shadow-lg flex items-center gap-2 whitespace-nowrap">
                     <ExternalLink className="w-4 h-4"/>Abrir Embudo en Vivo
                   </Link>}
+                  {selFun && <button
+                    type="button"
+                    onClick={deleteSelectedFunnel}
+                    disabled={deletingFunnels}
+                    className="bg-red-950 hover:bg-red-900 disabled:opacity-40 border border-red-800 text-red-200 font-bold text-xs px-4 py-3 rounded-xl flex items-center gap-2"
+                  >
+                    <Trash2 className="w-4 h-4"/>
+                    Borrar este embudo
+                  </button>}
                   <button
                     type="button"
                     onClick={deleteAllFunnels}
