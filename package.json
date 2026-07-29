@@ -9,7 +9,7 @@
     "init": "node scripts/init-db.mjs",
     "dev": "next dev --webpack",
     "build": "node scripts/build.mjs",
-    "start": "next start",
+    "start": "node scripts/start.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test:phase2": "node --experimental-strip-types scripts/phase2-characterization.mjs",

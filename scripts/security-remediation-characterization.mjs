@@ -60,6 +60,13 @@ for (const requirement of [
 const migration = await readFile(new URL("./migrate-security-remediation.sql", import.meta.url), "utf8");
 check(migration.includes("platform_legacy_dataset_owner"), "legacy dataset ownership migration exists");
 
+const rootLayout = await readFile(new URL("../src/app/layout.tsx", import.meta.url), "utf8");
+check(rootLayout.includes('dynamic = "force-dynamic"'), "nonce CSP uses dynamic rendering");
+const authForm = await readFile(new URL("../src/components/enterprise/AuthForm.tsx", import.meta.url), "utf8");
+check(authForm.includes('<form method="post"'), "auth fallback never places credentials in the URL");
+const buildScript = await readFile(new URL("./build.mjs", import.meta.url), "utf8");
+check(buildScript.includes('join(standalone, ".next", "static")'), "standalone build includes client chunks");
+
 const leakedDocument = await readFile(new URL("../DEPLOY_GITHUB_VERCEL.md", import.meta.url), "utf8");
 check(!leakedDocument.includes("Adeline@"), "known database credential removed");
 check(!/sk_test_[A-Za-z0-9]{20,}/.test(leakedDocument), "known Clerk secret removed");

@@ -1,5 +1,7 @@
 import { spawnSync } from "node:child_process";
+import { cpSync, existsSync } from "node:fs";
 import { createRequire } from "node:module";
+import { join } from "node:path";
 
 const require = createRequire(import.meta.url);
 const nextBin = require.resolve("next/dist/bin/next");
@@ -16,4 +18,16 @@ const result = spawnSync(process.execPath, [nextBin, "build", "--webpack"], {
 });
 
 if (result.error) throw result.error;
-process.exit(result.status ?? 1);
+if (result.status !== 0) process.exit(result.status ?? 1);
+
+const standalone = join(process.cwd(), ".next", "standalone");
+if (existsSync(standalone)) {
+  cpSync(join(process.cwd(), ".next", "static"), join(standalone, ".next", "static"), {
+    recursive: true,
+    force: true,
+  });
+  const publicDirectory = join(process.cwd(), "public");
+  if (existsSync(publicDirectory)) {
+    cpSync(publicDirectory, join(standalone, "public"), { recursive: true, force: true });
+  }
+}

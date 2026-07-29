@@ -10,6 +10,10 @@ export const metadata: Metadata = {
   description: "Lead intelligence, funnel analysis, proposals, outreach and CRM in one connected workspace.",
 };
 
+// Next.js can attach the request nonce to framework scripts only when HTML is
+// rendered per request.
+export const dynamic = "force-dynamic";
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
