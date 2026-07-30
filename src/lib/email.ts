@@ -1,18 +1,18 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 export async function sendOutreachEmail(
   to: string,
   subject: string,
   body: string,
   fromEmail: string = process.env.RESEND_FROM_EMAIL || "noreply@ecoscalepartner.com"
 ) {
-  if (!process.env.RESEND_API_KEY) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
     throw new Error("RESEND_API_KEY no está configurada; no se envió ningún correo.");
   }
 
   try {
+    const resend = new Resend(apiKey);
     const result = await resend.emails.send({
       from: fromEmail,
       to: to,

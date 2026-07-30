@@ -68,6 +68,14 @@ const authForm = await readFile(new URL("../src/components/enterprise/AuthForm.t
 check(authForm.includes('<form method="post"'), "auth fallback never places credentials in the URL");
 const buildScript = await readFile(new URL("./build.mjs", import.meta.url), "utf8");
 check(buildScript.includes('join(standalone, ".next", "static")'), "standalone build includes client chunks");
+const emailModule = await readFile(new URL("../src/lib/email.ts", import.meta.url), "utf8");
+const apiKeyGuard = emailModule.indexOf("if (!apiKey)");
+const resendInitialization = emailModule.indexOf("new Resend(apiKey)");
+check(apiKeyGuard >= 0, "email delivery rejects missing Resend credentials");
+check(
+  resendInitialization > apiKeyGuard,
+  "Resend initializes lazily after the credential guard",
+);
 
 const leakedDocument = await readFile(new URL("../DEPLOY_GITHUB_VERCEL.md", import.meta.url), "utf8");
 check(!leakedDocument.includes("Adeline@"), "known database credential removed");
