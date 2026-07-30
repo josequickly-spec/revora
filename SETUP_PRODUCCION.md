@@ -5,7 +5,7 @@
 | Componente | Servicio | Costo | Setup |
 |---|---|---|---|
 | **BD PostgreSQL** | Supabase | **Gratis** (hasta 500MB) | 2 min |
-| **Autenticación** | Clerk | **Gratis** (hasta 10k users) | 5 min |
+| **Autenticación** | Integrada | **Incluida** | 3 min |
 | **Email Real** | Resend | **Gratis dev**, $20/mes prod | 3 min |
 | **Hosting** | Vercel | **Gratis** (hobby) | 2 min |
 | **Total Mes 1** | — | **$0** | — |
@@ -51,67 +51,15 @@ Esto usa Drizzle para crear las tablas en Supabase.
 
 ---
 
-## PASO 2: Autenticación Real (Clerk)
+## PASO 2: Autenticación integrada
 
-### 2.1 Crear app en Clerk
-
-1. Ve a https://dashboard.clerk.com
-2. Sign Up (GitHub o email)
-3. Crea "Application" 
-4. Elige "Email" como método de sign-in
-5. Copia las keys:
-   - **NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY**
-   - **CLERK_SECRET_KEY**
-
-### 2.2 Instalar Clerk
-
-```bash
-npm install @clerk/nextjs
-```
-
-### 2.3 Agregar variables a `.env.local`
+Genera dos secretos aleatorios diferentes, de al menos 32 caracteres, y agrégalos a `.env.local`:
 
 ```env
 DATABASE_URL="postgresql://..."
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_..."
-CLERK_SECRET_KEY="sk_test_..."
+AUTH_JWT_SECRET="RANDOM_SECRET_WITH_AT_LEAST_32_CHARACTERS"
+AUTH_ENCRYPTION_KEY="DIFFERENT_RANDOM_SECRET_WITH_AT_LEAST_32_CHARACTERS"
 NODE_ENV=development
-```
-
-### 2.4 Crear middleware de Clerk
-
-Crea archivo `src/middleware.ts`:
-
-```typescript
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-
-const isProtectedRoute = createRouteMatcher(["/api(.*)"]);
-
-export default clerkMiddleware((auth, req) => {
-  if (isProtectedRoute(req)) auth().protect();
-});
-
-export const config = {
-  matcher: ["/((?!.*\\..*|_next).*)", "/", "/(api|trpc)(.*)"],
-};
-```
-
-### 2.5 Proteger layout
-
-Actualiza `src/app/layout.tsx`:
-
-```typescript
-import { ClerkProvider } from "@clerk/nextjs";
-
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <ClerkProvider>
-      <html lang="es">
-        <body className="bg-slate-950 text-slate-100 antialiased">{children}</body>
-      </html>
-    </ClerkProvider>
-  );
-}
 ```
 
 ---
@@ -288,8 +236,8 @@ git push -u origin main
 4. En "Environment Variables" agrega:
    ```
    DATABASE_URL=postgresql://...
-   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_...
-   CLERK_SECRET_KEY=sk_...
+   AUTH_JWT_SECRET=random_secret_with_at_least_32_characters
+   AUTH_ENCRYPTION_KEY=different_random_secret_with_at_least_32_characters
    RESEND_API_KEY=re_...
    ```
 5. Click "Deploy"

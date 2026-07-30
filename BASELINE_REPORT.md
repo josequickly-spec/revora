@@ -172,12 +172,12 @@ No values are recorded in this report.
 - `META_WEBHOOK_SECRET`
 - `META_VERIFY_TOKEN`
 
-### Authentication placeholders
+### Authentication
 
-- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
-- `CLERK_SECRET_KEY`
+- `AUTH_JWT_SECRET`
+- `AUTH_ENCRYPTION_KEY`
 
-Clerk variables exist in configuration guidance, but the current application does not implement active Clerk authentication.
+The current application uses its built-in authentication system.
 
 ### Operations and deployment
 
