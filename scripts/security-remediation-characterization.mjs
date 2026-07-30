@@ -66,6 +66,12 @@ check(rootLayout.includes('dynamic = "force-dynamic"'), "nonce CSP uses dynamic 
 check(rootLayout.includes("<GlobalNavigationControls />"), "all pages include global navigation controls");
 const authForm = await readFile(new URL("../src/components/enterprise/AuthForm.tsx", import.meta.url), "utf8");
 check(authForm.includes('<form method="post"'), "auth fallback never places credentials in the URL");
+check(authForm.includes('initialResetToken ? "reset" : "login"'), "login activates password recovery for reset tokens");
+check(authForm.includes('"/api/auth/password-reset-confirm"'), "reset form uses the confirmation endpoint");
+check(authForm.includes('name="confirmPassword"'), "reset form requires password confirmation");
+const loginPage = await readFile(new URL("../src/app/login/page.tsx", import.meta.url), "utf8");
+check(loginPage.includes("searchParams: Promise"), "login awaits Next.js search parameters");
+check(loginPage.includes("<AuthForm initialResetToken={resetToken}"), "login passes the reset token to the form");
 const buildScript = await readFile(new URL("./build.mjs", import.meta.url), "utf8");
 check(buildScript.includes('join(standalone, ".next", "static")'), "standalone build includes client chunks");
 const emailModule = await readFile(new URL("../src/lib/email.ts", import.meta.url), "utf8");
