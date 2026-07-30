@@ -32,29 +32,29 @@ resource "aws_db_subnet_group" "main" {
   tags       = local.tags
 }
 resource "aws_db_instance" "postgres" {
-  identifier                  = "${local.name}-postgres"
-  engine                      = "postgres"
-  engine_version              = "16.4"
-  instance_class              = "db.r6g.large"
-  allocated_storage           = 100
-  max_allocated_storage       = 1000
-  storage_type                = "gp3"
-  storage_encrypted           = true
-  kms_key_id                  = aws_kms_key.data.arn
-  db_name                     = var.database_name
-  username                    = var.database_username
-  password                    = random_password.database.result
-  db_subnet_group_name        = aws_db_subnet_group.main.name
-  vpc_security_group_ids      = var.database_security_group_ids
-  backup_retention_period     = var.backup_retention_days
-  copy_tags_to_snapshot       = true
-  deletion_protection         = var.environment == "production"
-  multi_az                    = var.environment == "production"
+  identifier                   = "${local.name}-postgres"
+  engine                       = "postgres"
+  engine_version               = "16.4"
+  instance_class               = "db.r6g.large"
+  allocated_storage            = 100
+  max_allocated_storage        = 1000
+  storage_type                 = "gp3"
+  storage_encrypted            = true
+  kms_key_id                   = aws_kms_key.data.arn
+  db_name                      = var.database_name
+  username                     = var.database_username
+  password                     = random_password.database.result
+  db_subnet_group_name         = aws_db_subnet_group.main.name
+  vpc_security_group_ids       = var.database_security_group_ids
+  backup_retention_period      = var.backup_retention_days
+  copy_tags_to_snapshot        = true
+  deletion_protection          = var.environment == "production"
+  multi_az                     = var.environment == "production"
   performance_insights_enabled = true
-  auto_minor_version_upgrade  = true
-  skip_final_snapshot         = false
-  final_snapshot_identifier   = "${local.name}-final"
-  tags                        = local.tags
+  auto_minor_version_upgrade   = true
+  skip_final_snapshot          = false
+  final_snapshot_identifier    = "${local.name}-final"
+  tags                         = local.tags
 }
 
 resource "aws_elasticache_subnet_group" "main" {
