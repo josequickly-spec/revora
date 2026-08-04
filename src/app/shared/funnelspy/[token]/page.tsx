@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { getAudit } from "@/lib/funnelspy-store";
 import FunnelSpyPrintButton from "@/components/FunnelSpyPrintButton";
-import FunnelSpyLanguage from "@/components/FunnelSpyLanguage";
 
 export default async function SharedFunnelSpyReport({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -21,7 +20,6 @@ export default async function SharedFunnelSpyReport({ params }: { params: Promis
         {audit.report && <section className="mt-6 rounded-3xl border border-violet-400/20 bg-violet-500/[.08] p-8"><h2 className="text-2xl font-black">{audit.report.primaryObjective}</h2><p className="mt-4 leading-7 text-slate-300">{audit.report.executiveSummary}</p></section>}
         <section className="mt-6 space-y-3">{audit.analysis.pages.map((page) => <article key={page.url} className="rounded-2xl border border-white/[.08] bg-white/[.025] p-5"><strong>{page.title}</strong><p className="mt-2 text-sm text-slate-500">{page.url}</p></article>)}</section>
       </div>
-      <FunnelSpyLanguage />
     </main>
   );
 }

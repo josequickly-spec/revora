@@ -123,6 +123,7 @@ assert.equal(consultantRequestFingerprint({ ...request, selectedOpportunityIds: 
 assert.equal(safeProviderError({ status: 429 }).code, "provider_rate_limited");
 assert.equal(safeProviderError({ name: "AbortError" }).code, "provider_timeout");
 assert.equal(safeProviderError(new Error("secret provider detail")).message, "The AI provider could not generate the strategy.");
+assert.equal(safeProviderError({ status: 404, code: "model_not_found" }).code, "provider_model_unavailable");
 
 assert.equal(AI_CONSULTANT_PROMPT_VERSION, "ai-consultant-prompt-v1");
 assert.equal(AI_CONSULTANT_SCHEMA_VERSION, "ai-consultant-schema-v1");

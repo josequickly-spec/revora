@@ -20,7 +20,20 @@ export interface AdCampaign {
   geolocation: string;
   duration: number;
   roi_target: number;
+  platform: "facebook" | "google" | "instagram";
 }
+
+const adCampaignAISchema = z.object({
+  name: z.string(),
+  dailyBudget: z.number().nonnegative(),
+  creatives: z.array(z.object({
+    headline: z.string(), subheading: z.string(), description: z.string(), cta: z.string(),
+    imagePrompt: z.string(), targetAudience: z.string(), estimatedCPC: z.number().nonnegative(),
+  })).min(1).max(6),
+  targetAudience: z.string(), geolocation: z.string(), duration: z.number().positive(), roi_target: z.number().nonnegative(),
+});
+
+const optimizationSchema = z.object({ recommendations: z.array(z.string()).min(3).max(5) });
 
 export async function generateAdCampaign(
   businessName: string,
@@ -59,40 +72,21 @@ Responde SOLO JSON:
   "roi_target": 300
 }`;
 
-  try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: 1200,
-        temperature: 0.8,
-      }),
-    });
-
-    if (!response.ok) throw new Error("OpenAI API error");
-
-    const data = (await response.json()) as {
-      choices: Array<{ message: { content: string } }>;
-    };
-    let content = data.choices[0].message.content;
-    content = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-
-    const campaign_data = JSON.parse(content);
-    return {
-      id: `camp_${Date.now()}`,
-      businessName,
-      platform,
-      ...campaign_data,
-    };
-  } catch (error) {
-    console.error("Ad campaign generation error:", error);
-    throw error;
-  }
+  const generation = await generateStructured({
+    task: "bulk",
+    schemaName: "ad_campaign",
+    schema: adCampaignAISchema,
+    system: "Eres especialista en publicidad responsable. No inventes resultados históricos, disponibilidad, prueba social ni garantías.",
+    user: prompt,
+  });
+  return {
+    id: `camp_${Date.now()}`,
+    businessName,
+    budget,
+    platform,
+    ...generation.output,
+    creatives: generation.output.creatives.map((creative) => ({ ...creative, platform })),
+  };
 }
 
 export async function generateAIBotOptimizations(
@@ -127,38 +121,20 @@ Metricas actuales:
 Dame 3 recomendaciones ESPECIFICAS para mejorar. Responde como JSON array de strings.`;
 
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: 500,
-        temperature: 0.7,
-      }),
+    const generation = await generateStructured({
+      task: "bulk",
+      schemaName: "ad_optimizations",
+      schema: optimizationSchema,
+      system: "Eres un analista de campañas. Basa cada recomendación únicamente en las métricas entregadas.",
+      user: `${prompt}\nResponde como un objeto con la propiedad recommendations.`,
     });
-
-    if (!response.ok) throw new Error("OpenAI API error");
-
-    const data = (await response.json()) as {
-      choices: Array<{ message: { content: string } }>;
-    };
-    let content = data.choices[0].message.content;
-    content = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-
-    const recommendations = JSON.parse(content);
 
     return {
       ctr,
       conversionRate,
       cpc,
       roas,
-      recommendations: Array.isArray(recommendations)
-        ? recommendations
-        : [recommendations],
+      recommendations: generation.output.recommendations,
     };
   } catch (error) {
     console.error("AI optimization error:", error);
@@ -175,3 +151,5 @@ Dame 3 recomendaciones ESPECIFICAS para mejorar. Responde como JSON array de str
     };
   }
 }
+import { z } from "zod";
+import { generateStructured } from "@/lib/ai-provider-router";

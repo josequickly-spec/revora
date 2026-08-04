@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, Building2, Globe2, Mail, Network, Trash2 } from "lucide-react";
+import { ArrowRight, Building2, Globe2, Mail, Network, Plus, Search, Trash2, X } from "lucide-react";
 
 type Business = {
   id: number;
@@ -20,10 +20,21 @@ type Business = {
     technologies?: Array<{ name: string; category?: string | null }>;
   } | null;
 };
-type Contact = { id: number; businessId: number | null; name: string; email: string; status: string | null };
+type Contact = { id: number; businessId: number | null; name: string; role: string; email: string; linkedinUrl?: string | null; confidenceScore?: number | null; status: string | null };
 type Funnel = { id: number; businessId: number | null; funnelName: string; slug: string; viewCount: number | null };
 type Audit = { id: string; businessId: number | null; domain: string; score: number; createdAt: string; opportunityCount: number };
-type ConsultantReport = { id: string; status: string; objective: string; createdAt: string };
+type ConsultantReport = {
+  id: string;
+  status: string;
+  objective: string;
+  createdAt: string;
+  provider?: string | null;
+  model?: string | null;
+  report?: {
+    executiveSummary: string;
+    topPriorities: Array<{ title: string; priority: string; recommendedAction: string }>;
+  } | null;
+};
 type ProposalSummary = { id: string; title: string; status: string };
 type CampaignSummary = { id: string; name: string; status: string };
 
@@ -123,7 +134,8 @@ export default function BusinessesView({ selectedId }: { selectedId?: number }) 
             <div className="mt-3 flex flex-wrap gap-2 text-xs">
               <Status label="Website" value={selected.domain ? "available" : "unavailable"} />
               <Status label="BuiltWith" value={selected.technologyData ? "success" : "unavailable"} />
-              <Status label="Hunter" value={businessContacts.length ? "success" : "unavailable"} />
+              <Status label="Hunter" value={businessContacts.some(contact => ["verified", "discovered"].includes(contact.status || "")) ? "success" : "unavailable"} />
+              <Status label="LinkedIn" value={businessContacts.some(contact => Boolean(contact.linkedinUrl)) ? "profile saved" : "research available"} />
               <Status label="Audit summary" value="not persisted" />
             </div>
             <p className="mt-4 text-xs leading-5 text-slate-500">
@@ -145,9 +157,16 @@ export default function BusinessesView({ selectedId }: { selectedId?: number }) 
           </section>
           <section className="mt-6 border-t border-white/[.07] pt-6">
             <div className="flex items-center justify-between gap-3"><h3 className="font-black text-white">AI Consultant</h3><Link href={`/businesses/${selected.id}/consultant`} className="text-xs font-bold text-violet-300">Report history</Link></div>
-            {consultantReports[0]
-              ? <Link href={`/consultant/${consultantReports[0].id}`} className="mt-3 flex items-center justify-between rounded-xl bg-violet-400/[.06] p-3 text-sm"><span className="text-slate-300">{consultantReports[0].objective.replaceAll("_", " ")} · {new Date(consultantReports[0].createdAt).toLocaleString()}</span><span className="text-violet-200">{consultantReports[0].status}</span></Link>
-              : <p className="mt-3 text-sm text-slate-500">{audits.length ? "No AI strategy has been generated. Opening this profile never calls AI." : "A persisted associated audit is required before strategy generation."}</p>}
+            {consultantReports[0]?.status === "completed" && consultantReports[0].report
+              ? <div className="mt-3 rounded-2xl border border-violet-300/15 bg-violet-400/[.06] p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-[10px] font-black uppercase tracking-[.16em] text-violet-300">Latest generated strategy</span><span className="text-[10px] text-slate-500">{consultantReports[0].provider} · {consultantReports[0].model}</span></div>
+                  <p className="mt-3 text-sm leading-6 text-slate-300">{consultantReports[0].report.executiveSummary}</p>
+                  <div className="mt-4 space-y-2">{consultantReports[0].report.topPriorities.slice(0, 3).map((priority) => <div key={priority.title} className="rounded-xl border border-white/[.06] bg-black/15 p-3"><div className="flex items-center justify-between gap-3"><strong className="text-sm text-white">{priority.title}</strong><span className="text-[9px] font-black uppercase text-cyan-300">{priority.priority}</span></div><p className="mt-1 text-xs leading-5 text-slate-500">{priority.recommendedAction}</p></div>)}</div>
+                  <Link href={`/consultant/${consultantReports[0].id}`} className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-violet-200">Open complete strategy <ArrowRight className="size-4" /></Link>
+                </div>
+              : consultantReports[0]
+                ? <Link href={`/consultant/${consultantReports[0].id}`} className="mt-3 flex items-center justify-between rounded-xl bg-violet-400/[.06] p-3 text-sm"><span className="text-slate-300">{consultantReports[0].objective.replaceAll("_", " ")} · {new Date(consultantReports[0].createdAt).toLocaleString()}</span><span className="text-violet-200">{consultantReports[0].status}</span></Link>
+                : <p className="mt-3 text-sm text-slate-500">{audits.length ? "No AI strategy has been generated. Opening this profile never calls AI." : "A persisted associated audit is required before strategy generation."}</p>}
             <Link href={audits.length ? `/businesses/${selected.id}/consultant?auditId=${audits[0].id}` : `/funnelspy?url=${encodeURIComponent(selected.domain)}&businessId=${selected.id}`} className="mt-3 inline-flex rounded-xl border border-violet-300/20 px-4 py-2 text-sm font-bold text-violet-200">{audits.length ? "Generate AI Strategy" : "Run Funnel Audit"}</Link>
           </section>
           <section className="mt-6 border-t border-white/[.07] pt-6">
@@ -160,7 +179,11 @@ export default function BusinessesView({ selectedId }: { selectedId?: number }) 
           </section>
         </section>
         <div className="space-y-6">
-          <RelatedList title="Contacts" icon={Mail} empty="No contacts recorded." items={businessContacts.map((contact) => ({ id: contact.id, title: contact.name, detail: contact.email }))} />
+          <ContactsPanel
+            business={selected}
+            contacts={businessContacts}
+            onCreated={(contact) => setContacts((current) => [contact, ...current])}
+          />
           <RelatedList title="Funnels" icon={Network} empty="No funnels recorded." items={businessFunnels.map((funnel) => ({
             id: funnel.id,
             title: funnel.funnelName,
@@ -198,6 +221,155 @@ export default function BusinessesView({ selectedId }: { selectedId?: number }) 
         })}
       </ul>
     </section>
+  );
+}
+
+function contactReadiness(contact: Contact) {
+  const role = contact.role.toLowerCase();
+  const localPart = contact.email.split("@")[0]?.toLowerCase() || "";
+  const reasons: string[] = [];
+  let score = 0;
+  if (/founder|co-founder|owner|ceo|fundador|propietario/.test(role)) { score += 35; reasons.push("senior decision-maker role"); }
+  else if (/director|head|vp|chief/.test(role)) { score += 30; reasons.push("department leadership role"); }
+  else if (/manager|gerente|lead/.test(role)) { score += 20; reasons.push("management role"); }
+  else { score += 8; reasons.push("role recorded"); }
+  if (contact.linkedinUrl) { score += 25; reasons.push("LinkedIn profile saved"); }
+  if (contact.status === "verified") { score += 30; reasons.push("email verified"); }
+  else if (contact.status === "discovered") { score += 15; reasons.push("email discovered; verification pending"); }
+  else { score += 5; reasons.push("manual email; verification pending"); }
+  if (localPart && !/^(info|hello|hola|contact|sales|ventas|marketing|admin|support|soporte)$/.test(localPart)) {
+    score += 10;
+    reasons.push("person-like mailbox");
+  }
+  return { score: Math.min(score, 100), reasons };
+}
+
+function ContactsPanel({ business, contacts, onCreated }: { business: Business; contacts: Contact[]; onCreated: (contact: Contact) => void }) {
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [savedMessage, setSavedMessage] = useState("");
+  const [form, setForm] = useState({ name: "", role: "", email: "", linkedinUrl: "" });
+
+  function updateField(field: keyof typeof form, value: string) {
+    setForm((current) => ({ ...current, [field]: value }));
+    setError("");
+    setSavedMessage("");
+  }
+
+  async function addContact(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (saving) return;
+    setSaving(true);
+    setError("");
+    setSavedMessage("");
+    try {
+      const response = await fetch("/api/contacts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ businessId: business.id, ...form }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.contact) throw new Error(data.error || "The contact could not be saved.");
+      onCreated(data.contact);
+      setForm({ name: "", role: "", email: "", linkedinUrl: "" });
+      setOpen(false);
+      setSavedMessage(`${data.contact.name} was added as a manual contact.`);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "The contact could not be saved.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className="rounded-3xl border border-white/[.07] bg-white/[.025] p-5">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="flex items-center gap-2 font-black text-white"><Mail className="size-4 text-cyan-300" />Contacts</h2>
+        <button
+          type="button"
+          onClick={() => { setOpen((current) => !current); setError(""); setSavedMessage(""); }}
+          aria-expanded={open}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-cyan-300/20 bg-cyan-300/[.06] px-3 py-2 text-xs font-black text-cyan-200 outline-none hover:bg-cyan-300/[.12] focus-visible:ring-2 focus-visible:ring-cyan-300"
+        >
+          {open ? <X className="size-3.5" /> : <Plus className="size-3.5" />}
+          {open ? "Cancel" : "Add manually"}
+        </button>
+      </div>
+
+      <div className="mt-4 rounded-2xl border border-blue-400/15 bg-blue-400/[.05] p-4">
+        <div className="flex items-start gap-3">
+          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#0a66c2] text-white"><Network className="size-4" /></span>
+          <div>
+            <h3 className="text-sm font-black text-white">Decision-maker research</h3>
+            <p className="mt-1 text-xs leading-5 text-slate-500">Open focused LinkedIn searches, confirm the person, then save the verified profile and email. EcoScale does not claim an identity until you save evidence.</p>
+          </div>
+        </div>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <a href={`https://www.linkedin.com/search/results/companies/?keywords=${encodeURIComponent(`${business.name} ${business.domain}`)}`} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-300/20 px-3 py-2.5 text-xs font-bold text-blue-200"><Search className="size-3.5" />Find company</a>
+          <a href={`https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(`${business.name} founder CEO owner`)}`} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-300/20 px-3 py-2.5 text-xs font-bold text-blue-200"><Search className="size-3.5" />Founder / CEO / Owner</a>
+          <a href={`https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(`${business.name} ecommerce director marketing growth`)}`} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-300/20 px-3 py-2.5 text-xs font-bold text-blue-200"><Search className="size-3.5" />Ecommerce / Marketing</a>
+          <a href={`https://www.google.com/search?q=${encodeURIComponent(`site:linkedin.com/in "${business.name}" (founder OR CEO OR director OR ecommerce OR marketing)`)}`} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 px-3 py-2.5 text-xs font-bold text-slate-300"><Search className="size-3.5" />Search public profiles</a>
+        </div>
+        <p className="mt-3 text-[11px] leading-5 text-slate-600">Suggested order: Founder/CEO/Owner for small owner-led businesses; Ecommerce/Marketing/Growth leadership when that responsibility is publicly documented.</p>
+      </div>
+
+      {open && (
+        <form onSubmit={addContact} className="mt-4 space-y-3 rounded-2xl border border-cyan-300/15 bg-cyan-300/[.04] p-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <ContactField label="Full name" value={form.name} onChange={(value) => updateField("name", value)} autoComplete="name" placeholder="Jane Smith" required />
+            <ContactField label="Role" value={form.role} onChange={(value) => updateField("role", value)} autoComplete="organization-title" placeholder="Marketing Director" required />
+          </div>
+          <ContactField label="Email" value={form.email} onChange={(value) => updateField("email", value)} type="email" autoComplete="email" placeholder="jane@company.com" required />
+          <ContactField label="LinkedIn URL (optional)" value={form.linkedinUrl} onChange={(value) => updateField("linkedinUrl", value)} type="url" autoComplete="url" placeholder="https://www.linkedin.com/in/jane-smith" />
+          <p className="text-[11px] leading-5 text-slate-500">Manual contacts are saved as unverified until a verification provider confirms the address.</p>
+          {error && <p role="alert" className="rounded-xl border border-red-400/20 bg-red-400/[.07] px-3 py-2 text-xs text-red-200">{error}</p>}
+          <button type="submit" disabled={saving} className="w-full rounded-xl bg-cyan-300 px-4 py-2.5 text-sm font-black text-slate-950 outline-none hover:bg-cyan-200 focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:cursor-not-allowed disabled:opacity-50">
+            {saving ? "Saving contact…" : "Save contact"}
+          </button>
+        </form>
+      )}
+
+      {savedMessage && <p role="status" className="mt-3 rounded-xl border border-emerald-400/20 bg-emerald-400/[.06] px-3 py-2 text-xs text-emerald-200">{savedMessage}</p>}
+      {contacts.length
+        ? <ul className="mt-4 space-y-3">{contacts.map((contact) => {
+            const readiness = contactReadiness(contact);
+            return <li key={contact.id} className="rounded-xl border border-white/[.05] bg-black/15 p-3 text-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="truncate font-semibold text-slate-200">{contact.name}</div>
+                  <a href={`mailto:${contact.email}`} className="mt-1 block truncate text-xs text-cyan-300 hover:text-cyan-200">{contact.email}</a>
+                  <div className="mt-1 text-xs text-slate-500">{contact.role || "Role not recorded"}</div>
+                  {contact.linkedinUrl && <a href={contact.linkedinUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-blue-300 hover:text-blue-200"><Network className="size-3.5" />Open LinkedIn profile</a>}
+                </div>
+                <div className="shrink-0 text-right">
+                  <span className="rounded-full border border-white/10 px-2 py-1 text-[9px] font-black uppercase tracking-wider text-slate-400">{contact.status || "unknown"}</span>
+                  <div className="mt-2 text-xs font-black text-lime-300">{readiness.score}/100</div>
+                  <div className="text-[9px] uppercase tracking-wider text-slate-600">readiness</div>
+                </div>
+              </div>
+              <p className="mt-3 border-t border-white/[.05] pt-2 text-[10px] leading-4 text-slate-600">Based on: {readiness.reasons.join(" · ")}. This is evidence readiness, not a predicted reply rate.</p>
+            </li>;
+          })}</ul>
+        : !open && <p className="mt-4 text-sm text-slate-500">No contacts recorded. Add the first one manually.</p>}
+    </section>
+  );
+}
+
+function ContactField({ label, value, onChange, type = "text", autoComplete, placeholder, required = false }: { label: string; value: string; onChange: (value: string) => void; type?: string; autoComplete?: string; placeholder?: string; required?: boolean }) {
+  return (
+    <label className="block text-xs font-bold text-slate-300">
+      {label}
+      <input
+        type={type}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        autoComplete={autoComplete}
+        placeholder={placeholder}
+        required={required}
+        className="mt-1.5 w-full rounded-xl border border-white/10 bg-[#090e19] px-3 py-2.5 text-sm font-normal text-white outline-none placeholder:text-slate-700 focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/20"
+      />
+    </label>
   );
 }
 

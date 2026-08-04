@@ -13,6 +13,8 @@ const categoryFilters: Record<string, string[]> = {
   dentist: ['["amenity"="dentist"]'], dental: ['["amenity"="dentist"]'],
   pharmacy: ['["amenity"="pharmacy"]'], hotel: ['["tourism"~"hotel|motel|guest_house"]'],
   realestate: ['["office"="estate_agent"]'], inmobiliaria: ['["office"="estate_agent"]'],
+  shopify: ['["shop"]["name"]'], tienda: ['["shop"]["name"]'],
+  retail: ['["shop"]["name"]'], store: ['["shop"]["name"]'],
 };
 
 function filtersFor(category = "") {

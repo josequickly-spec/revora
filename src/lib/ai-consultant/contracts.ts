@@ -28,7 +28,7 @@ export const evidenceReferenceSchema = z.object({
   sourceVersion: z.string().min(1),
   label: z.string().min(1).max(240),
   fact: z.string().min(1).max(2_000),
-  pageUrl: z.string().url().nullable(),
+  pageUrl: z.string().max(2_048).nullable(),
   auditSection: z.string().max(120).nullable(),
   capturedAt: z.string().datetime().nullable(),
   confidence: z.enum(["high", "medium", "low", "unknown"]),

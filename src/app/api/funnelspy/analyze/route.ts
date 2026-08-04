@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { analyzeFunnel } from "@/lib/funnelspy";
-import { findLatestAudit, saveAudit, storageWarning } from "@/lib/funnelspy-store";
+import { findLatestAudit, saveAudit } from "@/lib/funnelspy-store";
 import { checkRateLimit } from "@/lib/funnelspy-rate-limit";
 import { funnelAuditRequestSchema } from "@/lib/funnel-audit/contracts";
 import { isReusableAudit, normalizeAuditDomain } from "@/lib/funnel-audit/reuse";
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
           analysis: existing.analysis,
           audit: { id: existing.id, shareToken: existing.shareToken, createdAt: existing.createdAt, businessId: existing.businessId, storageMode: existing.storageMode },
           reused: true,
-          warnings: [storageWarning(existing)].filter(Boolean),
+          warnings: [],
           freshnessPolicyDays: 7,
         });
       }
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
       analysis,
       audit: { id: audit.id, shareToken: audit.shareToken, createdAt: audit.createdAt, businessId: audit.businessId, storageMode: audit.storageMode },
       reused: false,
-      warnings: [storageWarning(audit)].filter(Boolean),
+      warnings: [],
       freshnessPolicyDays: 7,
     });
   } catch (error) {

@@ -1,3 +1,6 @@
+import { z } from "zod";
+import { generateStructured } from "@/lib/ai-provider-router";
+
 export interface GeneratedFunnel {
   headline: string;
   subheadline: string;
@@ -37,6 +40,29 @@ export interface GeneratedFunnel {
     secondary: string;
     accent: string;
   };
+  landingPage: {
+    brandName: string;
+    navigation: string[];
+    logoUrl: string;
+    heroImageUrl: string;
+    preserveOriginalDesign: boolean;
+    fontFamily: string;
+    headerStyle: string;
+    sectionOrder: string[];
+    backgroundColor: string;
+    surfaceColor: string;
+    textColor: string;
+  };
+  otom: {
+    hook: { name: string; description: string; psychologicalTrigger: string; pricePoint: number };
+    coreOffer: { name: string; description: string; psychologicalTrigger: string; pricePoint: number };
+    upsell: { name: string; description: string; psychologicalTrigger: string; pricePoint: number };
+    downsell: { name: string; description: string; psychologicalTrigger: string; pricePoint: number };
+    pricingStrategy: { anchorPrice: number; suggestedPrice: number; premiumPrice: number; rationale: string };
+    psychologicalTriggers: string[];
+    customerJourney: Array<{ step: number; action: string; trigger: string; expectedResult: string }>;
+    followUp: Array<{ day: number; subject: string; purpose: string; body: string }>;
+  };
 }
 
 export interface FunnelBusinessContext {
@@ -47,7 +73,75 @@ export interface FunnelBusinessContext {
   price?: string;
   audit?: unknown;
   language?: "es" | "en";
+  visualIdentity?: {
+    logoUrl?: string;
+    heroImageUrl?: string;
+    colors?: string[];
+    fonts?: string[];
+    navigation?: string[];
+    layout?: string;
+  };
 }
+
+const offerStepSchema = z.object({
+  name: z.string(),
+  description: z.string(),
+  psychologicalTrigger: z.string(),
+  pricePoint: z.number().min(0),
+});
+
+const funnelAISchema = z.object({
+  headline: z.string(), subheadline: z.string(), ctaText: z.string(), offer: z.string(),
+  offerBadge: z.string(), bonusOffer: z.string(), painPoint: z.string(), agitationCopy: z.string(),
+  solutionCopy: z.string(), proofCopy: z.string(), eyebrow: z.string(),
+  benefits: z.array(z.string()).min(3).max(5),
+  objections: z.array(z.object({ question: z.string(), answer: z.string() })).min(2).max(5),
+  trustPoints: z.array(z.string()).min(3).max(5), audience: z.string(), primaryGoal: z.string(), valueProposition: z.string(),
+  leadMagnet: z.object({ name: z.string(), format: z.string(), deliveryPromise: z.string() }),
+  fascinationBullets: z.array(z.string()).length(4), ctaOptions: z.array(z.string()).length(3),
+  welcomeEmail: z.object({ subject: z.string(), previewText: z.string(), body: z.string(), postscript: z.string() }),
+  processSteps: z.array(z.object({ title: z.string(), description: z.string() })).min(3).max(5),
+  visualDirection: z.string(),
+  colorScheme: z.object({ primary: z.string(), secondary: z.string(), accent: z.string() }),
+  landingPage: z.object({
+    brandName: z.string(),
+    navigation: z.array(z.string()).min(2).max(6),
+    logoUrl: z.string(),
+    heroImageUrl: z.string(),
+    preserveOriginalDesign: z.boolean(),
+    fontFamily: z.string(),
+    headerStyle: z.string(),
+    sectionOrder: z.array(z.string()).min(5).max(12),
+    backgroundColor: z.string(),
+    surfaceColor: z.string(),
+    textColor: z.string(),
+  }),
+  otom: z.object({
+    hook: offerStepSchema,
+    coreOffer: offerStepSchema,
+    upsell: offerStepSchema,
+    downsell: offerStepSchema,
+    pricingStrategy: z.object({
+      anchorPrice: z.number().min(0),
+      suggestedPrice: z.number().min(0),
+      premiumPrice: z.number().min(0),
+      rationale: z.string(),
+    }),
+    psychologicalTriggers: z.array(z.string()).min(3).max(8),
+    customerJourney: z.array(z.object({
+      step: z.number().int().positive(),
+      action: z.string(),
+      trigger: z.string(),
+      expectedResult: z.string(),
+    })).min(5).max(9),
+    followUp: z.array(z.object({
+      day: z.number().int().min(0),
+      subject: z.string(),
+      purpose: z.string(),
+      body: z.string(),
+    })).length(5),
+  }),
+});
 
 export type FunnelLanguageMode = "es" | "en" | "bilingual";
 
@@ -84,6 +178,7 @@ DATOS DEL NEGOCIO
 - Precio informado: ${context.price || "no confirmado"}
 - Problema inicial: ${painPoint}
 - Auditoría observada del sitio: ${JSON.stringify(context.audit || null)}
+- Identidad visual observada: ${JSON.stringify(context.visualIdentity || null)}
 
 PROCESO INTERNO OBLIGATORIO
 1. Define el público y su intención principal a partir de industria, nicho y datos observados.
@@ -106,6 +201,10 @@ PROCESO INTERNO OBLIGATORIO
 18. Los CTA deben usar verbos de propiedad en primera persona y nunca decir "Enviar" o "Registrarse".
 19. El email de bienvenida debe entregar o explicar claramente cómo acceder al recurso, romper el escepticismo y anticipar el servicio de pago sin presión.
 20. No declares porcentajes de apertura o CTR. Optimiza el asunto para curiosidad y relevancia, sin clickbait.
+21. Integra en el mismo JSON el OTOM completo: hook, oferta principal, upsell, downsell, precios, cinco seguimientos y recorrido.
+22. landingPage no es una plantilla nueva: debe conservar logo, imagen hero, colores, tipografía, navegación, densidad y estructura observadas.
+23. No inventes URLs de recursos. Cuando no exista una URL observada usa una cadena vacía.
+24. La oferta, CTA, upsell, downsell y emails deben contar la misma historia comercial y usar los mismos nombres y precios.
 
 CONTROL EDITORIAL ANTES DE RESPONDER
 - Descarta cualquier frase intercambiable con otro negocio. Cada bloque debe reflejar el nicho, la intención y el problema observado.
@@ -120,7 +219,7 @@ REGLAS DE VERACIDAD
 - No prometas ingresos ni resultados garantizados.
 - Si falta información, usa lenguaje verificable como "solicita información" o "consulta disponibilidad".
 - No uses clichés vacíos como "líder del mercado", "revolucionario" o "la mejor calidad".
-- Escribe en español natural, profesional, concreto y centrado en el cliente.
+- Escribe en ${outputLanguage} natural, profesional, concreto y centrado en el cliente.
 - El titular debe comunicar valor, no mencionar que la página es un embudo.
 
 Responde SOLO con un objeto JSON válido, sin markdown y con exactamente esta estructura:
@@ -178,53 +277,68 @@ Responde SOLO con un objeto JSON válido, sin markdown y con exactamente esta es
     "primary": "#RRGGBB",
     "secondary": "#RRGGBB",
     "accent": "#RRGGBB"
+  },
+  "landingPage": {
+    "brandName": "Nombre exacto de la marca",
+    "navigation": ["Inicio", "Beneficios", "Oferta", "Preguntas"],
+    "logoUrl": "URL observada o cadena vacia",
+    "heroImageUrl": "URL observada o cadena vacia",
+    "preserveOriginalDesign": true,
+    "fontFamily": "Fuente observada o recomendacion compatible",
+    "headerStyle": "Descripcion breve del header y layout original",
+    "sectionOrder": ["hero", "trust", "problem", "solution", "offer", "upsell", "faq", "lead-capture"],
+    "backgroundColor": "#RRGGBB",
+    "surfaceColor": "#RRGGBB",
+    "textColor": "#RRGGBB"
+  },
+  "otom": {
+    "hook": {"name":"...","description":"...","psychologicalTrigger":"...","pricePoint":0},
+    "coreOffer": {"name":"...","description":"...","psychologicalTrigger":"...","pricePoint":0},
+    "upsell": {"name":"...","description":"...","psychologicalTrigger":"...","pricePoint":0},
+    "downsell": {"name":"...","description":"...","psychologicalTrigger":"...","pricePoint":0},
+    "pricingStrategy": {"anchorPrice":0,"suggestedPrice":0,"premiumPrice":0,"rationale":"Supuestos y logica, sin presentar estimaciones como hechos"},
+    "psychologicalTriggers": ["3 a 8 disparadores honestos"],
+    "customerJourney": [{"step":1,"action":"...","trigger":"...","expectedResult":"..."}],
+    "followUp": [
+      {"day":0,"subject":"...","purpose":"Entrega","body":"..."},
+      {"day":1,"subject":"...","purpose":"Valor","body":"..."},
+      {"day":3,"subject":"...","purpose":"Objecion","body":"..."},
+      {"day":5,"subject":"...","purpose":"Oferta","body":"..."},
+      {"day":7,"subject":"...","purpose":"Cierre honesto","body":"..."}
+    ]
   }
 }`;
 
-  try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4.1-mini",
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: 1800,
-        temperature: 0.35,
-        response_format: { type: "json_object" },
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      console.error("OpenAI error:", error);
-      throw new Error(`OpenAI API error`);
-    }
-
-    const data = (await response.json()) as {
-      choices: Array<{ message: { content: string } }>;
-    };
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) throw new Error("OpenAI no devolvió contenido para el embudo");
-    const result = JSON.parse(content.replace(/```json\s*|```/g, "").trim()) as GeneratedFunnel;
-    if (!result.headline || !result.subheadline || !result.ctaText || !result.colorScheme?.primary ||
-        !Array.isArray(result.benefits) || result.benefits.length < 3 ||
-        !Array.isArray(result.objections) || result.objections.length < 2 ||
-        !Array.isArray(result.processSteps) || result.processSteps.length < 3 ||
-        !Array.isArray(result.fascinationBullets) || result.fascinationBullets.length !== 4 ||
-        !Array.isArray(result.ctaOptions) || result.ctaOptions.length !== 3 ||
-        !result.leadMagnet?.name || !result.welcomeEmail?.subject || !result.welcomeEmail?.body ||
-        !result.audience || !result.primaryGoal || !result.valueProposition) {
-      throw new Error("OpenAI devolvió un embudo incompleto");
-    }
-    result.heroImage = `hero-${businessName.toLowerCase().replace(/\s+/g, "-")}.jpg`;
-    return result;
-  } catch (error) {
-    console.error("Funnel generation error:", error);
-    throw error;
-  }
+  const generation = await generateStructured({
+    task: "strategy",
+    schemaName: "funnel_content",
+    schema: funnelAISchema,
+    system: "Eres un estratega senior de conversión y UX writing. Usa solo la evidencia entregada y evita afirmaciones no verificadas.",
+    user: prompt,
+    timeoutMs: 150_000,
+  });
+  const identity = context.visualIdentity;
+  return {
+    ...generation.output,
+    colorScheme: {
+      primary: identity?.colors?.[0] || generation.output.colorScheme.primary,
+      secondary: identity?.colors?.[1] || identity?.colors?.[0] || generation.output.colorScheme.secondary,
+      accent: identity?.colors?.[2] || generation.output.colorScheme.accent,
+    },
+    landingPage: {
+      ...generation.output.landingPage,
+      brandName: businessName,
+      logoUrl: identity?.logoUrl || "",
+      heroImageUrl: identity?.heroImageUrl || "",
+      preserveOriginalDesign: Boolean(context.website && identity),
+      navigation: identity?.navigation && identity.navigation.length >= 2
+        ? identity.navigation.slice(0, 6)
+        : generation.output.landingPage.navigation,
+      fontFamily: identity?.fonts?.[0] || generation.output.landingPage.fontFamily,
+      headerStyle: identity?.layout || generation.output.landingPage.headerStyle,
+    },
+    heroImage: `hero-${businessName.toLowerCase().replace(/\s+/g, "-")}.jpg`,
+  };
 }
 
 export async function generateLocalizedFunnel(

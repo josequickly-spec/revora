@@ -5,6 +5,9 @@ import { getIndustry } from "@/lib/industries";
 import { funnelSelect, pool } from "@/lib/postgres";
 import { funnelAIReportSchema } from "@/lib/funnelspy-ai";
 import { checkRateLimit } from "@/lib/funnelspy-rate-limit";
+import type { FunnelSpyAnalysis } from "@/lib/funnelspy";
+import { analyzeFunnel } from "@/lib/funnelspy";
+import { attachVisualIdentity } from "@/lib/funnelspy-store";
 
 const requestSchema = z.object({
   analysis: z.object({
@@ -24,6 +27,7 @@ const requestSchema = z.object({
     })),
   }).passthrough(),
   report: funnelAIReportSchema,
+  auditId: z.string().uuid().optional(),
   languageMode: z.enum(["es", "en", "bilingual"]).default("bilingual"),
 });
 
@@ -33,6 +37,20 @@ export const maxDuration = 180;
 function businessNameFromDomain(domain: string) {
   const name = domain.replace(/^www\./, "").split(".")[0].replace(/[-_]+/g, " ");
   return name.replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function businessNameFromAnalysis(analysis: z.infer<typeof requestSchema>["analysis"]) {
+  const title = analysis.pages.find((page) => page.kind === "home")?.title
+      ?.split(/[|–—]/)[0]
+    .trim();
+  return title && title.length <= 120 ? title : businessNameFromDomain(analysis.domain);
+}
+
+function truncateAtWord(value: string, maxLength: number) {
+  if (value.length <= maxLength) return value;
+  const shortened = value.slice(0, maxLength + 1);
+  const boundary = shortened.lastIndexOf(" ");
+  return `${shortened.slice(0, boundary > maxLength * 0.7 ? boundary : maxLength).trim()}…`;
 }
 
 function inferIndustry(report: z.infer<typeof funnelAIReportSchema>, technologies: string[]) {
@@ -50,9 +68,23 @@ export async function POST(request: Request) {
     if (!limit.allowed) return NextResponse.json({ error: "Límite temporal de generación alcanzado." }, { status: 429 });
 
     const input = requestSchema.parse(await request.json());
-    const { analysis, report } = input;
+    let { analysis } = input;
+    const { report } = input;
+    const suppliedIdentity = (analysis as unknown as FunnelSpyAnalysis).visualIdentity;
+    const hasVisualEvidence = Boolean(
+      suppliedIdentity?.logoUrl || suppliedIdentity?.heroImageUrl || suppliedIdentity?.colors?.length || suppliedIdentity?.fonts?.length || suppliedIdentity?.navigation?.length,
+    );
+    if (!hasVisualEvidence) {
+      const refreshed = await analyzeFunnel(analysis.origin).catch(() => null);
+      if (refreshed) {
+        analysis = { ...analysis, visualIdentity: refreshed.visualIdentity };
+        if (input.auditId && refreshed.visualIdentity) {
+          await attachVisualIdentity(input.auditId, refreshed.visualIdentity).catch(() => undefined);
+        }
+      }
+    }
     const languageMode = input.languageMode as FunnelLanguageMode;
-    const businessName = businessNameFromDomain(analysis.domain);
+    const businessName = businessNameFromAnalysis(analysis);
     const industryType = inferIndustry(report, analysis.technologies);
     const industry = getIndustry(industryType);
     const niche = report.targetAudience || industry.defaultNiche;
@@ -64,7 +96,8 @@ export async function POST(request: Request) {
        (name, domain, country, business_type, niche, platform, status, hero_offer, hero_price, pain_point, technology_data)
        VALUES ($1, $2, 'Unknown', $3, $4, $5, 'analyzed', $6, 'Consultar', $7, $8)
        ON CONFLICT (domain) DO UPDATE SET
-         business_type = EXCLUDED.business_type,
+        name = EXCLUDED.name,
+        business_type = EXCLUDED.business_type,
          niche = EXCLUDED.niche,
          platform = EXCLUDED.platform,
          hero_offer = EXCLUDED.hero_offer,
@@ -75,7 +108,7 @@ export async function POST(request: Request) {
         businessName,
         analysis.domain,
         industryType,
-        niche.slice(0, 150),
+        truncateAtWord(niche, 145),
         platform,
         report.primaryObjective,
         painPoint,
@@ -103,6 +136,7 @@ export async function POST(request: Request) {
         platform,
         offer: report.primaryObjective,
         audit: auditEvidence,
+        visualIdentity: (analysis as unknown as FunnelSpyAnalysis).visualIdentity,
       },
       languageMode,
     );

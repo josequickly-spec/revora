@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 import { LeadSearchError, searchLeads } from "@/lib/lead-finder/search";
 import { leadSearchSchema } from "@/lib/lead-finder/validation";
+import { requestIp, validateTurnstile } from "@/lib/turnstile";
 
 export async function POST(req: Request) {
   try {
-    const parsed = leadSearchSchema.safeParse(await req.json());
+    const body = await req.json() as Record<string, unknown>;
+    const { turnstileToken, ...input } = body;
+    const turnstile = await validateTurnstile(turnstileToken, requestIp(req));
+    if (!turnstile.valid) return NextResponse.json({ success: false, error: "Bot verification failed", code: "turnstile_failed" }, { status: 403 });
+    const parsed = leadSearchSchema.safeParse(input);
     if (!parsed.success) {
       return NextResponse.json({ success: false, error: "Invalid lead search request", issues: parsed.error.issues }, { status: 400 });
     }
@@ -21,5 +26,5 @@ export async function POST(req: Request) {
 }
 
 export async function GET() {
-  return NextResponse.json({ success: true, provider: "OpenStreetMap", canonical: true, persistedMocks: false });
+  return NextResponse.json({ success: true, provider: "OpenStreetMap", canonical: true });
 }

@@ -22,6 +22,7 @@ import {
   Workflow,
   CreditCard,
   Sparkles,
+  Orbit,
   X,
 } from "lucide-react";
 import {
@@ -37,6 +38,7 @@ const icons: Record<PlatformNavItem["icon"], typeof Gauge> = {
   leads: Search,
   intelligence: Building2,
   audits: BarChart3,
+  funnelBuilder: Orbit,
   opportunities: Lightbulb,
   consultant: Bot,
   proposals: FileText,
@@ -53,27 +55,45 @@ const icons: Record<PlatformNavItem["icon"], typeof Gauge> = {
 
 function Navigation({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const sections: Array<{ id: PlatformNavItem["group"]; label: string }> = [
+    { id: "command", label: "Command" },
+    { id: "intelligence", label: "Intelligence" },
+    { id: "revenue", label: "Revenue" },
+    { id: "operations", label: "Operations" },
+    { id: "platform", label: "Platform" },
+  ];
 
   return (
-    <nav aria-label="Primary navigation" className="space-y-1">
-      {platformNavigation.map((item) => {
-        const Icon = icons[item.icon];
-        const active = isPlatformRouteActive(pathname, item.href);
+    <nav aria-label="Primary navigation" className="space-y-5">
+      {sections.map((section) => {
+        const items = platformNavigation.filter((item) => item.group === section.id);
+        if (!items.length) return null;
         return (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={onNavigate}
-            aria-current={active ? "page" : undefined}
-            className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-cyan-300 ${
-              active
-                ? "bg-cyan-300 text-slate-950 shadow-[0_8px_30px_rgba(103,232,249,.16)]"
-                : "text-slate-400 hover:bg-white/[.06] hover:text-white"
-            }`}
-          >
-            <Icon className="size-4 shrink-0" aria-hidden="true" />
-            <span>{item.label}</span>
-          </Link>
+          <section key={section.id} aria-label={section.label}>
+            <p className="mb-2 px-3 text-[10px] font-black uppercase tracking-[.2em] text-slate-600">{section.label}</p>
+            <div className="space-y-1">
+              {items.map((item) => {
+                const Icon = icons[item.icon];
+                const active = isPlatformRouteActive(pathname, item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={onNavigate}
+                    aria-current={active ? "page" : undefined}
+                    className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-cyan-300 ${
+                      active
+                        ? "bg-gradient-to-r from-cyan-300 to-sky-300 text-slate-950 shadow-[0_8px_30px_rgba(34,211,238,.14)]"
+                        : "text-slate-400 hover:bg-white/[.06] hover:text-white"
+                    }`}
+                  >
+                    <Icon className="size-4 shrink-0" aria-hidden="true" />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
         );
       })}
     </nav>
@@ -109,7 +129,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
   }, [mobileOpen]);
 
   return (
-    <div className="min-h-screen bg-[#070b14] text-slate-100">
+    <div className="min-h-screen bg-[#070b14] text-slate-100 selection:bg-cyan-300/30">
+      <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_14%_-10%,rgba(34,211,238,.12),transparent_28%),radial-gradient(circle_at_85%_0%,rgba(139,92,246,.14),transparent_30%)]" />
       <a
         href="#main-content"
         className="fixed left-4 top-3 z-[70] -translate-y-20 rounded-lg bg-cyan-300 px-4 py-2 font-bold text-slate-950 transition focus:translate-y-0"
@@ -117,14 +138,14 @@ export default function AppShell({ children }: { children: ReactNode }) {
         Skip to content
       </a>
 
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-white/[.07] bg-[#090e19] lg:flex lg:flex-col">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-white/[.07] bg-[#090e19]/95 lg:flex lg:flex-col">
         <div className="border-b border-white/[.07] px-5 py-5"><Brand /></div>
         <div className="flex-1 overflow-y-auto px-3 py-5"><Navigation /></div>
-        <div className="m-3 rounded-2xl border border-violet-400/15 bg-violet-400/[.06] p-4">
+        <div className="m-3 rounded-2xl border border-cyan-300/15 bg-gradient-to-br from-cyan-300/[.08] to-violet-400/[.08] p-4">
           <div className="flex items-center gap-2 text-xs font-bold text-violet-200">
-            <ShieldCheck className="size-4" aria-hidden="true" /> Baseline protected
+            <ShieldCheck className="size-4" aria-hidden="true" /> Controlled workspace
           </div>
-          <p className="mt-2 text-xs leading-5 text-slate-500">Existing tools remain available while modules are consolidated.</p>
+          <p className="mt-2 text-xs leading-5 text-slate-500">Evidence, AI drafts and delivery actions stay separated by approval.</p>
           <Link href="/legacy" className="mt-3 inline-flex text-xs font-bold text-cyan-300 outline-none hover:text-cyan-200 focus-visible:ring-2 focus-visible:ring-cyan-300">
             Open legacy workspace
           </Link>
@@ -193,7 +214,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <main id="main-content" className="mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+        <main id="main-content" className="mx-auto w-full max-w-[1500px] px-4 pb-28 pt-6 sm:px-6 sm:pb-28 sm:pt-8 lg:px-8">
           {children}
         </main>
       </div>

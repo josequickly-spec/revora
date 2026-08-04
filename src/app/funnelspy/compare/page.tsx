@@ -6,7 +6,7 @@ import { ArrowLeft, LoaderCircle, Swords, Trophy } from "lucide-react";
 import type { FunnelSpyAnalysis } from "@/lib/funnelspy";
 
 export default function FunnelSpyComparePage() {
-  const [domains, setDomains] = useState("stripe.com\npaypal.com");
+  const [domains, setDomains] = useState("");
   const [analyses, setAnalyses] = useState<FunnelSpyAnalysis[]>([]);
   const [winner, setWinner] = useState("");
   const [loading, setLoading] = useState(false);

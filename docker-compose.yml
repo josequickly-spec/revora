@@ -22,21 +22,39 @@ services:
       timeout: 3s
       retries: 20
   migrate:
+    image: revora-app:local
     build: .
-    command: ["node","scripts/init-db.mjs"]
+    command: ["sh","-c","export DATABASE_URL=\"postgresql://revora:$(cat /run/secrets/postgres_password)@postgres:5432/revora\"; exec node scripts/init-db.mjs"]
     env_file:
       - path: .env.production
         required: false
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGDATABASE: revora
+      PGUSER: revora
+    secrets: [postgres_password]
     depends_on:
       postgres: {condition: service_healthy}
     profiles: [operations]
   app:
+    image: revora-app:local
     build: .
     env_file:
       - path: .env.production
         required: false
     environment:
       REDIS_URL: redis://redis:6379
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGDATABASE: revora
+      PGUSER: revora
+      METRICS_BEARER_TOKEN_FILE: /run/secrets/metrics_token
+      LOCAL_ISOLATED_RUNTIME: "true"
+      TURNSTILE_SECRET_KEY: ""
+      NEXT_PUBLIC_TURNSTILE_SITE_KEY: ""
+    command: ["sh","-c","export DATABASE_URL=\"postgresql://revora:$(cat /run/secrets/postgres_password)@postgres:5432/revora\"; export METRICS_BEARER_TOKEN=\"$(cat /run/secrets/metrics_token)\"; exec node server.js"]
+    secrets: [postgres_password, metrics_token]
     ports: ["3000:3000"]
     depends_on:
       postgres: {condition: service_healthy}
@@ -47,7 +65,9 @@ services:
     security_opt: [no-new-privileges:true]
   prometheus:
     image: prom/prometheus:v2.55.1
-    command: ["--config.file=/etc/prometheus/prometheus.yml"]
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - "tr -d '\\r\\n' < /run/secrets/metrics_token > /tmp/metrics_token && exec /bin/prometheus --config.file=/etc/prometheus/prometheus.yml"
     volumes: ["./infrastructure/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro"]
     secrets: [metrics_token]
     depends_on: [app]

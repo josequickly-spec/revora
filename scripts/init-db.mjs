@@ -1,8 +1,12 @@
-import { config } from "dotenv";
 import pg from "pg";
 import { readFile } from "node:fs/promises";
 
-config({ path: ".env.local" });
+// Local development reads .env.local. Containers provide PGHOST/PGUSER/
+// PGPASSWORD through Compose and do not need dotenv in the runtime image.
+if (!process.env.DATABASE_URL && !process.env.PGHOST) {
+  const { config } = await import("dotenv");
+  config({ path: ".env.local" });
+}
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const client = await pool.connect();
@@ -160,6 +164,8 @@ try {
     );
     ALTER TABLE funnelspy_audits
       ADD COLUMN IF NOT EXISTS business_id BIGINT REFERENCES businesses(id) ON DELETE SET NULL;
+    ALTER TABLE funnelspy_audits ADD COLUMN IF NOT EXISTS otom JSONB;
+    ALTER TABLE funnelspy_audits ADD COLUMN IF NOT EXISTS web_builder JSONB;
     CREATE INDEX IF NOT EXISTS funnelspy_audits_domain_created_idx
       ON funnelspy_audits(domain, created_at DESC);
     CREATE INDEX IF NOT EXISTS funnelspy_audits_business_created_idx

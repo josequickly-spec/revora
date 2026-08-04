@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateFunnel } from "@/lib/funnel-generator";
-import { generateOutreachSequence } from "@/lib/outreach-generator";
 import { auditSite, type SiteAudit } from "@/lib/site-audit";
+import { z } from "zod";
+import { generateStructured } from "@/lib/ai-provider-router";
+import { findLatestAudit } from "@/lib/funnelspy-store";
 
 interface AutoGenerateRequest {
   businessName: string;
@@ -31,7 +33,9 @@ interface CampaignPackage {
     proof: string;
     cta: string;
     colors: { primary: string; secondary: string; accent: string };
+    layout?: Record<string, unknown>;
   };
+  otom?: Record<string, unknown>;
   emailSequence: Array<{
     number: number;
     subject: string;
@@ -60,43 +64,33 @@ interface CampaignPackage {
   };
 }
 
-async function generateSEOAnalysis(businessName: string, audit: SiteAudit | null): Promise<any> {
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "user",
-          content: `Eres experto en SEO. Analiza el negocio: "${businessName}" usando exclusivamente estos datos observados del sitio:
+const seoAnalysisSchema = z.object({
+  seoScore: z.number().min(0).max(100),
+  topKeywords: z.array(z.string()).max(12),
+  mainIssues: z.array(z.string()).max(8),
+  quickWins: z.array(z.string()).max(8),
+  recommendations: z.array(z.string()).max(10),
+});
+
+async function generateSEOAnalysis(businessName: string, audit: SiteAudit) {
+  const generation = await generateStructured({
+    task: "bulk",
+    schemaName: "seo_analysis",
+    schema: seoAnalysisSchema,
+    system: "Eres especialista en SEO. Usa exclusivamente la evidencia suministrada. No inventes tráfico, competidores, clientes, ingresos ni resultados.",
+    user: `Analiza el negocio: "${businessName}" usando exclusivamente estos datos observados del sitio:
 ${JSON.stringify(audit)}
 
 Proporciona SOLO JSON válido sin markdown:
 {
   "seoScore": número entre 0-100,
   "topKeywords": ["keyword1", "keyword2", "keyword3"],
-  "competitors": ["competitor1", "competitor2", "competitor3"],
   "mainIssues": ["issue1", "issue2"],
   "quickWins": ["win1", "win2"],
-  "estimatedTraffic": número,
   "recommendations": ["rec1", "rec2", "rec3"]
 }`,
-        },
-      ],
-      max_tokens: 500,
-    }),
   });
-
-  const data = (await response.json()) as {
-    choices: Array<{ message: { content: string } }>;
-  };
-  let content = data.choices[0].message.content;
-  content = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-  return JSON.parse(content);
+  return generation.output;
 }
 
 export async function POST(req: NextRequest) {
@@ -104,9 +98,9 @@ export async function POST(req: NextRequest) {
     const body: AutoGenerateRequest = await req.json();
     const { businessName, website, industry = "Negocio general" } = body;
 
-    if (!businessName) {
+    if (!businessName || !website) {
       return NextResponse.json(
-        { error: "Business name required" },
+        { error: "Business name and a public website are required. Name-only analysis is disabled." },
         { status: 400 }
       );
     }
@@ -115,7 +109,8 @@ export async function POST(req: NextRequest) {
 
     // PHASE 1: SEO Analysis (NEW)
     console.log("📊 Generating SEO Analysis...");
-    const siteAudit = website ? await auditSite(website) : null;
+    const siteAudit = await auditSite(website);
+    const latestFunnelSpy = await findLatestAudit(new URL(/^https?:\/\//i.test(website) ? website : `https://${website}`).hostname).catch(() => null);
     const seoAnalysis = await generateSEOAnalysis(businessName, siteAudit);
 
     // PHASE 2: Landing Page (REUTILIZA funnel-generator.ts)
@@ -124,17 +119,13 @@ export async function POST(req: NextRequest) {
       businessName,
       industry,
       "Premium Services",
-      seoAnalysis.mainIssues?.[0] || "Business growth"
-    );
-
-    // PHASE 3: Email Sequence & Video (REUTILIZA outreach-generator.ts)
-    console.log("✉️ Generating Email Sequence via Phase 3...");
-    const outreach = await generateOutreachSequence(
-      "Decisor",
-      businessName,
-      landingPage.offer,
-      landingPage.painPoint,
-      landingPage.bonusOffer
+      seoAnalysis.mainIssues?.[0] || "Business growth",
+      {
+        website,
+        offer: undefined,
+        audit: siteAudit,
+        visualIdentity: latestFunnelSpy?.analysis.visualIdentity,
+      },
     );
 
     // PHASE 4: Ads Strategy (using SEO keywords)
@@ -153,31 +144,24 @@ export async function POST(req: NextRequest) {
           landingPage.subheadline,
           landingPage.agitationCopy,
         ],
-        audience: [industry, "Business Owners", "Decision makers", "25-65"],
+        audience: [],
       },
     };
 
     // PHASE 5: Revenue Projections (based on SEO and market data)
-    const estimatedTraffic = Math.max(0, Number(seoAnalysis.estimatedTraffic) || 0);
-    const conversionRate = Math.max(0, Number(body.conversionRate) || 0) / 100;
-    const averageOrderValue = Math.max(0, Number(body.averageOrderValue) || 0);
     const currentRevenue = Math.max(0, Number(body.monthlyRevenue) || 0);
-    const adSpendEstimate = Math.max(0, Number(body.monthlyAdSpend) || 0);
-    const projectedConversions = estimatedTraffic * conversionRate;
-    const projectedRevenue = projectedConversions * averageOrderValue;
-    const incrementalRevenue = Math.max(0, projectedRevenue - currentRevenue);
 
     const projections = {
       monthlyRevenue: currentRevenue,
-      projectedRevenue: Math.round(projectedRevenue),
-      incrementalRevenue: Math.round(incrementalRevenue),
-      expectedROI: adSpendEstimate > 0 ? Math.round((incrementalRevenue / adSpendEstimate) * 100) : null,
-      breakEvenDays: incrementalRevenue > 0 && adSpendEstimate > 0
-        ? Math.ceil(adSpendEstimate / (incrementalRevenue / 30)) : null,
-      estimatedTraffic,
-      conversionRate: conversionRate * 100,
-      averageOrderValue,
-      monthlyAdSpend: adSpendEstimate,
+      projectedRevenue: null,
+      incrementalRevenue: null,
+      expectedROI: null,
+      breakEvenDays: null,
+      estimatedTraffic: null,
+      conversionRate: body.conversionRate ?? null,
+      averageOrderValue: body.averageOrderValue ?? null,
+      monthlyAdSpend: body.monthlyAdSpend ?? null,
+      disclaimer: "No revenue projection is calculated until verified traffic, conversion and sales baselines are connected.",
     };
 
     const campaign: CampaignPackage = {
@@ -185,7 +169,7 @@ export async function POST(req: NextRequest) {
       status: "ready",
       analysis: {
         seoScore: siteAudit?.score ?? seoAnalysis.seoScore ?? 0,
-        competitors: seoAnalysis.competitors || [],
+        competitors: [],
         keywords: seoAnalysis.topKeywords || [],
         opportunities: seoAnalysis.quickWins || [],
         audit: siteAudit,
@@ -198,14 +182,15 @@ export async function POST(req: NextRequest) {
         proof: landingPage.proofCopy,
         cta: landingPage.ctaText,
         colors: landingPage.colorScheme,
+        layout: landingPage.landingPage,
       },
-      emailSequence: outreach.emailSequence.map((email) => ({
-        number: email.index,
-        subject: email.subject,
-        body: email.body,
-        delay: email.delay,
-      })),
-      videoScript: outreach.videoPitch,
+      otom: landingPage.otom,
+      emailSequence: [],
+      videoScript: {
+        title: "Outreach pending verified contact",
+        script: "",
+        duration: "",
+      },
       adsStrategy,
       projections,
     };

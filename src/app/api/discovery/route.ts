@@ -125,7 +125,7 @@ export async function POST(req: Request) {
         body.businessName, domain, address.country || domainData?.country || "Unknown",
         body.city || address.city || address.town || address.village || null,
         body.zipcode || address.postcode || null, locationMatch?.display_name || null,
-        industryType, niche, platform, ind.color, ind.accent,
+        industryType, niche, platform, null, null,
         ind.defaultOffer, ind.defaultPrice, ind.defaultPainPoint,
         builtWith ? JSON.stringify(builtWith) : null,
       ]
@@ -140,7 +140,7 @@ export async function POST(req: Request) {
          ON CONFLICT (business_id,email) DO UPDATE SET confidence_score=EXCLUDED.confidence_score,status=EXCLUDED.status
          RETURNING ${contactSelect}`,
         [
-          business.id, body.contactName || [body.firstName, body.lastName].filter(Boolean).join(" ") || "Decision maker",
+          business.id, body.contactName || [body.firstName, body.lastName].filter(Boolean).join(" ") || "Public business contact",
           bestContact.type || "Business contact", bestContact.value, domainData?.linkedin_url || null,
           Math.round(bestContact.confidence || 0), emailVerified ? "verified" : "discovered",
         ]

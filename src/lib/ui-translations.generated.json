@@ -1,0 +1,2072 @@
+[
+  {
+    "source": ". Confirma todas las m�tricas antes de presentarlo.",
+    "es": ". Confirma todas las métricas antes de presentarlo.",
+    "en": ". Confirm all metrics before presenting it."
+  },
+  {
+    "source": ". El embudo est� adaptado al sector y genera facturaci�n extra inmediata.",
+    "es": ". El embudo está adaptado al sector y genera facturación extra inmediata.",
+    "en": ". The funnel is tailored to the industry and generates immediate extra revenue."
+  },
+  {
+    "source": ": item.onDelete &&",
+    "es": ": item.onDelete &&",
+    "en": ": item.onDelete &&"
+  },
+  {
+    "source": "�Blueprint Completado! Ver Dossier",
+    "es": "¡Blueprint Completado! Ver Dossier",
+    "en": "Blueprint Completed! View Dossier"
+  },
+  {
+    "source": "=st.s?",
+    "es": "=st.s?",
+    "en": "=st.s?"
+  },
+  {
+    "source": "? Volver a contactos",
+    "es": "? Volver a contactos",
+    "en": "? Return to contacts"
+  },
+  {
+    "source": "? Approval and scheduling remain separate actions",
+    "es": "? La aprobación y la programación son acciones separadas",
+    "en": "? Approval and scheduling remain separate actions"
+  },
+  {
+    "source": "? Suppression is checked before scheduling and delivery",
+    "es": "? La supresión se verifica antes de la programación y entrega",
+    "en": "? Suppression is checked before scheduling and delivery"
+  },
+  {
+    "source": "01 � Source",
+    "es": "01 - Fuente",
+    "en": "01 - Source"
+  },
+  {
+    "source": "1k�",
+    "es": "1k€",
+    "en": "1k€"
+  },
+  {
+    "source": "250k�",
+    "es": "250k€",
+    "en": "250k€"
+  },
+  {
+    "source": "500k�+",
+    "es": "500k€+",
+    "en": "500k€+"
+  },
+  {
+    "source": "90 segundos",
+    "es": "90 segundos",
+    "en": "90 seconds"
+  },
+  {
+    "source": "A persisted audit is required",
+    "es": "Se requiere una auditoría persistente",
+    "en": "A persisted audit is required"
+  },
+  {
+    "source": "A valid associated persisted audit is required. No audit runs automatically.",
+    "es": "Se requiere una auditoría persistente asociada válida. Ninguna auditoría se ejecuta automáticamente.",
+    "en": "A valid associated persisted audit is required. No audit runs automatically."
+  },
+  {
+    "source": "Abrir informe",
+    "es": "Abrir informe",
+    "en": "Open report"
+  },
+  {
+    "source": "Abrir preview",
+    "es": "Abrir vista previa",
+    "en": "Open preview"
+  },
+  {
+    "source": "Accent",
+    "es": "Acento",
+    "en": "Accent"
+  },
+  {
+    "source": "Accesibilidad",
+    "es": "Accesibilidad",
+    "en": "Accessibility"
+  },
+  {
+    "source": "Acciones r�pidas",
+    "es": "Acciones rápidas",
+    "en": "Quick actions"
+  },
+  {
+    "source": "Action:",
+    "es": "Acción:",
+    "en": "Action:"
+  },
+  {
+    "source": "Add reviewed sequence step",
+    "es": "Agregar paso de secuencia revisado",
+    "en": "Add reviewed sequence step"
+  },
+  {
+    "source": "Add to preview",
+    "es": "Agregar a la vista previa",
+    "en": "Add to preview"
+  },
+  {
+    "source": "Add verified contact candidate",
+    "es": "Agregar candidato de contacto verificado",
+    "en": "Add verified contact candidate"
+  },
+  {
+    "source": "Addresses are intentionally omitted from this list view.",
+    "es": "Las direcciones se omiten intencionalmente de esta vista de lista.",
+    "en": "Addresses are intentionally omitted from this list view."
+  },
+  {
+    "source": "Ads �/mes:",
+    "es": "Anuncios €/mes:",
+    "en": "Ads €/month:"
+  },
+  {
+    "source": "Agencia",
+    "es": "Agencia",
+    "en": "Agency"
+  },
+  {
+    "source": "AI Consultant",
+    "es": "Consultor de IA",
+    "en": "AI Consultant"
+  },
+  {
+    "source": "AI Consultant never runs FunnelSpy automatically.",
+    "es": "El Consultor de IA nunca ejecuta FunnelSpy automáticamente.",
+    "en": "AI Consultant never runs FunnelSpy automatically."
+  },
+  {
+    "source": "AI Web Builder",
+    "es": "Constructor Web de IA",
+    "en": "AI Web Builder"
+  },
+  {
+    "source": "AI Web Builder � Revora",
+    "es": "Constructor Web de IA - Revora",
+    "en": "AI Web Builder - Revora"
+  },
+  {
+    "source": "AI-generated � advisory � evidence-grounded � review required",
+    "es": "Generado por IA - asesoría - revisión basada en evidencia requerida",
+    "en": "AI-generated - advisory - evidence-grounded - review required"
+  },
+  {
+    "source": "AI-powered growth operations",
+    "es": "Operaciones de crecimiento impulsadas por IA",
+    "en": "AI-powered growth operations"
+  },
+  {
+    "source": "al mes recurrente",
+    "es": "al mes recurrente",
+    "en": "per recurring month"
+  },
+  {
+    "source": "All",
+    "es": "Todo",
+    "en": "All"
+  },
+  {
+    "source": "All audits",
+    "es": "Todas las auditorías",
+    "en": "All audits"
+  },
+  {
+    "source": "All statuses",
+    "es": "Todos los estados",
+    "en": "All statuses"
+  },
+  {
+    "source": "A�adir Cualquier Negocio",
+    "es": "Añadir Cualquier Negocio",
+    "en": "Add Any Business"
+  },
+  {
+    "source": "Analizando...",
+    "es": "Analizando...",
+    "en": "Analyzing..."
+  },
+  {
+    "source": "Analizar",
+    "es": "Analizar",
+    "en": "Analyze"
+  },
+  {
+    "source": "Analizar y crear embudo",
+    "es": "Analizar y crear embudo",
+    "en": "Analyze and create funnel"
+  },
+  {
+    "source": "Analyze with FunnelSpy",
+    "es": "Analizar con FunnelSpy",
+    "en": "Analyze with FunnelSpy"
+  },
+  {
+    "source": "Annual",
+    "es": "Anual",
+    "en": "Annual"
+  },
+  {
+    "source": "Antig�edad",
+    "es": "Antigüedad",
+    "en": "Tenure"
+  },
+  {
+    "source": "Apellido (Opcional)",
+    "es": "Apellido (Opcional)",
+    "en": "Last Name (Optional)"
+  },
+  {
+    "source": "Approve explicitly",
+    "es": "Aprobar explícitamente",
+    "en": "Approve explicitly"
+  },
+  {
+    "source": "Archive",
+    "es": "Archivar",
+    "en": "Archive"
+  },
+  {
+    "source": "Associate this audit with a business to continue",
+    "es": "Asocia esta auditoría con un negocio para continuar",
+    "en": "Associate this audit with a business to continue"
+  },
+  {
+    "source": "Associated persisted audit",
+    "es": "Auditoría persistente asociada",
+    "en": "Associated persisted audit"
+  },
+  {
+    "source": "Association, syntax, provenance and suppression are validated by the server.",
+    "es": "La asociación, sintaxis, procedencia y supresión son validadas por el servidor.",
+    "en": "Association, syntax, provenance and suppression are validated by the server."
+  },
+  {
+    "source": "Assumptions",
+    "es": "Suposiciones",
+    "en": "Assumptions"
+  },
+  {
+    "source": "Asunto",
+    "es": "Asunto",
+    "en": "Subject"
+  },
+  {
+    "source": "Audience",
+    "es": "Audiencia",
+    "en": "Audience"
+  },
+  {
+    "source": "A�n no hay una secuencia generada",
+    "es": "Aún no hay una secuencia generada",
+    "en": "No sequence has been generated yet"
+  },
+  {
+    "source": "Authentication",
+    "es": "Autenticación",
+    "en": "Authentication"
+  },
+  {
+    "source": "Automatizando para:",
+    "es": "Automatizando para:",
+    "en": "Automating for:"
+  },
+  {
+    "source": "Avanza de evidencia a ingresos",
+    "es": "Avanza de evidencia a ingresos",
+    "en": "Advance from evidence to revenue"
+  },
+  {
+    "source": "Battlecard",
+    "es": "Battlecard",
+    "en": "Battlecard"
+  },
+  {
+    "source": "Biling�e � Espa�ol + English",
+    "es": "Bilingüe - Español + English",
+    "en": "Bilingual - Spanish + English"
+  },
+  {
+    "source": "Blank",
+    "es": "En blanco",
+    "en": "Blank"
+  },
+  {
+    "source": "Blueprint 1-Click",
+    "es": "Blueprint 1-Clic",
+    "en": "Blueprint 1-Click"
+  },
+  {
+    "source": "Blueprint 1-Click con EcoScale Partner",
+    "es": "Blueprint 1-Clic con EcoScale Partner",
+    "en": "Blueprint 1-Click with EcoScale Partner"
+  },
+  {
+    "source": "Brand-preserving conversion preview",
+    "es": "Vista previa de conversión que preserva la marca",
+    "en": "Brand-preserving conversion preview"
+  },
+  {
+    "source": "Buenas pr�cticas",
+    "es": "Buenas prácticas",
+    "en": "Best practices"
+  },
+  {
+    "source": "Build from evidence",
+    "es": "Construir a partir de evidencia",
+    "en": "Build from evidence"
+  },
+  {
+    "source": "Build the offer",
+    "es": "Construir la oferta",
+    "en": "Build the offer"
+  },
+  {
+    "source": "Busca por ZIP, ciudad, direcci�n o una consulta completa",
+    "es": "Busca por ZIP, ciudad, dirección o una consulta completa",
+    "en": "Search by ZIP, city, address, or a full query"
+  },
+  {
+    "source": "Buscar negocios",
+    "es": "Buscar negocios",
+    "en": "Search businesses"
+  },
+  {
+    "source": "Buscar negocios reales",
+    "es": "Buscar negocios reales",
+    "en": "Search real businesses"
+  },
+  {
+    "source": "Business",
+    "es": "Negocio",
+    "en": "Business"
+  },
+  {
+    "source": "Business ID",
+    "es": "ID de Negocio",
+    "en": "Business ID"
+  },
+  {
+    "source": "Business name",
+    "es": "Nombre del Negocio",
+    "en": "Business name"
+  },
+  {
+    "source": "Business type",
+    "es": "Tipo de Negocio",
+    "en": "Business type"
+  },
+  {
+    "source": "Calculadora de Facturaci�n Extra y Comisiones",
+    "es": "Calculadora de Facturación Extra y Comisiones",
+    "en": "Extra Billing and Commissions Calculator"
+  },
+  {
+    "source": "Calidad t�cnica",
+    "es": "Calidad técnica",
+    "en": "Technical quality"
+  },
+  {
+    "source": "Campaign name",
+    "es": "Nombre de la campaña",
+    "en": "Campaign name"
+  },
+  {
+    "source": "Campa�a actual:",
+    "es": "Campaña actual:",
+    "en": "Current campaign:"
+  },
+  {
+    "source": "Cancel",
+    "es": "Cancelar",
+    "en": "Cancel"
+  },
+  {
+    "source": "Cancelar",
+    "es": "Cancelar",
+    "en": "Cancel"
+  },
+  {
+    "source": "Cancellation terms",
+    "es": "Términos de cancelación",
+    "en": "Cancellation terms"
+  },
+  {
+    "source": "Choose a new password",
+    "es": "Elige una nueva contraseña",
+    "en": "Choose a new password"
+  },
+  {
+    "source": "Choose the path that fits your next step.",
+    "es": "Elige el camino que se ajuste a tu siguiente paso.",
+    "en": "Choose the path that fits your next step."
+  },
+  {
+    "source": "Ciudad",
+    "es": "Ciudad",
+    "en": "City"
+  },
+  {
+    "source": "Client preview",
+    "es": "Vista previa del cliente",
+    "en": "Client preview"
+  },
+  {
+    "source": "Client proposal",
+    "es": "Propuesta del cliente",
+    "en": "Client proposal"
+  },
+  {
+    "source": "Coaching",
+    "es": "Coaching",
+    "en": "Coaching"
+  },
+  {
+    "source": "C�digo postal",
+    "es": "Código postal",
+    "en": "Postal code"
+  },
+  {
+    "source": "Cola de atenci�n",
+    "es": "Cola de atención",
+    "en": "Support queue"
+  },
+  {
+    "source": "Compara competidores",
+    "es": "Compara competidores",
+    "en": "Compare competitors"
+  },
+  {
+    "source": "completed",
+    "es": "completado",
+    "en": "completed"
+  },
+  {
+    "source": "Compliance review",
+    "es": "Revisión de cumplimiento",
+    "en": "Compliance review"
+  },
+  {
+    "source": "Con los valores que introdujiste, el c�lculo matem�tico requiere",
+    "es": "Con los valores que introdujiste, el cálculo matemático requiere",
+    "en": "With the values you entered, the mathematical calculation requires"
+  },
+  {
+    "source": "concise",
+    "es": "conciso",
+    "en": "concise"
+  },
+  {
+    "source": "Confianza:",
+    "es": "Confianza:",
+    "en": "Trust:"
+  },
+  {
+    "source": "configured integrations",
+    "es": "integraciones configuradas",
+    "en": "configured integrations"
+  },
+  {
+    "source": "Contacto",
+    "es": "Contacto",
+    "en": "Contact"
+  },
+  {
+    "source": "Contacto:",
+    "es": "Contacto:",
+    "en": "Contact:"
+  },
+  {
+    "source": "Contacts",
+    "es": "Contactos",
+    "en": "Contacts"
+  },
+  {
+    "source": "Continuar al paso 5",
+    "es": "Continuar al paso 5",
+    "en": "Continue to step 5"
+  },
+  {
+    "source": "Continue preview",
+    "es": "Continuar vista previa",
+    "en": "Continue preview"
+  },
+  {
+    "source": "Conversi�n (%):",
+    "es": "Conversión (%):",
+    "en": "Conversion (%):"
+  },
+  {
+    "source": "Counts reflect saved workspace records.",
+    "es": "Los conteos reflejan los registros guardados del espacio de trabajo.",
+    "en": "Counts reflect saved workspace records."
+  },
+  {
+    "source": "Crear OTOM",
+    "es": "Crear OTOM",
+    "en": "Create OTOM"
+  },
+  {
+    "source": "Create a provider-verified sender identity before reviewing a live campaign.",
+    "es": "Crea una identidad de remitente verificada por el proveedor antes de revisar una campaña en vivo.",
+    "en": "Create a provider-verified sender identity before reviewing a live campaign."
+  },
+  {
+    "source": "Create a verified sender",
+    "es": "Crear un remitente verificado",
+    "en": "Create a verified sender"
+  },
+  {
+    "source": "Create Campaign Draft",
+    "es": "Crear borrador de campaña",
+    "en": "Create Campaign Draft"
+  },
+  {
+    "source": "Create draft",
+    "es": "Crear borrador",
+    "en": "Create draft"
+  },
+  {
+    "source": "Create Outreach Campaign",
+    "es": "Crear campaña de alcance",
+    "en": "Create Outreach Campaign"
+  },
+  {
+    "source": "Create Proposal Draft",
+    "es": "Crear borrador de propuesta",
+    "en": "Create Proposal Draft"
+  },
+  {
+    "source": "Creating this record does not approve, schedule or send anything.",
+    "es": "Crear este registro no aprueba, programa ni envía nada.",
+    "en": "Creating this record does not approve, schedule or send anything."
+  },
+  {
+    "source": "Creation mode",
+    "es": "Modo de creación",
+    "en": "Creation mode"
+  },
+  {
+    "source": "CSV",
+    "es": "CSV",
+    "en": "CSV"
+  },
+  {
+    "source": "CTA:",
+    "es": "CTA:",
+    "en": "CTA:"
+  },
+  {
+    "source": "cualquier industria, tama�o o ingreso",
+    "es": "cualquier industria, tamaño o ingreso",
+    "en": "any industry, size or revenue"
+  },
+  {
+    "source": "cualquier negocio y cualquier ingreso",
+    "es": "cualquier negocio y cualquier ingreso",
+    "en": "any business and any revenue"
+  },
+  {
+    "source": "Cuerpo editable",
+    "es": "Cuerpo editable",
+    "en": "Editable body"
+  },
+  {
+    "source": "Current offer",
+    "es": "Oferta actual",
+    "en": "Current offer"
+  },
+  {
+    "source": "Current scenario",
+    "es": "Escenario actual",
+    "en": "Current scenario"
+  },
+  {
+    "source": "Current situation",
+    "es": "Situación actual",
+    "en": "Current situation"
+  },
+  {
+    "source": "Dashboard",
+    "es": "Tablero",
+    "en": "Dashboard"
+  },
+  {
+    "source": "Datos del workspace",
+    "es": "Datos del espacio de trabajo",
+    "en": "Workspace data"
+  },
+  {
+    "source": "Decision-maker research",
+    "es": "Investigación de tomadores de decisiones",
+    "en": "Decision-maker research"
+  },
+  {
+    "source": "Demonstration form. No information is stored or sent.",
+    "es": "Formulario de demostración. No se almacena ni se envía información.",
+    "en": "Demonstration form. No information is stored or sent."
+  },
+  {
+    "source": "Descubre negocios de",
+    "es": "Descubre negocios de",
+    "en": "Discover businesses from"
+  },
+  {
+    "source": "Designed to convert",
+    "es": "Diseñado para convertir",
+    "en": "Designed to convert"
+  },
+  {
+    "source": "detailed",
+    "es": "detallado",
+    "en": "detailed"
+  },
+  {
+    "source": "Deterministic opportunities",
+    "es": "Oportunidades determinísticas",
+    "en": "Deterministic opportunities"
+  },
+  {
+    "source": "Dimensi�n",
+    "es": "Dimensión",
+    "en": "Dimension"
+  },
+  {
+    "source": "Directorio de Contactos Verificados",
+    "es": "Directorio de Contactos Verificados",
+    "en": "Verified Contacts Directory"
+  },
+  {
+    "source": "Discovery mode",
+    "es": "Modo de descubrimiento",
+    "en": "Discovery mode"
+  },
+  {
+    "source": "Display name",
+    "es": "Nombre para mostrar",
+    "en": "Display name"
+  },
+  {
+    "source": "Do not use AI advisory text",
+    "es": "No utilices texto de asesoría de IA",
+    "en": "Do not use AI advisory text"
+  },
+  {
+    "source": "Domain",
+    "es": "Dominio",
+    "en": "Domain"
+  },
+  {
+    "source": "Dominio",
+    "es": "Dominio",
+    "en": "Domain"
+  },
+  {
+    "source": "Dominio Web:",
+    "es": "Dominio Web:",
+    "en": "Web Domain:"
+  },
+  {
+    "source": "Dominio:",
+    "es": "Dominio:",
+    "en": "Domain:"
+  },
+  {
+    "source": "Dossier real persistido",
+    "es": "Dossier real persistido",
+    "en": "Persisted real dossier"
+  },
+  {
+    "source": "Duplicate",
+    "es": "Duplicar",
+    "en": "Duplicate"
+  },
+  {
+    "source": "E-Commerce",
+    "es": "Comercio Electrónico",
+    "en": "E-Commerce"
+  },
+  {
+    "source": "Ecommerce / Marketing",
+    "es": "Ecommerce / Marketing",
+    "en": "Ecommerce / Marketing"
+  },
+  {
+    "source": "Editable assumption, not verified revenue.",
+    "es": "Suposición editable, ingresos no verificados.",
+    "en": "Editable assumption, not verified revenue."
+  },
+  {
+    "source": "Editor de secuencia",
+    "es": "Editor de secuencia",
+    "en": "Sequence editor"
+  },
+  {
+    "source": "Ejecutar auditor�a",
+    "es": "Ejecutar auditoría",
+    "en": "Run audit"
+  },
+  {
+    "source": "El siguiente movimiento",
+    "es": "El siguiente movimiento",
+    "en": "The next move"
+  },
+  {
+    "source": "El siguiente paso, sin saltos ni sorpresas",
+    "es": "El siguiente paso, sin saltos ni sorpresas",
+    "en": "The next step, no jumps or surprises"
+  },
+  {
+    "source": "El timeline aparecer� junto con la secuencia de emails.",
+    "es": "El timeline aparecerá junto con la secuencia de correos electrónicos.",
+    "en": "The timeline will appear along with the email sequence."
+  },
+  {
+    "source": "Email Descubierto (Hunter.io)",
+    "es": "Email Descubierto (Hunter.io)",
+    "en": "Discovered Email (Hunter.io)"
+  },
+  {
+    "source": "Email:",
+    "es": "Email:",
+    "en": "Email:"
+  },
+  {
+    "source": "Embudo biling�e � Espa�ol + English",
+    "es": "Embudo bilingüe – Español + English",
+    "en": "Bilingual funnel – Spanish + English"
+  },
+  {
+    "source": "Embudo estimado",
+    "es": "Embudo estimado",
+    "en": "Estimated funnel"
+  },
+  {
+    "source": "Embudo generado ?",
+    "es": "¿Embudo generado?",
+    "en": "Funnel generated?"
+  },
+  {
+    "source": "Embudo Personalizado",
+    "es": "Embudo Personalizado",
+    "en": "Custom funnel"
+  },
+  {
+    "source": "Embudo:",
+    "es": "Embudo:",
+    "en": "Funnel:"
+  },
+  {
+    "source": "Employees",
+    "es": "Empleados",
+    "en": "Employees"
+  },
+  {
+    "source": "EN",
+    "es": "EN",
+    "en": "EN"
+  },
+  {
+    "source": "en una sola vista.",
+    "es": "en una sola vista.",
+    "en": "in a single view."
+  },
+  {
+    "source": "English",
+    "es": "Inglés",
+    "en": "English"
+  },
+  {
+    "source": "English only",
+    "es": "Solo inglés",
+    "en": "English only"
+  },
+  {
+    "source": "Enlace P�blico:",
+    "es": "Enlace Público:",
+    "en": "Public Link:"
+  },
+  {
+    "source": "Enrichment status",
+    "es": "Estado de enriquecimiento",
+    "en": "Enrichment status"
+  },
+  {
+    "source": "escenario, no resultado previsto",
+    "es": "escenario, no resultado previsto",
+    "en": "scenario, no expected outcome"
+  },
+  {
+    "source": "Espa�ol",
+    "es": "Español",
+    "en": "Spanish"
+  },
+  {
+    "source": "Este negocio necesita un contacto con email real antes de generar outreach.",
+    "es": "Este negocio necesita un contacto con email real antes de generar outreach.",
+    "en": "This business needs a contact with a real email before generating outreach."
+  },
+  {
+    "source": "Events",
+    "es": "Eventos",
+    "en": "Events"
+  },
+  {
+    "source": "Evidence and limits",
+    "es": "Evidencia y límites",
+    "en": "Evidence and limits"
+  },
+  {
+    "source": "Evidence snapshot",
+    "es": "Instantánea de evidencia",
+    "en": "Evidence snapshot"
+  },
+  {
+    "source": "Evidence used",
+    "es": "Evidencia utilizada",
+    "en": "Evidence used"
+  },
+  {
+    "source": "Evidence, AI drafts and delivery actions stay separated by approval.",
+    "es": "La evidencia, los borradores de IA y las acciones de entrega se mantienen separados por aprobación.",
+    "en": "Evidence, AI drafts and delivery actions stay separated by approval."
+  },
+  {
+    "source": "Evidence:",
+    "es": "Evidencia:",
+    "en": "Evidence:"
+  },
+  {
+    "source": "Evidence-assisted",
+    "es": "Asistido por evidencia",
+    "en": "Evidence-assisted"
+  },
+  {
+    "source": "Evidence-based proposal",
+    "es": "Propuesta basada en evidencia",
+    "en": "Evidence-based proposal"
+  },
+  {
+    "source": "Exact audit",
+    "es": "Auditoría exacta",
+    "en": "Exact audit"
+  },
+  {
+    "source": "Exclusions",
+    "es": "Exclusiones",
+    "en": "Exclusions"
+  },
+  {
+    "source": "Executive summary",
+    "es": "Resumen ejecutivo",
+    "en": "Executive summary"
+  },
+  {
+    "source": "Explain every assumption",
+    "es": "Explicar cada suposición",
+    "en": "Explain every assumption"
+  },
+  {
+    "source": "Explicit campaign draft",
+    "es": "Borrador de campaña explícito",
+    "en": "Explicit campaign draft"
+  },
+  {
+    "source": "Explicit draft creation",
+    "es": "Creación de borrador explícito",
+    "en": "Explicit draft creation"
+  },
+  {
+    "source": "Explorador Universal de Negocios",
+    "es": "Explorador Universal de Negocios",
+    "en": "Universal Business Explorer"
+  },
+  {
+    "source": "Explore the experience",
+    "es": "Explorar la experiencia",
+    "en": "Explore the experience"
+  },
+  {
+    "source": "Export CSV",
+    "es": "Exportar CSV",
+    "en": "Export CSV"
+  },
+  {
+    "source": "Export HTML",
+    "es": "Exportar HTML",
+    "en": "Export HTML"
+  },
+  {
+    "source": "Export JSON",
+    "es": "Exportar JSON",
+    "en": "Export JSON"
+  },
+  {
+    "source": "Facturaci�n (�/mes):",
+    "es": "Facturación (€/mes):",
+    "en": "Billing (€ / month):"
+  },
+  {
+    "source": "Facturaci�n Extra para el Negocio:",
+    "es": "Facturación Extra para el Negocio:",
+    "en": "Extra Billing for the Business:"
+  },
+  {
+    "source": "Facturaci�n Mensual Actual:",
+    "es": "Facturación Mensual Actual:",
+    "en": "Current Monthly Billing:"
+  },
+  {
+    "source": "Facturaci�n:",
+    "es": "Facturación:",
+    "en": "Billing:"
+  },
+  {
+    "source": "failed",
+    "es": "fallido",
+    "en": "failed"
+  },
+  {
+    "source": "Featured offers",
+    "es": "Ofertas destacadas",
+    "en": "Featured offers"
+  },
+  {
+    "source": "Filtrar por tipo de negocio",
+    "es": "Filtrar por tipo de negocio",
+    "en": "Filter by business type"
+  },
+  {
+    "source": "Find company",
+    "es": "Encontrar empresa",
+    "en": "Find company"
+  },
+  {
+    "source": "Find local businesses or return only stores whose Shopify signal is verified.",
+    "es": "Encontrar negocios locales o devolver solo tiendas cuyo señal de Shopify está verificada.",
+    "en": "Find local businesses or return only stores whose Shopify signal is verified."
+  },
+  {
+    "source": "F�rmula 10.000�/mes:",
+    "es": "Fórmula 10.000€/mes:",
+    "en": "Formula 10,000€/month:"
+  },
+  {
+    "source": "Founder / CEO / Owner",
+    "es": "Fundador / CEO / Propietario",
+    "en": "Founder / CEO / Owner"
+  },
+  {
+    "source": "From discovery to delivery",
+    "es": "Desde el descubrimiento hasta la entrega",
+    "en": "From discovery to delivery"
+  },
+  {
+    "source": "From email",
+    "es": "Desde el correo electrónico",
+    "en": "From email"
+  },
+  {
+    "source": "Funciona para",
+    "es": "Funciona para",
+    "en": "Works for"
+  },
+  {
+    "source": "Funnel audits",
+    "es": "Auditorías de embudo",
+    "en": "Funnel audits"
+  },
+  {
+    "source": "FunnelSpy",
+    "es": "FunnelSpy",
+    "en": "FunnelSpy"
+  },
+  {
+    "source": "FunnelSpy � Informe compartido",
+    "es": "FunnelSpy - Informe compartido",
+    "en": "FunnelSpy - Shared report"
+  },
+  {
+    "source": "FunnelSpy audit",
+    "es": "Auditoría de FunnelSpy",
+    "en": "FunnelSpy audit"
+  },
+  {
+    "source": "Generate AI Strategy",
+    "es": "Generar Estrategia de IA",
+    "en": "Generate AI Strategy"
+  },
+  {
+    "source": "generating",
+    "es": "generando",
+    "en": "generating"
+  },
+  {
+    "source": "Gimnasio",
+    "es": "Gimnasio",
+    "en": "Gym"
+  },
+  {
+    "source": "Growth pipeline",
+    "es": "Pipeline de crecimiento",
+    "en": "Growth pipeline"
+  },
+  {
+    "source": "Guion Loom",
+    "es": "Guion Loom",
+    "en": "Loom script"
+  },
+  {
+    "source": "Historial de auditor�as",
+    "es": "Historial de auditorías",
+    "en": "Audit history"
+  },
+  {
+    "source": "Idioma del embudo",
+    "es": "Idioma del embudo",
+    "en": "Funnel language"
+  },
+  {
+    "source": "Implementation roadmap",
+    "es": "Hoja de ruta de implementación",
+    "en": "Implementation roadmap"
+  },
+  {
+    "source": "Important disclaimers",
+    "es": "Importantes descargos de responsabilidad",
+    "en": "Important disclaimers"
+  },
+  {
+    "source": "in one command center.",
+    "es": "en un centro de comando.",
+    "en": "in one command center."
+  },
+  {
+    "source": "In production, this lead would enter the selected follow-up automation.",
+    "es": "En producción, este lead ingresaría a la automatización de seguimiento seleccionada.",
+    "en": "In production, this lead would enter the selected follow-up automation."
+  },
+  {
+    "source": "Include",
+    "es": "Incluir",
+    "en": "Include"
+  },
+  {
+    "source": "Incremento con Embudo + Ads:",
+    "es": "Incremento con Embudo + Ads:",
+    "en": "Increase with Funnel + Ads:"
+  },
+  {
+    "source": "Industria:",
+    "es": "Industria:",
+    "en": "Industry:"
+  },
+  {
+    "source": "Inmobiliaria",
+    "es": "Inmobiliaria",
+    "en": "Real Estate"
+  },
+  {
+    "source": "Integration status",
+    "es": "Estado de integración",
+    "en": "Integration status"
+  },
+  {
+    "source": "Interactive client prototype",
+    "es": "Prototipo interactivo del cliente",
+    "en": "Interactive client prototype"
+  },
+  {
+    "source": "Interactive demo",
+    "es": "Demostración interactiva",
+    "en": "Interactive demo"
+  },
+  {
+    "source": "Internal notes � never public",
+    "es": "Notas internas - nunca públicas",
+    "en": "Internal notes - never public"
+  },
+  {
+    "source": "Invalid business ID.",
+    "es": "ID de negocio inválido.",
+    "en": "Invalid business ID."
+  },
+  {
+    "source": "Investment",
+    "es": "Inversión",
+    "en": "Investment"
+  },
+  {
+    "source": "Keep the brand.",
+    "es": "Mantén la marca.",
+    "en": "Keep the brand."
+  },
+  {
+    "source": "Keep the pipeline moving",
+    "es": "Mantén el pipeline en movimiento",
+    "en": "Keep the pipeline moving"
+  },
+  {
+    "source": "Language",
+    "es": "Idioma",
+    "en": "Language"
+  },
+  {
+    "source": "Latest generated strategy",
+    "es": "Última estrategia generada",
+    "en": "Latest generated strategy"
+  },
+  {
+    "source": "LCP",
+    "es": "LCP",
+    "en": "LCP"
+  },
+  {
+    "source": "Legacy revenue-share records",
+    "es": "Registros de participación de ingresos heredados",
+    "en": "Legacy revenue-share records"
+  },
+  {
+    "source": "Legacy workspace � upgraded",
+    "es": "Espacio de trabajo heredado - actualizado",
+    "en": "Legacy workspace - upgraded"
+  },
+  {
+    "source": "Line item",
+    "es": "Artículo",
+    "en": "Line item"
+  },
+  {
+    "source": "Listo para enviar pitch y Loom video",
+    "es": "Listo para enviar pitch y video de Loom",
+    "en": "Ready to send pitch and Loom video"
+  },
+  {
+    "source": "Listo para los siguientes pasos:",
+    "es": "Listo para los siguientes pasos:",
+    "en": "Ready for the next steps:"
+  },
+  {
+    "source": "Live brand controls",
+    "es": "Controles de marca en vivo",
+    "en": "Live brand controls"
+  },
+  {
+    "source": "Live data",
+    "es": "Datos en vivo",
+    "en": "Live data"
+  },
+  {
+    "source": "Live render",
+    "es": "Renderizado en vivo",
+    "en": "Live render"
+  },
+  {
+    "source": "Llena el formulario y haz clic &quot;Descubrir Negocio&quot;",
+    "es": "Llena el formulario y haz clic \"Descubrir Negocio\"",
+    "en": "Fill out the form and click \"Discover Business\""
+  },
+  {
+    "source": "Loading campaign�",
+    "es": "Cargando campaña...",
+    "en": "Loading campaign..."
+  },
+  {
+    "source": "Mark ready",
+    "es": "Marcar como listo",
+    "en": "Mark ready"
+  },
+  {
+    "source": "Men�",
+    "es": "Menú",
+    "en": "Menu"
+  },
+  {
+    "source": "Men� principal",
+    "es": "Menú principal",
+    "en": "Main menu"
+  },
+  {
+    "source": "Messages",
+    "es": "Mensajes",
+    "en": "Messages"
+  },
+  {
+    "source": "Modeled lift",
+    "es": "Elevación modelada",
+    "en": "Modeled lift"
+  },
+  {
+    "source": "Mostrando",
+    "es": "Mostrando",
+    "en": "Showing"
+  },
+  {
+    "source": "Negocio activo",
+    "es": "Negocio activo",
+    "en": "Active business"
+  },
+  {
+    "source": "Negocio a�adido",
+    "es": "Negocio añadido",
+    "en": "Business added"
+  },
+  {
+    "source": "Negocio Descubierto",
+    "es": "Negocio Descubierto",
+    "en": "Discovered business"
+  },
+  {
+    "source": "Negocio:",
+    "es": "Negocio:",
+    "en": "Business:"
+  },
+  {
+    "source": "negocios",
+    "es": "negocios",
+    "en": "businesses"
+  },
+  {
+    "source": "Next actions",
+    "es": "Próximas acciones",
+    "en": "Next actions"
+  },
+  {
+    "source": "Nicho:",
+    "es": "Nicho:",
+    "en": "Niche:"
+  },
+  {
+    "source": "No associated audit. Opening this profile does not run one automatically.",
+    "es": "No hay auditoría asociada. Abrir este perfil no ejecuta una automáticamente.",
+    "en": "No associated audit. Opening this profile does not run one automatically."
+  },
+  {
+    "source": "No campaign drafts. Opening this profile does not create one.",
+    "es": "No hay borradores de campaña. Abrir este perfil no crea uno.",
+    "en": "No campaign drafts. Opening this profile does not create one."
+  },
+  {
+    "source": "No campaigns exist. Nothing is created automatically.",
+    "es": "No existen campañas. Nada se crea automáticamente.",
+    "en": "No campaigns exist. Nothing is created automatically."
+  },
+  {
+    "source": "No consultant report exists for this audit.",
+    "es": "No existe un informe de consultor para esta auditoría.",
+    "en": "No consultant report exists for this audit."
+  },
+  {
+    "source": "No contacts recorded. Add the first one manually.",
+    "es": "No hay contactos registrados. Agrega el primero manualmente.",
+    "en": "No contacts recorded. Add the first one manually."
+  },
+  {
+    "source": "No evidence-based proposal drafts exist. Creation is always explicit.",
+    "es": "No existen borradores de propuestas basadas en evidencia. La creación siempre es explícita.",
+    "en": "No evidence-based proposal drafts exist. Creation is always explicit."
+  },
+  {
+    "source": "No hay negocios guardados.",
+    "es": "No hay negocios guardados.",
+    "en": "No saved businesses."
+  },
+  {
+    "source": "No opportunities match these filters.",
+    "es": "No hay oportunidades que coincidan con estos filtros.",
+    "en": "No opportunities match these filters."
+  },
+  {
+    "source": "No proposal drafts. Opening this profile never creates one automatically.",
+    "es": "No hay borradores de propuestas. Abrir este perfil nunca crea uno automáticamente.",
+    "en": "No proposal drafts. Opening this profile never creates one automatically."
+  },
+  {
+    "source": "No proposal is associated with this audit. Viewing an audit never creates one.",
+    "es": "No hay propuesta asociada con esta auditoría. Ver una auditoría nunca crea una.",
+    "en": "No proposal is associated with this audit. Viewing an audit never creates one."
+  },
+  {
+    "source": "No public businesses matched this search.",
+    "es": "No se encontraron negocios públicos que coincidieran con esta búsqueda.",
+    "en": "No public businesses matched this search."
+  },
+  {
+    "source": "No real payment will be processed.",
+    "es": "No se procesará ningún pago real.",
+    "en": "No real payment will be processed."
+  },
+  {
+    "source": "No se encontraron negocios con esos datos",
+    "es": "No se encontraron negocios con esos datos",
+    "en": "No businesses found with that data."
+  },
+  {
+    "source": "No supported opportunity was derived.",
+    "es": "No se derivó ninguna oportunidad soportada.",
+    "en": "No supported opportunity was derived."
+  },
+  {
+    "source": "Nombre (Opcional)",
+    "es": "Nombre (Opcional)",
+    "en": "Name (Optional)"
+  },
+  {
+    "source": "Nombre del Contacto:",
+    "es": "Nombre del Contacto:",
+    "en": "Contact Name:"
+  },
+  {
+    "source": "Nombre del Negocio: *",
+    "es": "Nombre del Negocio: *",
+    "en": "Business Name: *"
+  },
+  {
+    "source": "Objective",
+    "es": "Objetivo",
+    "en": "Objective"
+  },
+  {
+    "source": "Oferta / Servicio Principal:",
+    "es": "Oferta / Servicio Principal:",
+    "en": "Main Offer / Service:"
+  },
+  {
+    "source": "Oferta dise�ada para avanzar",
+    "es": "Oferta diseñada para avanzar",
+    "en": "Offer designed to advance"
+  },
+  {
+    "source": "Oferta generada:",
+    "es": "Oferta generada:",
+    "en": "Generated offer:"
+  },
+  {
+    "source": "Oferta:",
+    "es": "Oferta:",
+    "en": "Offer:"
+  },
+  {
+    "source": "Offer and FunnelSpy evidence",
+    "es": "Oferta y evidencia de FunnelSpy",
+    "en": "Offer and FunnelSpy evidence"
+  },
+  {
+    "source": "One item per line.",
+    "es": "Un ítem por línea.",
+    "en": "One item per line."
+  },
+  {
+    "source": "Open complete strategy",
+    "es": "Abrir estrategia completa",
+    "en": "Open complete strategy"
+  },
+  {
+    "source": "Open legacy workspace",
+    "es": "Abrir espacio de trabajo legado",
+    "en": "Open legacy workspace"
+  },
+  {
+    "source": "Open LinkedIn profile",
+    "es": "Abrir perfil de LinkedIn",
+    "en": "Open LinkedIn profile"
+  },
+  {
+    "source": "Open the complete generated report ?",
+    "es": "¿Abrir el informe completo generado?",
+    "en": "Open the complete generated report?"
+  },
+  {
+    "source": "Open website",
+    "es": "Abrir sitio web",
+    "en": "Open website"
+  },
+  {
+    "source": "OpenStreetMap",
+    "es": "OpenStreetMap",
+    "en": "OpenStreetMap"
+  },
+  {
+    "source": "Optional completed AI Consultant report",
+    "es": "Informe de Consultor AI completado opcional",
+    "en": "Optional completed AI Consultant report"
+  },
+  {
+    "source": "Optional instructions",
+    "es": "Instrucciones opcionales",
+    "en": "Optional instructions"
+  },
+  {
+    "source": "OTOM",
+    "es": "OTOM",
+    "en": "OTOM"
+  },
+  {
+    "source": "OTOM Studio",
+    "es": "OTOM Studio",
+    "en": "OTOM Studio"
+  },
+  {
+    "source": "Otro / Cualquier negocio",
+    "es": "Otro / Cualquier negocio",
+    "en": "Other / Any business"
+  },
+  {
+    "source": "Outreach campaigns",
+    "es": "Campañas de alcance",
+    "en": "Outreach campaigns"
+  },
+  {
+    "source": "Outreach handoff",
+    "es": "Transferencia de alcance",
+    "en": "Outreach handoff"
+  },
+  {
+    "source": "Para",
+    "es": "Para",
+    "en": "To"
+  },
+  {
+    "source": "Par�metros del Negocio",
+    "es": "Parámetros del Negocio",
+    "en": "Business Parameters"
+  },
+  {
+    "source": "Paso 4 � Cold Outreach",
+    "es": "Paso 4 - Cold Outreach",
+    "en": "Step 4 - Cold Outreach"
+  },
+  {
+    "source": "Password recovery",
+    "es": "Recuperación de contraseña",
+    "en": "Password recovery"
+  },
+  {
+    "source": "Payment terms",
+    "es": "Términos de pago",
+    "en": "Payment terms"
+  },
+  {
+    "source": "pending",
+    "es": "pendiente",
+    "en": "pending"
+  },
+  {
+    "source": "Persisted audit",
+    "es": "Auditoría persistente",
+    "en": "Persisted audit"
+  },
+  {
+    "source": "Physical business address",
+    "es": "Dirección física del negocio",
+    "en": "Physical business address"
+  },
+  {
+    "source": "Pipeline CRM Universal",
+    "es": "Pipeline CRM Universal",
+    "en": "Pipeline CRM Universal"
+  },
+  {
+    "source": "Pipeline de crecimiento",
+    "es": "Pipeline de crecimiento",
+    "en": "Growth pipeline"
+  },
+  {
+    "source": "Plan de optimizaci�n",
+    "es": "Plan de optimización",
+    "en": "Optimization plan"
+  },
+  {
+    "source": "Planning potential, never a guarantee.",
+    "es": "Potencial de planificación, nunca una garantía.",
+    "en": "Planning potential, never a guarantee."
+  },
+  {
+    "source": "Precio:",
+    "es": "Precio:",
+    "en": "Price:"
+  },
+  {
+    "source": "Preparar pitch",
+    "es": "Preparar pitch",
+    "en": "Prepare pitch"
+  },
+  {
+    "source": "Preparar propuesta",
+    "es": "Preparar propuesta",
+    "en": "Prepare proposal"
+  },
+  {
+    "source": "Present",
+    "es": "Presentar",
+    "en": "Present"
+  },
+  {
+    "source": "Preview captured",
+    "es": "Vista previa capturada",
+    "en": "Preview captured"
+  },
+  {
+    "source": "Preview cart",
+    "es": "Vista previa del carrito",
+    "en": "Preview cart"
+  },
+  {
+    "source": "Preview completo ?",
+    "es": "¿Vista previa completa?",
+    "en": "Complete preview?"
+  },
+  {
+    "source": "Preview products",
+    "es": "Vista previa de productos",
+    "en": "Preview products"
+  },
+  {
+    "source": "Primary",
+    "es": "Primario",
+    "en": "Primary"
+  },
+  {
+    "source": "Primary interest",
+    "es": "Interés primario",
+    "en": "Primary interest"
+  },
+  {
+    "source": "Proposal type",
+    "es": "Tipo de propuesta",
+    "en": "Proposal type"
+  },
+  {
+    "source": "Proposals",
+    "es": "Propuestas",
+    "en": "Proposals"
+  },
+  {
+    "source": "Provider",
+    "es": "Proveedor",
+    "en": "Provider"
+  },
+  {
+    "source": "Public token is shown only now. Copy and store the link safely.",
+    "es": "El token público se muestra solo ahora. Copia y guarda el enlace de forma segura.",
+    "en": "Public token is shown only now. Copy and store the link safely."
+  },
+  {
+    "source": "Publish explicitly",
+    "es": "Publicar explícitamente",
+    "en": "Publish explicitly"
+  },
+  {
+    "source": "Published proposal preselected. It will be validated server-side.",
+    "es": "Propuesta publicada preseleccionada. Será validada del lado del servidor.",
+    "en": "Published proposal preselected. It will be validated server-side."
+  },
+  {
+    "source": "Qu� falta para vender",
+    "es": "¿Qué falta para vender?",
+    "en": "What is missing to sell?"
+  },
+  {
+    "source": "Questions, answered",
+    "es": "Preguntas, respondidas",
+    "en": "Questions, answered"
+  },
+  {
+    "source": "readiness",
+    "es": "preparación",
+    "en": "readiness"
+  },
+  {
+    "source": "Rebuild the experience.",
+    "es": "Reconstruir la experiencia.",
+    "en": "Rebuild the experience."
+  },
+  {
+    "source": "Recipients",
+    "es": "Destinatarios",
+    "en": "Recipients"
+  },
+  {
+    "source": "Recommended services",
+    "es": "Servicios recomendados",
+    "en": "Recommended services"
+  },
+  {
+    "source": "Recommended:",
+    "es": "Recomendado:",
+    "en": "Recommended:"
+  },
+  {
+    "source": "Regenerate opportunities",
+    "es": "Regenerar oportunidades",
+    "en": "Regenerate opportunities"
+  },
+  {
+    "source": "Regenerate with review",
+    "es": "Regenerar con revisión",
+    "en": "Regenerate with review"
+  },
+  {
+    "source": "Registrador",
+    "es": "Registrador",
+    "en": "Registrar"
+  },
+  {
+    "source": "Reply-to",
+    "es": "Responder a",
+    "en": "Reply-to"
+  },
+  {
+    "source": "Report history",
+    "es": "Historial de informes",
+    "en": "Report history"
+  },
+  {
+    "source": "Report style",
+    "es": "Estilo de informe",
+    "en": "Report style"
+  },
+  {
+    "source": "response.json() as Promise",
+    "es": "response.json() como Promesa",
+    "en": "response.json() as Promise"
+  },
+  {
+    "source": "Restaurante",
+    "es": "Restaurante",
+    "en": "Restaurant"
+  },
+  {
+    "source": "Resultado por Negocio:",
+    "es": "Result by Business:",
+    "en": "Result by Business:"
+  },
+  {
+    "source": "Return to generation settings",
+    "es": "Regresar a la configuración de generación",
+    "en": "Return to generation settings"
+  },
+  {
+    "source": "Revenue model",
+    "es": "Modelo de ingresos",
+    "en": "Revenue model"
+  },
+  {
+    "source": "Revenue Operations",
+    "es": "Operaciones de ingresos",
+    "en": "Revenue Operations"
+  },
+  {
+    "source": "Revenue simulator",
+    "es": "Simulador de ingresos",
+    "en": "Revenue simulator"
+  },
+  {
+    "source": "Review integrations",
+    "es": "Revisar integraciones",
+    "en": "Review integrations"
+  },
+  {
+    "source": "Revisa resultados, comparte informes y observa cambios de score por dominio.",
+    "es": "Review results, share reports, and observe score changes by domain.",
+    "en": "Review results, share reports, and observe score changes by domain."
+  },
+  {
+    "source": "Revisar y aprobar",
+    "es": "Review and approve",
+    "en": "Review and approve"
+  },
+  {
+    "source": "Rol:",
+    "es": "Role:",
+    "en": "Role:"
+  },
+  {
+    "source": "Run fresh audit",
+    "es": "Ejecutar auditoría nueva",
+    "en": "Run fresh audit"
+  },
+  {
+    "source": "Run Funnel Audit",
+    "es": "Ejecutar Auditoría de Embudo",
+    "en": "Run Funnel Audit"
+  },
+  {
+    "source": "SaaS",
+    "es": "SaaS",
+    "en": "SaaS"
+  },
+  {
+    "source": "Safety boundary",
+    "es": "Límite de seguridad",
+    "en": "Safety boundary"
+  },
+  {
+    "source": "Salud/Clínica",
+    "es": "Health/Clinic",
+    "en": "Health/Clinic"
+  },
+  {
+    "source": "Save new version",
+    "es": "Guardar nueva versión",
+    "en": "Save new version"
+  },
+  {
+    "source": "Schedule explicitly",
+    "es": "Programar explícitamente",
+    "en": "Schedule explicitly"
+  },
+  {
+    "source": "Search",
+    "es": "Buscar",
+    "en": "Search"
+  },
+  {
+    "source": "Search public profiles",
+    "es": "Buscar perfiles públicos",
+    "en": "Search public profiles"
+  },
+  {
+    "source": "Secure operations workspace",
+    "es": "Espacio de trabajo de operaciones seguro",
+    "en": "Secure operations workspace"
+  },
+  {
+    "source": "Seguimiento de negocios de cualquier industria. Enfocado en facturación extra.",
+    "es": "Tracking businesses from any industry. Focused on extra billing.",
+    "en": "Tracking businesses from any industry. Focused on extra billing."
+  },
+  {
+    "source": "Select an offer to demonstrate the cart journey.",
+    "es": "Selecciona una oferta para demostrar el recorrido del carrito.",
+    "en": "Select an offer to demonstrate the cart journey."
+  },
+  {
+    "source": "Select associated contact",
+    "es": "Seleccionar contacto asociado",
+    "en": "Select associated contact"
+  },
+  {
+    "source": "Select audit",
+    "es": "Seleccionar auditoría",
+    "en": "Select audit"
+  },
+  {
+    "source": "Select business",
+    "es": "Seleccionar negocio",
+    "en": "Select business"
+  },
+  {
+    "source": "Select provider",
+    "es": "Seleccionar proveedor",
+    "en": "Select provider"
+  },
+  {
+    "source": "Select sender",
+    "es": "Seleccionar remitente",
+    "en": "Select sender"
+  },
+  {
+    "source": "Sender",
+    "es": "Remitente",
+    "en": "Sender"
+  },
+  {
+    "source": "Sequence steps",
+    "es": "Pasos de secuencia",
+    "en": "Sequence steps"
+  },
+  {
+    "source": "Service",
+    "es": "Servicio",
+    "en": "Service"
+  },
+  {
+    "source": "Services and pricing",
+    "es": "Servicios y precios",
+    "en": "Services and pricing"
+  },
+  {
+    "source": "Servicios Profesionales",
+    "es": "Professional Services",
+    "en": "Professional Services"
+  },
+  {
+    "source": "Shared report",
+    "es": "Informe compartido",
+    "en": "Shared report"
+  },
+  {
+    "source": "Shopify verified",
+    "es": "Verificado por Shopify",
+    "en": "Shopify verified"
+  },
+  {
+    "source": "Sign in",
+    "es": "Iniciar sesión",
+    "en": "Sign in"
+  },
+  {
+    "source": "Sin negocios",
+    "es": "No businesses",
+    "en": "No businesses"
+  },
+  {
+    "source": "Solo español",
+    "es": "Spanish only",
+    "en": "Spanish only"
+  },
+  {
+    "source": "Spy",
+    "es": "Espiar",
+    "en": "Spy"
+  },
+  {
+    "source": "Stack detectado",
+    "es": "Stack detected",
+    "en": "Stack detected"
+  },
+  {
+    "source": "standard",
+    "es": "estándar",
+    "en": "standard"
+  },
+  {
+    "source": "Status",
+    "es": "Estado",
+    "en": "Status"
+  },
+  {
+    "source": "Suppression records",
+    "es": "Registros de supresión",
+    "en": "Suppression records"
+  },
+  {
+    "source": "System readiness",
+    "es": "Preparación del sistema",
+    "en": "System readiness"
+  },
+  {
+    "source": "Tama�o:",
+    "es": "Size:",
+    "en": "Size:"
+  },
+  {
+    "source": "Target scenario",
+    "es": "Escenario objetivo",
+    "en": "Target scenario"
+  },
+  {
+    "source": "Technologies",
+    "es": "Tecnologías",
+    "en": "Technologies"
+  },
+  {
+    "source": "Technology evidence is unavailable.",
+    "es": "La evidencia de tecnología no está disponible.",
+    "en": "Technology evidence is unavailable."
+  },
+  {
+    "source": "Tecnolog�a � BuiltWith",
+    "es": "Technology - BuiltWith",
+    "en": "Technology - BuiltWith"
+  },
+  {
+    "source": "Tecnolog�a:",
+    "es": "Technology:",
+    "en": "Technology:"
+  },
+  {
+    "source": "Template",
+    "es": "Plantilla",
+    "en": "Template"
+  },
+  {
+    "source": "This validates readiness; it never sends or schedules messages.",
+    "es": "Esto valida la preparación; nunca envía ni programa mensajes.",
+    "en": "This validates readiness; it never sends or schedules messages."
+  },
+  {
+    "source": "Ticket medio (�):",
+    "es": "Average ticket ($):",
+    "en": "Average ticket ($):"
+  },
+  {
+    "source": "Timeline",
+    "es": "Línea de tiempo",
+    "en": "Timeline"
+  },
+  {
+    "source": "Timezone",
+    "es": "Zona horaria",
+    "en": "Timezone"
+  },
+  {
+    "source": "Tipo de Negocio",
+    "es": "Business Type",
+    "en": "Business Type"
+  },
+  {
+    "source": "Tipo de Negocio:",
+    "es": "Business Type:",
+    "en": "Business Type:"
+  },
+  {
+    "source": "Tipo:",
+    "es": "Type:",
+    "en": "Type:"
+  },
+  {
+    "source": "Title",
+    "es": "Título",
+    "en": "Title"
+  },
+  {
+    "source": "Titular generado:",
+    "es": "Generated holder:",
+    "en": "Generated holder:"
+  },
+  {
+    "source": "Todav�a no hay auditor�as guardadas.",
+    "es": "There are no saved audits yet.",
+    "en": "There are no saved audits yet."
+  },
+  {
+    "source": "Total estimate",
+    "es": "Estimación total",
+    "en": "Total estimate"
+  },
+  {
+    "source": "Traffic � conversion � average value.",
+    "es": "Tráfico - conversión - valor promedio.",
+    "en": "Traffic - conversion - average value."
+  },
+  {
+    "source": "Tu Comisi�n (%):",
+    "es": "Your Commission (%):",
+    "en": "Your Commission (%):"
+  },
+  {
+    "source": "Tu Ganancia (MRR):",
+    "es": "Your Profit (MRR):",
+    "en": "Your Profit (MRR):"
+  },
+  {
+    "source": "Ubicaci�n:",
+    "es": "Location:",
+    "en": "Location:"
+  },
+  {
+    "source": "valuable customers.",
+    "es": "clientes valiosos.",
+    "en": "valuable customers."
+  },
+  {
+    "source": "Ver Embudo",
+    "es": "View Funnel",
+    "en": "View Funnel"
+  },
+  {
+    "source": "Ver funnel",
+    "es": "View funnel",
+    "en": "View funnel"
+  },
+  {
+    "source": "Verificar antes de aprobar",
+    "es": "Verify before approving",
+    "en": "Verify before approving"
+  },
+  {
+    "source": "Verify and save sender",
+    "es": "Verificar y guardar remitente",
+    "en": "Verify and save sender"
+  },
+  {
+    "source": "View all",
+    "es": "Ver todo",
+    "en": "View all"
+  },
+  {
+    "source": "View opportunities",
+    "es": "Ver oportunidades",
+    "en": "View opportunities"
+  },
+  {
+    "source": "Vista del sitio",
+    "es": "Vista del sitio",
+    "en": "Site view"
+  },
+  {
+    "source": "Vista Previa",
+    "es": "Vista previa",
+    "en": "Preview"
+  },
+  {
+    "source": "void | Promise",
+    "es": "void | Promise",
+    "en": "void | Promise"
+  },
+  {
+    "source": "Volver",
+    "es": "Volver",
+    "en": "Back"
+  },
+  {
+    "source": "Volver a EcoScale Partner",
+    "es": "Regresar a EcoScale Partner",
+    "en": "Back to EcoScale Partner"
+  },
+  {
+    "source": "Website",
+    "es": "Sitio web",
+    "en": "Website"
+  },
+  {
+    "source": "Workspace",
+    "es": "Espacio de trabajo",
+    "en": "Workspace"
+  },
+  {
+    "source": "Workspace signals",
+    "es": "Señales del espacio de trabajo",
+    "en": "Workspace signals"
+  },
+  {
+    "source": "Your growth operation,",
+    "es": "Tu operación de crecimiento,",
+    "en": "Your growth operation,"
+  },
+  {
+    "source": "Your selection",
+    "es": "Tu selección",
+    "en": "Your selection"
+  },
+  {
+    "source": "?? Paso 3: Encontrar al Decisor",
+    "es": "?? Step 3: Find the Decision Maker",
+    "en": "?? Step 3: Find the Decision Maker"
+  },
+  {
+    "source": "?? Copy del Anuncio:",
+    "es": "?? Ad Copy:",
+    "en": "?? Ad Copy:"
+  },
+  {
+    "source": "?? Paso 5: Modelo Rev-Share Universal",
+    "es": "?? Step 5: Universal Rev-Share Model",
+    "en": "?? Step 5: Universal Rev-Share Model"
+  },
+  {
+    "source": "?? Discovery Autom�tico (Hunter.io)",
+    "es": "?? Discovery Automático (Hunter.io)",
+    "en": "?? Automatic Discovery (Hunter.io)"
+  }
+]

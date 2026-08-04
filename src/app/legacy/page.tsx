@@ -1,15 +1,18 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { Search, Globe, Sparkles, Zap, Mail, Video, Calculator, ArrowRight, CheckCircle2, TrendingUp, ExternalLink, Flame, UserCheck, DollarSign, Copy, Send, Layers, Check, RefreshCw, Plus, Clock, Kanban, ShieldCheck, Filter, Target, BarChart3, Percent, Award, Trash2 } from "lucide-react";
+import { Search, Globe, Sparkles, Zap, Mail, Video, Calculator, ArrowRight, CheckCircle2, TrendingUp, ExternalLink, Flame, UserCheck, DollarSign, Copy, Layers, Check, RefreshCw, Plus, Clock, Kanban, ShieldCheck, Filter, Target, BarChart3, Percent, Award, Trash2, Home, LayoutDashboard, Send, Activity, FileText, Eye } from "lucide-react";
 import { INDUSTRY_LIST } from "@/lib/industries";
 import type { IndustryConfig } from "@/lib/industries";
 import { AutoDiscovery } from "@/components/AutoDiscovery";
 import { LocalBusinessFinder } from "@/components/LocalBusinessFinder";
 
 interface Business { id: number; name: string; domain: string; country: string; businessType: string; niche: string; monthlyRevenue: number; averageOrderValue?: number; conversionRate?: number; monthlyAdSpend?: number; platform: string; technologyData?: {technologies?: Array<{name:string}>; techSpendUsd?: number | null} | null; logoUrl?: string | null; brandColor?: string | null; brandAccent?: string | null; status: string; heroOffer?: string | null; heroPrice?: string | null; painPoint?: string | null; }
-interface Funnel { id: number; businessId: number | null; funnelName: string; templateType: string; headline: string; subheadline: string; ctaText: string; offerBadge: string | null; bonusOffer: string | null; customPrimaryColor: string | null; slug: string; viewCount: number | null; }
+interface Funnel { id: number; businessId: number | null; funnelName: string; templateType: string; headline: string; subheadline: string; ctaText: string; offerBadge: string | null; bonusOffer: string | null; customPrimaryColor: string | null; slug: string; viewCount: number | null; contentJson?: any; }
 interface Contact { id: number; businessId: number | null; name: string; role: string; email: string; linkedinUrl: string | null; confidenceScore: number | null; status: string | null; }
+interface AuditSummary { id: string; businessId: number | null; domain: string; score: number; createdAt: string; }
+interface OutreachCampaignSummary { id: string; businessId: number; status: string; }
+interface ProposalSummary { id: string | number; businessId: number | null; status: string; }
 
 const ICONS: Record<string,string> = { general:"🏢", ecommerce:"🛒", restaurant:"🍽️", gym:"💪", professional:"👨‍💼", healthcare:"🏥", saas:"💻", realestate:"🏠", coaching:"🎓", agency:"🚀" };
 const IND_MAP: Record<string,IndustryConfig> = {};
@@ -20,12 +23,11 @@ export default function LegacyWorkspacePage() {
   const [bizs, setBizs] = useState<Business[]>([]);
   const [funs, setFuns] = useState<Funnel[]>([]);
   const [cons, setCons] = useState<Contact[]>([]);
+  const [audits, setAudits] = useState<AuditSummary[]>([]);
+  const [outreachCampaigns, setOutreachCampaigns] = useState<OutreachCampaignSummary[]>([]);
+  const [proposals, setProposals] = useState<ProposalSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"autodiscover"|"discover"|"funnels"|"contacts"|"outreach"|"calculator"|"crm"|"autoanalyze">("autodiscover");
-  const [autoCampaigns, setAutoCampaigns] = useState<any[]>([]);
-  const [autoInput, setAutoInput] = useState("");
-  const [autoAnalyzing, setAutoAnalyzing] = useState(false);
-  const [selectedCampaign, setSelectedCampaign] = useState<any|null>(null);
+  const [tab, setTab] = useState<"dashboard"|"autodiscover"|"discover"|"funnels"|"contacts"|"outreach"|"calculator"|"crm">("dashboard");
   const [selId, setSelId] = useState<number|null>(null);
   const [typeFilter, setTypeFilter] = useState("all");
   const [countryFilter, setCountryFilter] = useState("all");
@@ -38,20 +40,24 @@ export default function LegacyWorkspacePage() {
   const [nDomain, setNDomain] = useState("");
   const [nType, setNType] = useState("general");
   const [nNiche, setNNiche] = useState("");
-  const [nRev, setNRev] = useState(10000);
-  const [nAov, setNAov] = useState(100);
-  const [nConversion, setNConversion] = useState(2);
-  const [nAdSpend, setNAdSpend] = useState(1000);
+  const [nRev, setNRev] = useState(0);
+  const [nAov, setNAov] = useState(0);
+  const [nConversion, setNConversion] = useState(0);
+  const [nAdSpend, setNAdSpend] = useState(0);
   const [nOffer, setNOffer] = useState("");
   const [nPrice, setNPrice] = useState("");
   const [nContact, setNContact] = useState("");
-  const [calcRev, setCalcRev] = useState(15000);
-  const [calcLift, setCalcLift] = useState(25);
-  const [calcShare, setCalcShare] = useState(25);
+  const [calcRev, setCalcRev] = useState(0);
+  const [calcLift, setCalcLift] = useState(0);
+  const [calcShare, setCalcShare] = useState(0);
   const [copied, setCopied] = useState<string|null>(null);
-  const [emailSent, setEmailSent] = useState(false);
   const [emailError, setEmailError] = useState("");
-  const [outreachDraftId, setOutreachDraftId] = useState<number|null>(null);
+  const [, setOutreachDraftId] = useState<number|null>(null);
+  const [outreachDraft, setOutreachDraft] = useState<any|null>(null);
+  const [outreachGenerating, setOutreachGenerating] = useState(false);
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailBody, setEmailBody] = useState("");
+  const [selectedEmailIndex, setSelectedEmailIndex] = useState(0);
   const [blueprintError, setBlueprintError] = useState("");
   const [blueprintCampaignId, setBlueprintCampaignId] = useState<string|null>(null);
   const [funnelGenerating, setFunnelGenerating] = useState(false);
@@ -61,14 +67,30 @@ export default function LegacyWorkspacePage() {
   const fetchAll = React.useCallback(async () => {
     setLoading(true);
     try {
-      const [bR, fR, cR] = await Promise.all([fetch("/api/businesses"), fetch("/api/funnels"), fetch("/api/contacts")]);
-      const [bJ, fJ, cJ] = await Promise.all([bR.json(), fR.json(), cR.json()]);
+      const [bR, fR, cR, aR, oR, pR] = await Promise.all([
+        fetch("/api/businesses"),
+        fetch("/api/funnels"),
+        fetch("/api/contacts"),
+        fetch("/api/funnelspy/history"),
+        fetch("/api/outreach/campaigns?limit=100"),
+        fetch("/api/proposals?limit=100"),
+      ]);
+      const [bJ, fJ, cJ, aJ, oJ, pJ] = await Promise.all([bR.json(), fR.json(), cR.json(), aR.json(), oR.json(), pR.json()]);
       if (bJ.success) {
         setBizs(bJ.businesses);
         if (bJ.businesses.length) setSelId(current => current ?? bJ.businesses[0].id);
       }
       if (fJ.success) setFuns(fJ.funnels);
       if (cJ.success) setCons(cJ.contacts);
+      if (aR.ok && Array.isArray(aJ.audits)) setAudits(aJ.audits);
+      if (oR.ok && Array.isArray(oJ.campaigns)) setOutreachCampaigns(oJ.campaigns);
+      if (pR.ok) {
+        const current = Array.isArray(pJ.proposals) ? pJ.proposals : [];
+        const legacy = Array.isArray(pJ.legacyProposals)
+          ? pJ.legacyProposals.map((item: any) => ({ id: item.id, businessId: item.business_id ?? null, status: item.status || "draft" }))
+          : [];
+        setProposals([...current, ...legacy]);
+      }
     } catch(e) { console.error(e); }
     setLoading(false);
   }, []);
@@ -78,9 +100,89 @@ export default function LegacyWorkspacePage() {
   }, [fetchAll]);
 
   const sel = bizs.find(b => b.id === selId) || bizs[0];
-  const selFun = funs.find(f => f.businessId === sel?.id);
+  const selFun = funs
+    .filter(f => f.businessId === sel?.id)
+    .sort((left, right) => right.id - left.id)[0];
+  const selContent = selFun?.contentJson?.translations?.es || selFun?.contentJson || null;
+  const selLayout = selContent?.landingPage || null;
+  const selOtom = selContent?.otom || null;
   const selCon = cons.find(c => c.businessId === sel?.id);
   const selInd = sel ? getInd(sel.businessType) : getInd("general");
+  const outreachSequence = Array.isArray(outreachDraft?.emailSequence) ? outreachDraft.emailSequence : [];
+  const loomSegments = Array.isArray(outreachDraft?.videoPitch?.segments) ? outreachDraft.videoPitch.segments : [];
+
+  useEffect(() => {
+    if (!sel?.id) return;
+    const controller = new AbortController();
+    fetch(`/api/outreach?businessId=${sel.id}`, { signal: controller.signal })
+      .then(response => response.ok ? response.json() : Promise.reject(new Error("No se pudo cargar el borrador")))
+      .then(data => {
+        const latest = data.outreach?.[0] || null;
+        setOutreachDraft(latest ? {
+          ...latest,
+          emailSequence: latest.email_sequence || [],
+          videoPitch: latest.video_script || null,
+        } : null);
+        setOutreachDraftId(latest?.id ? Number(latest.id) : null);
+        setEmailSubject(latest?.email_subject || "");
+        setEmailBody(latest?.email_body || "");
+        setSelectedEmailIndex(0);
+      })
+      .catch(error => { if (error.name !== "AbortError") setEmailError(error.message); });
+    return () => controller.abort();
+  }, [sel?.id]);
+
+  const generateCurrentOutreach = async () => {
+    if (!sel || !selCon?.email) {
+      setEmailError("Añade un contacto con email real antes de generar el outreach.");
+      return;
+    }
+    setOutreachGenerating(true);
+    setEmailError("");
+    try {
+      const response = await fetch("/api/outreach/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          businessId: sel.id,
+          contactId: selCon.id,
+          contactName: selCon.name,
+          contactRole: selCon.role,
+          businessName: sel.name,
+          recipientEmail: selCon.email,
+          website: sel.domain,
+          industry: sel.businessType,
+          location: sel.country,
+          audience: sel.niche,
+          offerHeadline: selContent?.offer || sel.heroOffer,
+          painPoint: selContent?.painPoint || sel.painPoint,
+          problems: [selContent?.painPoint || sel.painPoint].filter(Boolean),
+          opportunity: selOtom?.coreOffer?.description || selFun?.bonusOffer,
+          bonusOffer: selFun?.bonusOffer,
+          previewUrl: selFun ? `${window.location.origin}/es/funnel/${selFun.slug}` : "",
+          objective: selContent?.primaryGoal || "Revisar la propuesta y conversar durante 15 minutos",
+          senderCompany: "EcoScale Partner",
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || "No se pudo generar el outreach");
+      setOutreachDraft({
+        ...data.outreach,
+        emailSequence: data.emailSequence,
+        videoPitch: data.videoPitch,
+        personalizationUsed: data.personalizationUsed,
+        claimsToVerify: data.claimsToVerify,
+      });
+      setOutreachDraftId(Number(data.outreach.id));
+      setEmailSubject(data.emailSequence[0]?.subject || "");
+      setEmailBody(data.emailSequence[0]?.body || "");
+      setSelectedEmailIndex(0);
+    } catch (error) {
+      setEmailError(error instanceof Error ? error.message : "No se pudo generar el outreach");
+    } finally {
+      setOutreachGenerating(false);
+    }
+  };
 
   const filtered = bizs.filter(b => {
     if (typeFilter !== "all" && b.businessType !== typeFilter) return false;
@@ -94,6 +196,25 @@ export default function LegacyWorkspacePage() {
     setCountryFilter("all");
     setSearch("");
   };
+
+  const auditedBusinessIds = new Set(audits.map(item => item.businessId).filter((id): id is number => Number.isInteger(id)));
+  const funnelBusinessIds = new Set(funs.map(item => item.businessId).filter((id): id is number => Number.isInteger(id)));
+  const pitchBusinessIds = new Set(outreachCampaigns.map(item => item.businessId).filter(Number.isInteger));
+  const sentBusinessIds = new Set(
+    outreachCampaigns
+      .filter(item => ["scheduled", "running", "completed"].includes(item.status))
+      .map(item => item.businessId)
+      .filter(Number.isInteger),
+  );
+  const closedBusinesses = bizs.filter(item => item.status === "closed_deal");
+  const verifiedContacts = cons.filter(item => Boolean(item.email) && ["verified", "valid"].includes(item.status || ""));
+  const selectedAudit = audits.find(item => item.businessId === sel?.id);
+  const selectedProposal = proposals.find(item => item.businessId === sel?.id);
+  const selectedCampaign = outreachCampaigns.find(item => item.businessId === sel?.id);
+  const contactBusinessIds = new Set(cons.filter(item => Boolean(item.email)).map(item => item.businessId).filter((id): id is number => Number.isInteger(id)));
+  const businessesWithoutAudit = bizs.filter(item => !auditedBusinessIds.has(item.id)).length;
+  const businessesWithoutFunnel = bizs.filter(item => !funnelBusinessIds.has(item.id)).length;
+  const businessesWithoutContact = bizs.filter(item => !contactBusinessIds.has(item.id)).length;
 
   const runBlueprint = async (b: Business) => {
     setSelId(b.id); setAutoName(b.name); setAutoRun(true); setAutoStep(1);
@@ -122,25 +243,31 @@ export default function LegacyWorkspacePage() {
 
       const contact = cons.find(c => c.businessId === b.id);
       if (!contact?.email) throw new Error("No hay un contacto real para este negocio");
-      const funnel = funs.find(f => f.businessId === b.id);
+      const funnel = funs
+        .filter(f => f.businessId === b.id)
+        .sort((left, right) => right.id - left.id)[0];
       setAutoStep(4);
       const outreachResponse = await fetch("/api/outreach/generate", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           businessId:b.id,contactId:contact.id,campaignId,
           contactName:contact.name,businessName:b.name,recipientEmail:contact.email,
-          offerHeadline:b.heroOffer,painPoint:b.painPoint,bonusOffer:funnel?.bonusOffer
+          contactRole:contact.role,website:b.domain,industry:b.businessType,location:b.country,
+          audience:b.niche,offerHeadline:b.heroOffer,painPoint:b.painPoint,
+          problems:[b.painPoint].filter(Boolean),bonusOffer:funnel?.bonusOffer,
+          opportunity:funnel?.headline || funnel?.subheadline,
+          previewUrl:funnel?.slug ? `${window.location.origin}/es/funnel/${funnel.slug}` : undefined,
+          objective:"Conseguir que el decisor revise la propuesta y acepte una conversación de 15 minutos",
+          senderCompany:"EcoScale Partner"
         })
       });
       const outreach = await outreachResponse.json();
       if (!outreachResponse.ok || !outreach.success) throw new Error(outreach.error || "Falló el outreach");
       setOutreachDraftId(Number(outreach.outreach.id));
+      setOutreachDraft({ ...outreach.outreach, emailSequence: outreach.emailSequence, videoPitch: outreach.videoPitch, personalizationUsed: outreach.personalizationUsed, claimsToVerify: outreach.claimsToVerify });
+      setEmailSubject(outreach.emailSequence?.[0]?.subject || "");
+      setEmailBody(outreach.emailSequence?.[0]?.body || "");
 
-      const proposal = await fetch("/api/revenue-share", {
-        method:"POST", headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({businessId:b.id,monthlyRevenue:b.monthlyRevenue,expectedLiftPercent:25,commissionPercentage:25})
-      });
-      if (!proposal.ok) throw new Error("No se pudo guardar la propuesta");
       setAutoStep(5);
       await fetchAll();
     } catch (error) {
@@ -148,46 +275,17 @@ export default function LegacyWorkspacePage() {
     }
   };
 
-  const sendCurrentOutreach = async () => {
-    setEmailError("");
-    setEmailSent(false);
-    try {
-      let draftId = outreachDraftId;
-      if (!draftId) {
-        if (!selCon?.email) throw new Error("No existe un contacto real para enviar");
-        const generated = await fetch("/api/outreach/generate", {
-          method:"POST", headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({
-            businessId:sel.id,contactId:selCon.id,contactName:selCon.name,
-            businessName:sel.name,recipientEmail:selCon.email,
-            offerHeadline:sel.heroOffer,painPoint:sel.painPoint,bonusOffer:selFun?.bonusOffer
-          })
-        });
-        const data = await generated.json();
-        if (!generated.ok) throw new Error(data.error || "No se pudo crear el borrador");
-        draftId = Number(data.outreach.id);
-        setOutreachDraftId(draftId);
-      }
-      const response = await fetch("/api/outreach", {
-        method:"POST", headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({outreachId:draftId})
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "No se pudo enviar");
-      setEmailSent(true);
-    } catch (error) {
-      setEmailError(error instanceof Error ? error.message : "No se pudo enviar");
-    }
-  };
-
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nName) return;
+    if (!nName || !nDomain) {
+      setFunnelError("El nombre y el dominio público real son obligatorios.");
+      return;
+    }
     setFunnelGenerating(true);
     setFunnelError("");
     const ind = getInd(nType);
     try {
-      const res = await fetch("/api/businesses", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ name:nName, domain:nDomain||`${nName.toLowerCase().replace(/\s+/g,"")}.com`, businessType:nType, niche:nNiche||ind.defaultNiche, monthlyRevenue:nRev, averageOrderValue:nAov, conversionRate:nConversion, monthlyAdSpend:nAdSpend, heroOffer:nOffer||ind.defaultOffer, heroPrice:nPrice||ind.defaultPrice, painPoint:ind.defaultPainPoint, country:countryFilter==="all"?"España":countryFilter, contactName:nContact||"Director" }) });
+      const res = await fetch("/api/businesses", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ name:nName, domain:nDomain, businessType:nType, niche:nNiche||ind.defaultNiche, monthlyRevenue:nRev, averageOrderValue:nAov, conversionRate:nConversion, monthlyAdSpend:nAdSpend, heroOffer:nOffer||ind.defaultOffer, heroPrice:nPrice||ind.defaultPrice, painPoint:ind.defaultPainPoint, country:countryFilter==="all"?"Unknown":countryFilter, contactName:nContact||undefined }) });
       const j = await res.json();
       if (!res.ok || !j.success) throw new Error(j.error || "No se pudo guardar el negocio");
       const funnelRes = await fetch("/api/funnels/generate", {
@@ -289,83 +387,203 @@ export default function LegacyWorkspacePage() {
 
   const calcExtra = Math.round(calcRev * (calcLift / 100));
   const calcFee = Math.round(calcExtra * (calcShare / 100));
-  const needClients = Math.max(1, Math.ceil(10000 / (calcFee || 1)));
+  const needClients = calcFee > 0 ? Math.ceil(10000 / calcFee) : null;
 
-  if (loading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500" /></div>;
+  if (loading) return <div className="legacy-studio min-h-screen flex items-center justify-center"><div className="size-12 animate-spin rounded-full border-2 border-white/10 border-t-orange-400" /></div>;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      {/* Top Status - Universal Revenue Focus */}
-      <div className="bg-gradient-to-r from-emerald-900 via-purple-900 to-slate-900 border-b border-emerald-800/60 px-4 py-2 text-xs flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-2 w-2 relative"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" /><span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" /></span>
-          <span className="font-semibold text-slate-200">Sistema Universal: <strong className="text-emerald-400">Cualquier Negocio · Cualquier Ingreso · Enfocado en Facturación Extra</strong></span>
-        </div>
-        <span className="bg-emerald-950 border border-emerald-700/60 text-emerald-300 px-2 py-0.5 rounded font-mono font-bold">Meta: +10.000€/mes (2-3 Deals)</span>
-      </div>
-
-      {/* Header */}
-      <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 py-3.5 flex flex-wrap items-center justify-between gap-4">
+    <div className="legacy-studio min-h-screen overflow-x-hidden text-slate-100 selection:bg-orange-500/30">
+      <div className="legacy-ambient" aria-hidden="true" />
+      <header className="legacy-command-header sticky top-0 z-40 border-b border-white/[.07] bg-[#070707]/85 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-[1500px] flex-wrap items-center justify-between gap-4 px-5 py-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 via-purple-600 to-rose-500 flex items-center justify-center shadow-lg"><Target className="w-5 h-5 text-white" /></div>
+            <div className="grid size-10 place-items-center rounded-xl bg-gradient-to-br from-orange-500 to-amber-300 text-black shadow-lg shadow-orange-500/20"><Target className="size-5" /></div>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="font-black text-xl tracking-tight text-white">EcoScale Partner</h1>
-                <span className="bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Commerce Intelligence</span>
-              </div>
-              <p className="text-xs text-slate-400">Cualquier negocio. Cualquier ingreso. Embudos + Ads que generan facturación extra.</p>
+              <strong className="block tracking-tight text-white">Revenue Operations</strong>
+              <span className="text-[9px] font-bold uppercase tracking-[.25em] text-slate-600">Legacy workspace · upgraded</span>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <Link href="/funnelspy" className="bg-violet-500/15 hover:bg-violet-500/25 text-violet-200 border border-violet-400/30 font-semibold text-xs sm:text-sm px-3.5 py-2 rounded-xl flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
+            <button onClick={() => setTab("dashboard")} className="hidden items-center gap-1.5 rounded-xl border border-white/10 px-3.5 py-2 text-xs font-bold text-slate-400 transition hover:border-orange-300/30 hover:text-white sm:flex">
+              <LayoutDashboard className="size-4" /><span>Dashboard</span>
+            </button>
+            <Link href="/" className="flex items-center gap-1.5 rounded-xl border border-white/10 px-3.5 py-2 text-xs font-bold text-slate-400 transition hover:border-orange-300/30 hover:text-white">
+              <Home className="size-4" /><span>Menú</span>
+            </Link>
+            <Link href="/funnelspy" className="flex items-center gap-1.5 rounded-xl border border-white/10 px-3.5 py-2 text-xs font-bold text-slate-400 transition hover:border-cyan-300/30 hover:text-white">
               <Search className="w-4 h-4" /><span>FunnelSpy</span>
             </Link>
-            <button onClick={() => sel && runBlueprint(sel)} className="bg-gradient-to-r from-amber-500 via-rose-500 to-indigo-600 hover:from-amber-400 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 transition active:scale-95">
+            <Link href="/otom" className="hidden items-center gap-1.5 rounded-xl border border-orange-400/20 bg-orange-400/[.07] px-3.5 py-2 text-xs font-bold text-orange-200 transition hover:bg-orange-400/[.12] sm:flex">
+              <DollarSign className="size-4" /><span>OTOM</span>
+            </Link>
+            <button onClick={() => sel && runBlueprint(sel)} className="flex items-center gap-2 rounded-xl bg-orange-500 px-4 py-2 text-xs font-black text-black shadow-lg shadow-orange-500/20 transition hover:bg-orange-400 active:scale-95">
               <Zap className="w-4 h-4 fill-white" /><span>Blueprint 1-Click</span>
             </button>
-            <button onClick={() => setAddOpen(true)} className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs sm:text-sm px-3.5 py-2 rounded-xl flex items-center gap-1.5">
-              <Plus className="w-4 h-4 text-emerald-400" /><span className="hidden sm:inline">Añadir Negocio</span>
+            <button onClick={() => setAddOpen(true)} className="grid size-10 place-items-center rounded-xl border border-white/10 text-slate-400 transition hover:bg-white/[.06] hover:text-white" aria-label="Añadir negocio" title="Añadir negocio">
+              <Plus className="size-4" />
             </button>
           </div>
         </div>
       </header>
 
+      <main className="legacy-workspace relative z-10 mx-auto max-w-[1500px] px-5 py-8">
+        <section className="mb-7 flex flex-col justify-between gap-6 xl:flex-row xl:items-end">
+          <div>
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-lime-400/20 bg-lime-400/[.07] px-3 py-1.5 text-[10px] font-black uppercase tracking-[.16em] text-lime-300">
+              <span className="size-1.5 animate-pulse rounded-full bg-lime-300" />
+              Revenue system online
+            </div>
+            <h1 className="max-w-4xl text-4xl font-black leading-none tracking-[-.045em] text-white md:text-6xl">
+              Tu pipeline de crecimiento,{" "}
+              <span className="bg-gradient-to-r from-orange-400 via-amber-200 to-lime-300 bg-clip-text text-transparent">en una sola vista.</span>
+            </h1>
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-400">
+              Descubre, analiza, crea OTOM y preview, prepara el pitch, envía con aprobación y mide resultados usando datos reales del workspace.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+            {[
+              ["Negocios", bizs.length, "text-cyan-300"],
+              ["Auditorías", audits.length, "text-violet-300"],
+              ["Funnels", funs.length, "text-orange-300"],
+              ["Propuestas", proposals.length, "text-lime-300"],
+            ].map(([label, value, tone]) => (
+              <div key={String(label)} className="min-w-24 rounded-2xl border border-white/[.08] bg-white/[.03] p-4 sm:min-w-28">
+                <span className="block text-[9px] font-black uppercase tracking-[.16em] text-slate-600">{label}</span>
+                <strong className={`mt-1 block text-2xl font-black ${tone}`}>{value}</strong>
+              </div>
+            ))}
+          </div>
+        </section>
+
       {/* Industry Selector - ALL INDUSTRIES VISIBLE */}
-      <section className="bg-slate-900 border-b border-slate-800/80 px-4 py-3">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-400 mb-2"><Filter className="w-3.5 h-3.5 text-emerald-400" /> Selecciona el tipo de negocio:</div>
+      {tab !== "dashboard" && <section className="legacy-filter-deck rounded-3xl border border-white/[.08] bg-white/[.025] p-5">
+        <div>
+          <div className="mb-3 flex items-center gap-2 text-[10px] font-black uppercase tracking-[.16em] text-slate-500"><Filter className="size-3.5 text-orange-300" /> Filtrar por tipo de negocio</div>
           <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-8 lg:grid-cols-9 gap-2">
-            <button onClick={() => setTypeFilter("all")} className={`px-2.5 py-2 rounded-xl text-xs font-bold border transition ${typeFilter==="all"?"bg-emerald-600 text-white border-emerald-500":"bg-slate-800/60 text-slate-300 border-slate-700 hover:border-slate-600"}`}>🌍 Todos ({bizs.length})</button>
+            <button onClick={() => setTypeFilter("all")} className={`px-2.5 py-2 rounded-xl text-xs font-bold border transition ${typeFilter==="all"?"border-orange-400 bg-orange-400 text-black":"border-white/[.08] bg-white/[.03] text-slate-400 hover:border-white/20 hover:text-white"}`}>Todos ({bizs.length})</button>
             {INDUSTRY_LIST.map(ind => {
               const c = bizs.filter(b => b.businessType === ind.key).length;
-              return <button key={ind.key} onClick={() => setTypeFilter(ind.key)} className={`px-2 py-2 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-1 ${typeFilter===ind.key?"text-white shadow":"text-slate-300 hover:text-white"}`} style={typeFilter===ind.key?{backgroundColor:ind.color,borderColor:ind.color}:{backgroundColor:"rgba(30,41,59,0.6)",borderColor:"#334155"}}><span>{ind.emoji}</span><span className="hidden sm:inline text-[10px]">{ind.label.split("·")[0].trim()}</span><span className="text-[9px] opacity-70">({c})</span></button>;
+              return <button key={ind.key} onClick={() => setTypeFilter(ind.key)} className={`flex items-center justify-center gap-1 rounded-xl border px-2 py-2 text-xs font-bold transition ${typeFilter===ind.key?"text-white shadow":"border-white/[.08] bg-white/[.03] text-slate-400 hover:border-white/20 hover:text-white"}`} style={typeFilter===ind.key?{backgroundColor:ind.color,borderColor:ind.color}:undefined}><span>{ind.emoji}</span><span className="hidden sm:inline text-[10px]">{ind.label.split("·")[0].trim()}</span><span className="text-[9px] opacity-70">({c})</span></button>;
             })}
           </div>
         </div>
-      </section>
+      </section>}
 
       {/* 7-Step Progress */}
-      <section className="bg-slate-950 border-b border-slate-800/80 px-4 py-3">
-        <div className="max-w-7xl mx-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2">
+      <section className="legacy-flow-rail mt-5 rounded-3xl border border-white/[.08] bg-black/20 p-3">
+        <div className="pipeline grid grid-flow-col auto-cols-[minmax(145px,1fr)] gap-2 overflow-x-auto pb-2 lg:grid-flow-row lg:grid-cols-8 lg:auto-cols-auto lg:overflow-visible lg:pb-0">
           {([
+            {k:"dashboard" as const,n:"Inicio",sub:"Centro de mando",icon:<LayoutDashboard className="w-3.5 h-3.5 text-orange-300"/>},
             {k:"autodiscover" as const,n:"0. Auto-Discovery",sub:"Hunter.io",icon:<Zap className="w-3.5 h-3.5 text-purple-400"/>},
             {k:"discover" as const,n:"1. Descubrir",sub:"Cualquier negocio",icon:<Globe className="w-3.5 h-3.5 text-amber-400"/>},
             {k:"funnels" as const,n:"2. Embudo Gratis",sub:"Adaptado al negocio",icon:<Layers className="w-3.5 h-3.5 text-indigo-400"/>},
             {k:"contacts" as const,n:"3. Contacto",sub:"Email del decisor",icon:<UserCheck className="w-3.5 h-3.5 text-emerald-400"/>},
             {k:"outreach" as const,n:"4. Pitch",sub:"Email + Loom 90s",icon:<Mail className="w-3.5 h-3.5 text-rose-400"/>},
             {k:"calculator" as const,n:"5. Rev-Share",sub:"Ads a % beneficio",icon:<Calculator className="w-3.5 h-3.5 text-amber-400"/>},
-            {k:"autoanalyze" as const,n:"6. Auto-Analyze",sub:"Análisis 1-click",icon:<Sparkles className="w-3.5 h-3.5 text-cyan-400"/>},
+            {k:"crm" as const,n:"6. CRM",sub:"Pipeline real",icon:<BarChart3 className="w-3.5 h-3.5 text-cyan-400"/>},
           ]).map(s => (
-            <button key={s.k} onClick={() => setTab(s.k)} className={`p-2.5 rounded-xl border text-left transition ${tab===s.k?"bg-indigo-950/60 border-indigo-500 shadow":"bg-slate-900/40 border-slate-800 hover:border-slate-700"}`}>
-              <p className="text-xs font-bold text-white flex items-center gap-1.5">{s.icon}{s.n}</p>
+            <button key={s.k} onClick={() => setTab(s.k)} className={`pipeline-step rounded-2xl border p-3 text-left transition ${tab===s.k?"border-orange-400/30 bg-orange-400/[.09] shadow-lg shadow-orange-950/20":"border-white/[.06] bg-white/[.025] hover:border-white/15 hover:bg-white/[.05]"}`}>
+              <p className={`flex items-center gap-1.5 text-xs font-bold ${tab===s.k ? "text-orange-100" : "text-white"}`}>{s.icon}{s.n}</p>
               <p className="text-[10px] text-slate-400 mt-0.5">{s.sub}</p>
             </button>
           ))}
         </div>
       </section>
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <div className="mt-8">
+
+        {/* ===== COMMAND CENTER ===== */}
+        {tab === "dashboard" && (
+          <div className="space-y-6">
+            <section className="grid gap-4 xl:grid-cols-[1.6fr_.9fr]">
+              <div className="rounded-3xl border border-white/[.08] bg-white/[.025] p-5 sm:p-7">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[.18em] text-orange-300"><Activity className="size-4" /> Pipeline de crecimiento</div>
+                    <h2 className="mt-2 text-2xl font-black text-white">Avanza de evidencia a ingresos</h2>
+                    <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-400">Cada cifra proviene de registros guardados. Una etapa vacía indica trabajo pendiente, no una estimación.</p>
+                  </div>
+                  <span className="rounded-full border border-lime-400/20 bg-lime-400/[.07] px-3 py-1.5 text-[10px] font-black uppercase tracking-[.14em] text-lime-300">Datos del workspace</span>
+                </div>
+
+                <div className="mt-7 grid gap-2 md:grid-cols-3 xl:grid-cols-6">
+                  {[
+                    { label:"Descubrir", value:bizs.length, note:"negocios", icon:<Search className="size-4" />, action:() => setTab("discover") },
+                    { label:"Analizar", value:auditedBusinessIds.size, note:"auditados", icon:<Activity className="size-4" />, href:"/funnelspy" },
+                    { label:"OTOM + preview", value:funnelBusinessIds.size, note:"con funnel", icon:<Eye className="size-4" />, action:() => setTab("funnels") },
+                    { label:"Crear pitch", value:pitchBusinessIds.size, note:"con campaña", icon:<Mail className="size-4" />, action:() => setTab("outreach") },
+                    { label:"Enviar", value:sentBusinessIds.size, note:"activados", icon:<Send className="size-4" />, href:"/outreach" },
+                    { label:"Medir", value:closedBusinesses.length, note:"cerrados", icon:<BarChart3 className="size-4" />, href:"/analytics/sales" },
+                  ].map((stage, index) => {
+                    const content = <><span className="flex items-center justify-between text-orange-300">{stage.icon}<span className="text-[9px] font-black text-slate-600">0{index + 1}</span></span><strong className="mt-5 block text-3xl font-black text-white">{stage.value}</strong><span className="mt-1 block text-xs font-bold text-white">{stage.label}</span><span className="block text-[10px] text-slate-500">{stage.note}</span></>;
+                    return stage.href
+                      ? <Link key={stage.label} href={stage.href} className="group rounded-2xl border border-white/[.07] bg-black/20 p-4 transition hover:-translate-y-0.5 hover:border-orange-300/30 hover:bg-orange-400/[.05]">{content}</Link>
+                      : <button key={stage.label} onClick={stage.action} className="group rounded-2xl border border-white/[.07] bg-black/20 p-4 text-left transition hover:-translate-y-0.5 hover:border-orange-300/30 hover:bg-orange-400/[.05]">{content}</button>;
+                  })}
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-orange-400/20 bg-gradient-to-br from-orange-400/[.09] via-white/[.025] to-lime-400/[.04] p-5 sm:p-7">
+                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[.18em] text-orange-300"><Zap className="size-4" /> Acciones rápidas</div>
+                <h2 className="mt-2 text-2xl font-black text-white">El siguiente movimiento</h2>
+                <div className="mt-5 grid gap-2">
+                  <button onClick={() => setTab("autodiscover")} className="flex items-center justify-between rounded-2xl bg-orange-400 px-4 py-3 text-left text-xs font-black text-black transition hover:bg-orange-300"><span className="flex items-center gap-2"><Search className="size-4" /> Buscar negocios</span><ArrowRight className="size-4" /></button>
+                  <Link href="/funnelspy" className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[.04] px-4 py-3 text-xs font-black text-white transition hover:bg-white/[.08]"><span className="flex items-center gap-2"><Activity className="size-4 text-violet-300" /> Ejecutar auditoría</span><ArrowRight className="size-4" /></Link>
+                  <Link href="/otom" className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[.04] px-4 py-3 text-xs font-black text-white transition hover:bg-white/[.08]"><span className="flex items-center gap-2"><Layers className="size-4 text-orange-300" /> Crear OTOM</span><ArrowRight className="size-4" /></Link>
+                  <Link href="/proposals/new" className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[.04] px-4 py-3 text-xs font-black text-white transition hover:bg-white/[.08]"><span className="flex items-center gap-2"><FileText className="size-4 text-lime-300" /> Preparar propuesta</span><ArrowRight className="size-4" /></Link>
+                </div>
+              </div>
+            </section>
+
+            <section className="grid gap-4 lg:grid-cols-[1.15fr_.85fr]">
+              <div className="rounded-3xl border border-white/[.08] bg-white/[.025] p-5 sm:p-7">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-300">Negocio activo</div>
+                    <h2 className="mt-1 text-2xl font-black text-white">{sel?.name || "Selecciona un negocio"}</h2>
+                    <p className="mt-1 text-xs text-slate-500">{sel?.domain || "El pipeline comenzará cuando agregues un dominio real."}</p>
+                  </div>
+                  {sel && <select value={sel.id} onChange={event => setSelId(Number(event.target.value))} className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-xs font-bold text-white">
+                    {bizs.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+                  </select>}
+                </div>
+
+                {sel ? <>
+                  <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    {[
+                      {label:"Auditoría",value:selectedAudit ? `${selectedAudit.score}/100` : "Pendiente",ok:Boolean(selectedAudit)},
+                      {label:"Funnel",value:selFun ? "Creado" : "Pendiente",ok:Boolean(selFun)},
+                      {label:"Contacto",value:selCon?.email ? "Disponible" : "Pendiente",ok:Boolean(selCon?.email)},
+                      {label:"Propuesta",value:selectedProposal?.status || "Pendiente",ok:Boolean(selectedProposal)},
+                    ].map(item => <div key={item.label} className="rounded-2xl border border-white/[.07] bg-black/20 p-4"><span className="text-[9px] font-black uppercase tracking-[.14em] text-slate-600">{item.label}</span><strong className={`mt-2 block text-sm ${item.ok ? "text-lime-300" : "text-amber-300"}`}>{item.value}</strong></div>)}
+                  </div>
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    <Link href={`/funnelspy?url=${encodeURIComponent(sel.domain)}`} className="rounded-xl border border-white/10 px-4 py-2.5 text-xs font-black text-white hover:bg-white/[.06]">Analizar</Link>
+                    <button onClick={() => setTab("funnels")} className="rounded-xl border border-white/10 px-4 py-2.5 text-xs font-black text-white hover:bg-white/[.06]">Ver funnel</button>
+                    <button onClick={() => setTab("outreach")} className="rounded-xl border border-white/10 px-4 py-2.5 text-xs font-black text-white hover:bg-white/[.06]">Preparar pitch</button>
+                    {selFun && <Link href={`/es/funnel/${selFun.slug}`} target="_blank" className="rounded-xl bg-orange-400 px-4 py-2.5 text-xs font-black text-black hover:bg-orange-300">Abrir preview</Link>}
+                  </div>
+                  {selectedCampaign && <p className="mt-4 text-[10px] text-slate-500">Campaña actual: <span className="font-bold text-slate-300">{selectedCampaign.status}</span></p>}
+                </> : <div className="mt-6 rounded-2xl border border-dashed border-white/10 p-8 text-center text-xs text-slate-500">No hay negocios guardados.</div>}
+              </div>
+
+              <div className="rounded-3xl border border-white/[.08] bg-white/[.025] p-5 sm:p-7">
+                <div className="text-[10px] font-black uppercase tracking-[.18em] text-amber-300">Cola de atención</div>
+                <h2 className="mt-1 text-2xl font-black text-white">Qué falta para vender</h2>
+                <div className="mt-5 space-y-2">
+                  {[
+                    {label:"Sin auditoría vinculada",value:businessesWithoutAudit,action:() => setTab("discover")},
+                    {label:"Sin funnel o preview",value:businessesWithoutFunnel,action:() => setTab("funnels")},
+                    {label:"Sin contacto con email",value:businessesWithoutContact,action:() => setTab("contacts")},
+                    {label:"Contactos verificados",value:verifiedContacts.length,action:() => setTab("contacts")},
+                  ].map(item => <button key={item.label} onClick={item.action} className="flex w-full items-center justify-between rounded-2xl border border-white/[.07] bg-black/20 px-4 py-3 text-left transition hover:border-orange-300/30 hover:bg-white/[.04]"><span className="text-xs font-bold text-slate-300">{item.label}</span><strong className="text-lg font-black text-white">{item.value}</strong></button>)}
+                </div>
+                <p className="mt-4 text-[10px] leading-4 text-slate-600">Los conteos se calculan con negocios, auditorías, funnels, contactos, campañas y propuestas persistidos. No incluyen datos de ejemplo.</p>
+              </div>
+            </section>
+          </div>
+        )}
 
         {/* ===== TAB 0: AUTO-DISCOVER ===== */}
         {tab === "autodiscover" && (
@@ -415,9 +633,7 @@ export default function LegacyWorkspacePage() {
               {filtered.map(b => {
                 const ind = getInd(b.businessType);
                 const isSel = b.id === sel?.id;
-                const extra = Math.round(b.monthlyRevenue * (ind.liftPercent / 100));
-                const fee = Math.round(extra * 0.25);
-                const revLabel = b.monthlyRevenue < 5000 ? "Micro (<5k)" : b.monthlyRevenue < 25000 ? "Pequeño (5k-25k)" : b.monthlyRevenue < 100000 ? "Mediano (25k-100k)" : "Grande (100k+)";
+                const revLabel = b.monthlyRevenue <= 0 ? "No verificado" : b.monthlyRevenue < 5000 ? "Micro (<5k)" : b.monthlyRevenue < 25000 ? "Pequeño (5k-25k)" : b.monthlyRevenue < 100000 ? "Mediano (25k-100k)" : "Grande (100k+)";
                 return (
                   <div key={b.id} className={`bg-slate-900/90 border rounded-2xl p-5 flex flex-col justify-between transition group ${isSel?"border-emerald-500 shadow-xl ring-1 ring-emerald-500":"border-slate-800 hover:border-slate-700"}`}>
                     <div>
@@ -435,14 +651,14 @@ export default function LegacyWorkspacePage() {
                         <div className="flex justify-between"><span className="text-slate-400">Tipo:</span><span className="font-semibold" style={{color:ind.color}}>{ind.label.split("·")[0].trim()}</span></div>
                         <div className="flex justify-between"><span className="text-slate-400">Nicho:</span><span className="text-slate-200 font-medium">{b.niche}</span></div>
                         <div className="flex justify-between"><span className="text-slate-400">Tecnología:</span><span className="text-cyan-300 font-medium">{b.platform || "Sitio web"}{b.technologyData?.technologies?.length ? ` · ${b.technologyData.technologies.length} señales` : ""}</span></div>
-                        <div className="flex justify-between"><span className="text-slate-400">Facturación:</span><span className="font-bold text-emerald-400">€{b.monthlyRevenue.toLocaleString()}/mes</span></div>
+                        <div className="flex justify-between"><span className="text-slate-400">Facturación:</span><span className="font-bold text-emerald-400">{b.monthlyRevenue > 0 ? `€${b.monthlyRevenue.toLocaleString()}/mes` : "No verificada"}</span></div>
                         <div className="flex justify-between"><span className="text-slate-400">Tamaño:</span><span className="text-slate-300 font-mono text-[11px]">{revLabel}</span></div>
                         <div className="flex justify-between"><span className="text-slate-400">Oferta:</span><span className="text-slate-200 truncate max-w-[170px]">{b.heroOffer}</span></div>
                       </div>
                       <div className="bg-emerald-950/40 border border-emerald-900/60 rounded-xl p-2.5 text-xs text-emerald-200 flex items-start gap-2 mb-4">
                         <Flame className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"/>
                         <div><strong className="text-white block">{b.painPoint}</strong>
-                        <span>Potencial extra: <strong className="text-amber-300">+€{extra.toLocaleString()}/mes</strong> · Tu comisión: <strong className="text-emerald-400">€{fee.toLocaleString()}/mes</strong></span></div>
+                        <span>El potencial financiero requiere tráfico, conversión, ventas e inversión verificadas.</span></div>
                       </div>
                     </div>
                     <div className="space-y-2 pt-2">
@@ -538,28 +754,40 @@ export default function LegacyWorkspacePage() {
                     <div className="flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-rose-500"/><span className="h-3 w-3 rounded-full bg-amber-500"/><span className="h-3 w-3 rounded-full bg-emerald-500"/><span className="text-xs text-slate-400 font-mono ml-2">Vista Previa</span></div>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded uppercase border" style={{color:sel.brandColor||"#6366F1",borderColor:`${sel.brandColor||"#6366F1"}66`,backgroundColor:`${sel.brandColor||"#6366F1"}11`}}>{selInd.emoji} {selInd.label.split("·")[0].trim()}</span>
                   </div>
-                  <div className="rounded-xl border border-slate-800 bg-slate-950 p-6 space-y-5">
-                    <div className="bg-gradient-to-r from-rose-600 via-amber-600 to-indigo-600 text-white text-xs font-bold py-1.5 px-3 rounded-lg text-center flex items-center justify-center gap-2">
-                      <Flame className="w-3.5 h-3.5 animate-pulse"/>{selFun?.offerBadge||selInd.funnelBadge}
-                    </div>
-                    <div className="flex items-center justify-between">
+                  <div
+                    className="overflow-hidden rounded-xl border border-white/10"
+                    style={{
+                      backgroundColor: selLayout?.backgroundColor || "#090d18",
+                      color: selLayout?.textColor || "#ffffff",
+                      fontFamily: selLayout?.fontFamily || "inherit",
+                    }}
+                  >
+                    <div className="flex items-center justify-between border-b border-white/10 px-5 py-3">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm" style={{backgroundColor:sel.brandColor||"#6366F1"}}>{sel.name.charAt(0)}</div>
-                        <span className="font-bold text-white text-sm">{sel.name}</span>
+                        {selLayout?.logoUrl ? <img src={selLayout.logoUrl} alt="" className="h-8 w-auto max-w-28 object-contain"/> : <div className="grid size-8 place-items-center rounded-lg text-sm font-black text-white" style={{backgroundColor:selFun?.customPrimaryColor||sel.brandColor||"#6366F1"}}>{sel.name.charAt(0)}</div>}
+                        <span className="text-sm font-black">{sel.name}</span>
                       </div>
-                      <span className="text-[10px] text-emerald-400 bg-emerald-950/80 border border-emerald-800 px-2 py-0.5 rounded">{selInd.emoji} Verificado</span>
+                      <div className="hidden gap-3 text-[9px] font-bold opacity-70 sm:flex">
+                        {(selLayout?.navigation || ["Inicio", "Beneficios", "Oferta"]).slice(0,4).map((item:string) => <span key={item}>{item}</span>)}
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <h4 className="font-black text-lg text-white leading-tight">{selFun?.headline||selInd.funnelHeadline(sel.name,sel.heroOffer||"")}</h4>
-                      <p className="text-xs text-slate-300">{selFun?.subheadline||selInd.funnelSubheadline(sel.name)}</p>
+                    <div className="grid min-h-[310px] md:grid-cols-2">
+                      <div className="flex flex-col justify-center p-6">
+                        <span className="mb-3 w-fit rounded-full border border-current/20 px-2.5 py-1 text-[9px] font-black uppercase tracking-[.16em] opacity-80">{selContent?.eyebrow || selFun?.offerBadge || selInd.funnelBadge}</span>
+                        <h4 className="text-2xl font-black leading-[1.04] tracking-tight">{selContent?.headline || selFun?.headline || selInd.funnelHeadline(sel.name,sel.heroOffer||"")}</h4>
+                        <p className="mt-3 text-xs leading-5 opacity-70">{selContent?.subheadline || selFun?.subheadline || selInd.funnelSubheadline(sel.name)}</p>
+                        <div className="mt-5 flex items-center gap-2">
+                          {selFun && <Link href={`/es/funnel/${selFun.slug}`} target="_blank" className="rounded-lg px-4 py-2.5 text-[10px] font-black text-white shadow-lg" style={{backgroundColor:selFun.customPrimaryColor||sel.brandColor||"#6366F1"}}>{selContent?.ctaText || selFun.ctaText || selInd.funnelCta}</Link>}
+                          <span className="text-[9px] font-bold opacity-60">Preview completo →</span>
+                        </div>
+                      </div>
+                      <div className="relative min-h-48 bg-white/[.04]">
+                        {selLayout?.heroImageUrl ? <img src={selLayout.heroImageUrl} alt="" className="absolute inset-0 size-full object-cover"/> : <div className="absolute inset-0 grid place-items-center p-6" style={{background:`radial-gradient(circle, ${selFun?.customPrimaryColor||sel.brandColor||"#6366F1"}55, transparent 68%)`}}><div className="rounded-2xl border border-white/15 bg-black/25 p-5 text-center backdrop-blur"><span className="text-4xl">{selInd.emoji}</span><p className="mt-2 text-sm font-black">{selOtom?.coreOffer?.name || selContent?.offer || sel.heroOffer}</p></div></div>}
+                      </div>
                     </div>
-                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex justify-between items-center text-xs">
-                      <div><span className="text-slate-400 block">Oferta Principal</span><span className="text-lg font-black text-white">{sel.heroOffer}</span></div>
-                      <div className="text-right"><span className="text-slate-400 block">Precio</span><span className="font-bold text-emerald-400">{sel.heroPrice}</span></div>
-                    </div>
-                    {selFun && <Link href={`/es/funnel/${selFun.slug}`} target="_blank" className="w-full py-3 rounded-xl font-bold text-white text-xs flex items-center justify-center gap-2 shadow-lg" style={{backgroundColor:sel.brandColor||"#6366F1"}}>
-                      {selFun.ctaText||selInd.funnelCta} <ArrowRight className="w-4 h-4"/>
-                    </Link>}
+                    {selOtom && <div className="grid grid-cols-3 border-t border-white/10 text-center">
+                      {[["HOOK",selOtom.hook],["CORE",selOtom.coreOffer],["UPSELL",selOtom.upsell]].map(([label,item]:any) => <div key={label} className="border-r border-white/10 p-3 last:border-r-0"><span className="text-[8px] font-black tracking-widest opacity-45">{label}</span><p className="mt-1 truncate text-[10px] font-bold">{item?.name}</p></div>)}
+                    </div>}
                   </div>
                 </div>
               </div>
@@ -592,7 +820,7 @@ export default function LegacyWorkspacePage() {
                       <div className="flex justify-between"><span className="text-slate-400">Negocio:</span><span className="font-bold text-white">{ind.emoji} {biz?.name}</span></div>
                       <div className="flex justify-between"><span className="text-slate-400">Industria:</span><span className="font-semibold" style={{color:ind.color}}>{ind.label.split("·")[0].trim()}</span></div>
                       <div className="flex justify-between"><span className="text-slate-400">Email:</span><span className="font-mono text-indigo-300 font-semibold">{c.email}</span></div>
-                      <div className="flex justify-between"><span className="text-slate-400">Facturación:</span><span className="font-bold text-emerald-400">€{biz?.monthlyRevenue.toLocaleString()||"0"}/mes</span></div>
+                      <div className="flex justify-between"><span className="text-slate-400">Facturación:</span><span className="font-bold text-emerald-400">{biz && biz.monthlyRevenue > 0 ? `€${biz.monthlyRevenue.toLocaleString()}/mes` : "No verificada"}</span></div>
                     </div>
                     <button onClick={() => {if(biz)setSelId(biz.id);setTab("outreach");}} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-2.5 rounded-xl flex items-center justify-center gap-2 shadow-md">
                       <Mail className="w-3.5 h-3.5"/>Redactar Email
@@ -606,62 +834,36 @@ export default function LegacyWorkspacePage() {
 
         {/* ===== TAB 4: OUTREACH ===== */}
         {tab === "outreach" && sel && (
-          <div className="space-y-6">
-            <div className="rounded-2xl p-6 shadow-xl border" style={{background:`linear-gradient(135deg, ${sel.brandColor||"#E11D48"}15 0%, #0f172a 100%)`,borderColor:`${sel.brandColor||"#E11D48"}33`}}>
-              <p className="text-xs font-bold text-rose-400 uppercase tracking-wider mb-1">✉️ Paso 4: Cold Outreach Universal</p>
-              <h2 className="text-2xl font-black text-white">Email + Guión Loom para {sel.name}</h2>
-              <p className="text-sm text-slate-300 mt-1">Email hiperpersonalizado + enlace al embudo gratuito. Funciona para <strong>cualquier negocio, cualquier ingreso</strong>.</p>
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-              <div className="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5 shadow-2xl">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                  <span className="font-bold text-white text-sm flex items-center gap-2"><Mail className="w-4 h-4 text-rose-400"/>Email para {selCon?.name?.split(" ")[0]||"Decisor"}</span>
-                  <span className="text-xs text-slate-400">Para: <strong className="text-indigo-400">{selCon?.email||`info@${sel.domain}`}</strong></span>
-                </div>
-                <div><label className="text-xs text-slate-400 font-semibold block mb-1">Asunto:</label>
-                  <input type="text" readOnly value={selInd.emailSubject(sel.name)} className="w-full bg-slate-950 border border-slate-700 text-white font-bold text-xs rounded-xl px-3.5 py-2.5"/>
-                </div>
-                <div><label className="text-xs text-slate-400 font-semibold block mb-1">Cuerpo:</label>
-                  <div className="bg-slate-950 border border-slate-700 rounded-xl p-4 text-xs text-slate-200 font-mono whitespace-pre-wrap leading-relaxed">
-                    {selInd.emailBody(sel.name, selCon?.name?.split(" ")[0]||"", sel.heroOffer||selInd.defaultOffer, selFun?.slug||"funnel")}
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-                  <button onClick={() => copy(selInd.emailBody(sel.name,selCon?.name?.split(" ")[0]||"",sel.heroOffer||"",selFun?.slug||""),"email")} className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs py-2.5 px-4 rounded-xl flex items-center gap-2">
-                    {copied==="email"?<Check className="w-3.5 h-3.5 text-emerald-400"/>:<Copy className="w-3.5 h-3.5"/>}{copied==="email"?"¡Copiado!":"Copiar Email"}
-                  </button>
-                  <button onClick={sendCurrentOutreach} className="bg-gradient-to-r from-rose-600 to-indigo-600 text-white font-bold text-xs py-2.5 px-5 rounded-xl shadow-lg flex items-center gap-2">
-                    <Send className="w-3.5 h-3.5"/>{emailSent?"¡Enviado!":"Enviar con Resend"}
-                  </button>
-                </div>
-                {emailError && <p className="text-xs text-red-400">{emailError}</p>}
+          <section className="pitch-module">
+            <header className="module-header rounded-3xl border border-rose-400/20 bg-gradient-to-br from-rose-400/[.09] via-white/[.025] to-violet-400/[.08] p-6">
+              <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
+                <div><p className="text-[10px] font-black uppercase tracking-[.18em] text-rose-300">Paso 4 · Cold Outreach</p><h2 className="mt-2 text-2xl font-black text-white md:text-3xl">Email + guion Loom para {sel.name}</h2><p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">Borrador consultivo basado en el negocio, la oferta, los problemas detectados y el preview. Revisa cualquier afirmación antes de aprobar el envío.</p></div>
+                <button onClick={generateCurrentOutreach} disabled={outreachGenerating || !selCon?.email} className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-orange-400 px-5 py-3 text-xs font-black text-black disabled:opacity-40"><RefreshCw className={`size-4 ${outreachGenerating ? "animate-spin" : ""}`}/>{outreachGenerating ? "Generando 5 emails..." : outreachDraft ? "Regenerar con IA" : "Generar con IA"}</button>
               </div>
+            </header>
 
-              {/* Loom Script */}
-              <div className="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-2xl">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                  <span className="font-bold text-white text-sm flex items-center gap-2"><Video className="w-4 h-4 text-purple-400"/>Guión Loom (90s)</span>
-                  <span className="bg-purple-950 border border-purple-800 text-purple-300 text-[10px] font-bold px-2 py-0.5 rounded">Universal</span>
-                </div>
-                <div className="space-y-3 text-xs">
-                  {[
-                    {t:"⏱️ 0:00 - 0:15 | Gancho:",c:selInd.loomHook(selCon?.name?.split(" ")[0]||"",sel.name,sel.heroOffer||""),clr:"text-amber-400"},
-                    {t:"⏱️ 0:15 - 0:45 | Demo:",c:selInd.loomDemo(sel.name),clr:"text-indigo-400"},
-                    {t:"⏱️ 0:45 - 1:15 | Oferta:",c:selInd.loomOffer(),clr:"text-emerald-400"},
-                    {t:"⏱️ 1:15 - 1:30 | CTA:",c:selInd.loomCta(),clr:"text-rose-400"},
-                  ].map((s,i) => (
-                    <div key={i} className="bg-slate-950 border border-slate-800 p-3 rounded-xl">
-                      <span className={`${s.clr} font-bold block mb-1`}>{s.t}</span>
-                      <p className="text-slate-300">{s.c}</p>
-                    </div>
-                  ))}
-                </div>
-                <button onClick={() => setTab("calculator")} className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs py-3 rounded-xl border border-slate-700 flex items-center justify-center gap-2">
-                  Paso 5: Calculadora <ArrowRight className="w-4 h-4 text-amber-400"/>
-                </button>
-              </div>
+            {emailError && <p className="rounded-xl border border-red-500/20 bg-red-500/[.07] p-3 text-xs text-red-200">{emailError}</p>}
+            {!selCon?.email && <p className="rounded-xl border border-amber-400/20 bg-amber-400/[.07] p-3 text-xs text-amber-100">Este negocio necesita un contacto con email real antes de generar outreach.</p>}
+
+            <div className="pitch-grid">
+              <article className="pitch-card">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[.07] pb-4"><span className="flex items-center gap-2 text-sm font-black text-white"><Mail className="size-4 text-rose-300"/>Editor de secuencia</span><span className="text-xs text-slate-500">Para <strong className="text-indigo-300">{selCon?.email || "contacto pendiente"}</strong></span></div>
+                {outreachSequence.length > 0 ? <>
+                  <div className="flex gap-2 overflow-x-auto pb-1">{outreachSequence.map((email:any,index:number) => <button key={email.index || index} onClick={() => {setSelectedEmailIndex(index);setEmailSubject(email.subject);setEmailBody(email.body);}} className={`min-w-24 rounded-xl border px-3 py-2 text-left ${selectedEmailIndex === index ? "border-orange-400/50 bg-orange-400/[.09]" : "border-white/[.07] bg-black/15"}`}><span className="block text-[9px] font-black uppercase text-orange-300">Email {index + 1}</span><span className="mt-1 block truncate text-[10px] text-slate-400">{email.purpose}</span></button>)}</div>
+                  <div className="email-editor"><label><span>Asunto</span><input value={emailSubject} onChange={event => setEmailSubject(event.target.value)}/></label><label><span>Cuerpo editable</span><textarea value={emailBody} onChange={event => setEmailBody(event.target.value)}/></label><div className="rounded-xl border border-cyan-300/10 bg-cyan-300/[.05] p-3 text-xs text-cyan-100"><strong>CTA:</strong> {outreachSequence[selectedEmailIndex]?.cta}</div></div>
+                  <div className="email-actions"><button onClick={() => copy(`Asunto: ${emailSubject}\n\n${emailBody}`,"email")} className="flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-xs font-bold">{copied === "email" ? <Check className="size-4 text-emerald-300"/> : <Copy className="size-4"/>}{copied === "email" ? "Copiado" : "Copiar email"}</button><Link href={`/outreach/campaigns/new?businessId=${sel.id}`} className="flex items-center gap-2 rounded-xl bg-violet-500 px-4 py-2.5 text-xs font-black text-white">Revisar y aprobar <ArrowRight className="size-4"/></Link></div>
+                </> : <div className="grid min-h-96 place-items-center rounded-2xl border border-dashed border-white/10 bg-black/10 p-8 text-center"><div><Mail className="mx-auto size-8 text-slate-600"/><h3 className="mt-3 font-black text-white">Aún no hay una secuencia generada</h3><p className="mt-2 max-w-sm text-xs leading-5 text-slate-500">Genera cinco emails personalizados. Aquí aparecerán asunto, cuerpo, CTA y datos que requieren verificación.</p></div></div>}
+              </article>
+
+              <aside className="pitch-card">
+                <div className="flex items-center justify-between gap-3 border-b border-white/[.07] pb-4"><span className="flex items-center gap-2 text-sm font-black text-white"><Video className="size-4 text-violet-300"/>Guion Loom</span><span className="rounded-full border border-violet-300/20 bg-violet-300/[.07] px-2.5 py-1 text-[9px] font-black uppercase text-violet-200">90 segundos</span></div>
+                {loomSegments.length ? <div className="loom-timeline">{loomSegments.map((segment:any,index:number) => <div key={`${segment.time}-${index}`} className="loom-step"><span className="text-[9px] font-black uppercase tracking-wider text-orange-300">{segment.time}</span><h3 className="mt-1 text-sm font-black text-white">{segment.label}</h3><p className="mt-2 text-xs leading-5 text-slate-400">{segment.copy}</p></div>)}</div> : <div className="grid min-h-96 place-items-center rounded-2xl border border-dashed border-white/10 bg-black/10 p-8 text-center text-xs leading-5 text-slate-500">El timeline aparecerá junto con la secuencia de emails.</div>}
+                {outreachDraft?.claimsToVerify?.length > 0 && <div className="rounded-xl border border-amber-400/15 bg-amber-400/[.06] p-4"><span className="text-[9px] font-black uppercase tracking-wider text-amber-300">Verificar antes de aprobar</span><ul className="mt-2 space-y-1 text-xs text-amber-100/70">{outreachDraft.claimsToVerify.map((claim:string) => <li key={claim}>· {claim}</li>)}</ul></div>}
+              </aside>
             </div>
-          </div>
+
+            <footer className="module-footer"><button onClick={() => setTab("contacts")} className="rounded-xl border border-white/10 px-5 py-3 text-xs font-black text-slate-300">← Volver a contactos</button><button onClick={() => setTab("calculator")} className="flex items-center gap-2 rounded-xl bg-orange-400 px-5 py-3 text-xs font-black text-black">Continuar al paso 5 <ArrowRight className="size-4"/></button></footer>
+          </section>
         )}
 
         {/* ===== TAB 5: CALCULATOR ===== */}
@@ -670,41 +872,30 @@ export default function LegacyWorkspacePage() {
             <div className="bg-gradient-to-r from-amber-950 via-slate-900 to-emerald-950 border border-amber-800/40 rounded-2xl p-6 shadow-xl">
               <p className="text-xs font-bold text-amber-400 uppercase tracking-wider mb-1">🚀 Paso 5: Modelo Rev-Share Universal</p>
               <h2 className="text-2xl font-black text-white">Calculadora de Facturación Extra y Comisiones</h2>
-              <p className="text-sm text-slate-300 mt-1 max-w-3xl">Funciona para <strong>cualquier negocio y cualquier ingreso</strong>. Tú solo ganas cuando ellos facturan más. Con 2-3 negocios superas 10.000€/mes.</p>
+              <p className="text-sm text-slate-300 mt-1 max-w-3xl">Modelo editable para explorar escenarios. Empieza en cero y no representa ingresos, resultados ni garantías hasta introducir métricas verificadas.</p>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
               <div className="lg:col-span-6 bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6 shadow-2xl">
                 <h3 className="font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3"><DollarSign className="w-4 h-4 text-emerald-400"/>Parámetros del Negocio</h3>
 
-                {/* Industry Presets */}
-                <div><span className="text-xs text-slate-400 font-semibold block mb-2">Presets por Industria:</span>
-                  <div className="grid grid-cols-4 gap-2">
-                    {INDUSTRY_LIST.map(ind => (
-                      <button key={ind.key} onClick={() => setCalcLift(ind.liftPercent)} className="bg-slate-950 border border-slate-800 hover:border-slate-600 rounded-xl p-2 text-center text-[10px] font-semibold text-slate-300 transition">
-                        <span className="text-lg block">{ind.emoji}</span>{ind.label.split("·")[0].trim()}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 <div className="space-y-2">
                   <div className="flex justify-between items-center text-xs"><span className="text-slate-300 font-semibold">Facturación Mensual Actual:</span>
                     <span className="font-black text-white bg-slate-800 px-3 py-1 rounded-lg border border-slate-700">€{calcRev.toLocaleString()}/mes</span>
                   </div>
-                  <input type="range" min={1000} max={500000} step={500} value={calcRev} onChange={e => setCalcRev(parseInt(e.target.value))} className="w-full accent-emerald-500"/>
+                  <input type="range" min={0} max={500000} step={500} value={calcRev} onChange={e => setCalcRev(parseInt(e.target.value))} className="w-full accent-emerald-500"/>
                   <div className="flex justify-between text-[10px] text-slate-500 font-mono"><span>1k€</span><span>250k€</span><span>500k€+</span></div>
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between items-center text-xs"><span className="text-slate-300 font-semibold">Incremento con Embudo + Ads:</span>
                     <span className="font-black text-indigo-400 bg-indigo-950/80 border border-indigo-800 px-3 py-1 rounded-lg">+{calcLift}%</span>
                   </div>
-                  <input type="range" min={10} max={60} step={1} value={calcLift} onChange={e => setCalcLift(parseInt(e.target.value))} className="w-full accent-indigo-500"/>
+                  <input type="range" min={0} max={60} step={1} value={calcLift} onChange={e => setCalcLift(parseInt(e.target.value))} className="w-full accent-indigo-500"/>
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between items-center text-xs"><span className="text-slate-300 font-semibold">Tu Comisión (%):</span>
                     <span className="font-black text-amber-400 bg-amber-950/80 border border-amber-800 px-3 py-1 rounded-lg">{calcShare}%</span>
                   </div>
-                  <input type="range" min={15} max={40} step={1} value={calcShare} onChange={e => setCalcShare(parseInt(e.target.value))} className="w-full accent-amber-500"/>
+                  <input type="range" min={0} max={40} step={1} value={calcShare} onChange={e => setCalcShare(parseInt(e.target.value))} className="w-full accent-amber-500"/>
                 </div>
               </div>
 
@@ -715,7 +906,7 @@ export default function LegacyWorkspacePage() {
                     <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4">
                       <span className="text-[11px] text-slate-400 block">Facturación Extra para el Negocio:</span>
                       <span className="text-2xl font-black text-white block mt-1">+€{calcExtra.toLocaleString()}</span>
-                      <span className="text-[10px] text-indigo-400">sin riesgo para ellos</span>
+                      <span className="text-[10px] text-indigo-400">escenario, no resultado previsto</span>
                     </div>
                     <div className="bg-emerald-950/60 border border-emerald-700/80 rounded-xl p-4">
                       <span className="text-[11px] text-emerald-300 font-bold block">Tu Ganancia (MRR):</span>
@@ -725,7 +916,7 @@ export default function LegacyWorkspacePage() {
                   </div>
                   <div className="bg-slate-900/90 border border-amber-500/40 rounded-xl p-4 space-y-2">
                     <div className="flex items-center gap-2 text-amber-400 font-bold text-xs"><Flame className="w-4 h-4"/>Fórmula 10.000€/mes:</div>
-                    <p className="text-xs text-slate-300">Cobrando <strong className="text-emerald-400">€{calcFee.toLocaleString()}/mes</strong> por negocio, necesitas <strong className="text-amber-300 bg-amber-950 px-2 py-0.5 rounded border border-amber-800">{needClients} negocio{needClients>1?"s":""}</strong> para superar <strong className="text-white">10.000€/mes</strong>.</p>
+                    <p className="text-xs text-slate-300">{needClients ? <>Con los valores que introdujiste, el cálculo matemático requiere <strong className="text-amber-300 bg-amber-950 px-2 py-0.5 rounded border border-amber-800">{needClients} negocio{needClients > 1 ? "s" : ""}</strong>. Confirma todas las métricas antes de presentarlo.</> : "Introduce métricas verificadas para calcular este escenario."}</p>
                   </div>
                 </div>
 
@@ -795,48 +986,7 @@ export default function LegacyWorkspacePage() {
           </div>
         )}
 
-        {/* ===== TAB 7: AUTO-ANALYZE ===== */}
-        {tab === "autoanalyze" && (
-          <div className="space-y-6">
-            <div className="bg-gradient-to-r from-cyan-950/80 via-slate-900 to-purple-950/80 border border-cyan-500/40 rounded-2xl p-6 shadow-xl">
-              <h2 className="text-2xl font-black text-white mb-1">✨ Análisis Automático 1-Click</h2>
-              <p className="text-sm text-slate-300">Escribe el nombre de cualquier negocio y EcoScale Partner generará automáticamente: análisis SEO, landing page, emails, video script, ads strategy y proyecciones de ingresos.</p>
-            </div>
-
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-              <label className="text-sm font-bold text-slate-300 block">Nombre del Negocio:</label>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <input type="text" placeholder="Ej: Nike, Restaurant Milano, Gimnasio..." value={autoInput} onChange={(e) => setAutoInput(e.target.value)} disabled={autoAnalyzing} className="flex-1 bg-slate-950 border border-slate-700 text-white placeholder-slate-500 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-cyan-500 disabled:opacity-50"/>
-                <button onClick={async () => {if (!autoInput.trim()) return; setAutoAnalyzing(true); try {const res = await fetch("/api/campaign-auto-generate", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({businessName: autoInput})}); const data = await res.json(); if (data.success) {setAutoCampaigns([{id: Date.now(), businessName: autoInput, status: "ready", createdAt: new Date().toISOString(), ...data.campaign}, ...autoCampaigns]); setAutoInput("");}} catch(e) {console.error(e);} finally {setAutoAnalyzing(false);}}} disabled={autoAnalyzing || !autoInput.trim()} className="bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 disabled:opacity-50 text-white font-bold px-6 py-3 rounded-xl shadow-lg flex items-center gap-2 whitespace-nowrap transition">
-                  {autoAnalyzing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                  {autoAnalyzing ? "Analizando..." : "Analizar"}
-                </button>
-              </div>
-            </div>
-
-            {autoCampaigns.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="text-lg font-bold text-white">Análisis Generados</h3>
-                {autoCampaigns.map((campaign: any) => (
-                  <div key={campaign.id} className="bg-slate-900 border border-slate-800 rounded-xl p-5 hover:border-slate-700 transition cursor-pointer" onClick={() => setSelectedCampaign(campaign)}>
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div>
-                        <h4 className="font-bold text-white text-base">{campaign.businessName}</h4>
-                        <p className="text-xs text-slate-400 mt-1">{campaign.status === "ready" ? "✓ Listo" : "🚀 Activo"} • {new Date(campaign.createdAt).toLocaleDateString("es-ES")}</p>
-                      </div>
-                      <div className="text-right text-xs">
-                        <div className="text-cyan-400 font-bold">{campaign.analysis?.seoScore || 0}/100 SEO</div>
-                        <div className="text-slate-400">Keywords: {campaign.analysis?.keywords?.length || 0}</div>
-                      </div>
-                      <button className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs px-4 py-2 rounded-xl whitespace-nowrap">Ver Paquete →</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </main>
+      </div>
 
       {/* ===== BLUEPRINT MODAL ===== */}
       {autoRun && (
@@ -853,7 +1003,7 @@ export default function LegacyWorkspacePage() {
                 {s:2,t:`🎨 2. Generando embudo adaptado a ${selInd.label.split("·")[0].trim()}`},
                 {s:3,t:`👤 3. Extrayendo email verificado`},
                 {s:4,t:`✉️ 4. Redactando pitch + Loom 90s`},
-                {s:5,t:`🚀 5. Propuesta Revenue-Share lista`},
+                {s:5,t:`🚀 5. Activos listos para revisión`},
               ].map(st => (
                 <div key={st.s} className={`p-3 rounded-xl border flex items-center justify-between transition ${autoStep>=st.s?(st.s===5?"bg-emerald-950/80 border-emerald-600 text-emerald-200":"bg-indigo-950/60 border-indigo-600 text-white"):"bg-slate-950 border-slate-800 text-slate-500"}`}>
                   <span>{st.t}</span>
@@ -868,85 +1018,33 @@ export default function LegacyWorkspacePage() {
       )}
 
       {/* ===== BOTTOM NAVIGATION DOCK ===== */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-gradient-to-t from-slate-950 via-slate-950 to-slate-950/80 border-t border-slate-800/60 backdrop-blur-md px-4 py-3">
+      {tab !== "outreach" && <div className="legacy-mobile-dock fixed bottom-0 left-0 right-0 z-40 border-t border-white/[.08] bg-[#070707]/90 px-4 py-3 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto flex items-center justify-center gap-1 sm:gap-2 overflow-x-auto pb-2">
           {([
-            {k:"autodiscover" as const, emoji:"⚡", label:"Discovery"},
-            {k:"discover" as const, emoji:"🌍", label:"Businesses"},
-            {k:"funnels" as const, emoji:"📄", label:"Funnels"},
-            {k:"contacts" as const, emoji:"👤", label:"Contacts"},
-            {k:"outreach" as const, emoji:"✉️", label:"Outreach"},
-            {k:"calculator" as const, emoji:"💰", label:"Revenue"},
-            {k:"autoanalyze" as const, emoji:"✨", label:"Auto-Analyze"},
-            {k:"crm" as const, emoji:"📊", label:"CRM"},
+            {k:"dashboard" as const, icon:<LayoutDashboard className="size-3.5" />, label:"Dashboard"},
+            {k:"autodiscover" as const, icon:<Zap className="size-3.5" />, label:"Discovery"},
+            {k:"discover" as const, icon:<Globe className="size-3.5" />, label:"Businesses"},
+            {k:"funnels" as const, icon:<Layers className="size-3.5" />, label:"Funnels"},
+            {k:"contacts" as const, icon:<UserCheck className="size-3.5" />, label:"Contacts"},
+            {k:"outreach" as const, icon:<Mail className="size-3.5" />, label:"Outreach"},
+            {k:"calculator" as const, icon:<DollarSign className="size-3.5" />, label:"Revenue"},
+            {k:"crm" as const, icon:<BarChart3 className="size-3.5" />, label:"CRM"},
           ]).map(item => (
             <button
               key={item.k}
               onClick={() => setTab(item.k)}
               className={`px-3 sm:px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap transition ${
                 tab === item.k
-                  ? "bg-gradient-to-r from-cyan-600 to-purple-600 text-white shadow-lg"
-                  : "bg-slate-800/60 text-slate-300 hover:bg-slate-700/60 hover:text-white"
+                  ? "bg-orange-400 text-black shadow-lg shadow-orange-950/30"
+                  : "border border-white/[.07] bg-white/[.04] text-slate-400 hover:bg-white/[.08] hover:text-white"
               }`}
             >
-              <span className="text-sm">{item.emoji}</span>
+              <span>{item.icon}</span>
               <span className="hidden sm:inline">{item.label}</span>
             </button>
           ))}
         </div>
-      </div>
-
-      {/* ===== CAMPAIGN DETAIL MODAL ===== */}
-      {selectedCampaign && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-800">
-              <h3 className="font-black text-xl text-white">{selectedCampaign.businessName}</h3>
-              <button onClick={() => setSelectedCampaign(null)} className="text-slate-400 hover:text-white text-2xl">✕</button>
-            </div>
-
-            <div className="space-y-4">
-              <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-2xl">📊</span>
-                  <h4 className="font-bold text-white">Análisis Competitivo & SEO</h4>
-                </div>
-                <p className="text-sm text-slate-300 mb-3">SEO Score: <span className="font-bold text-emerald-400">{selectedCampaign.analysis?.seoScore || 0}/100</span></p>
-                <p className="text-xs text-slate-300">Keywords principales: {selectedCampaign.analysis?.keywords?.join(", ") || "N/A"}</p>
-              </div>
-
-              <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-2xl">🎨</span>
-                  <h4 className="font-bold text-white">Funnel de Ventas</h4>
-                </div>
-                <p className="text-xs text-slate-300">Headline: <span className="font-semibold text-slate-200">{selectedCampaign.landingPage?.headline || "Generado"}</span></p>
-                <p className="text-xs text-slate-300 mt-2">Offer: {selectedCampaign.landingPage?.offer || "Premium"}</p>
-              </div>
-
-              <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-2xl">✉️</span>
-                  <h4 className="font-bold text-white">Estrategia de Outreach</h4>
-                </div>
-                <p className="text-xs text-slate-300">Email Sequence: {selectedCampaign.emailSequence?.length || 3} emails</p>
-                <p className="text-xs text-slate-300 mt-2">Video Script: {selectedCampaign.videoScript?.duration || "60-90s"}</p>
-              </div>
-
-              <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-2xl">📈</span>
-                  <h4 className="font-bold text-white">Proyecciones & ROI</h4>
-                </div>
-                <p className="text-xs text-slate-300">Expected Revenue: <span className="font-bold text-amber-400">€{selectedCampaign.projections?.monthlyRevenue?.toLocaleString() || "5000"}/month</span></p>
-                <p className="text-xs text-slate-300 mt-2">Expected ROI: <span className="font-bold text-emerald-400">{selectedCampaign.projections?.expectedROI || 100}%</span></p>
-              </div>
-            </div>
-
-            <button onClick={() => setSelectedCampaign(null)} className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-2.5 rounded-xl mt-6">Cerrar</button>
-          </div>
-        </div>
-      )}
+      </div>}
 
       {/* Add bottom padding to main so content doesn't hide under dock */}
       <div className="h-24" />
@@ -975,7 +1073,7 @@ export default function LegacyWorkspacePage() {
                 <input type="text" required placeholder="ej. Restaurante, Gimnasio, Tienda..." value={nName} onChange={e => setNName(e.target.value)} className="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-500"/>
               </div>
               <div><label className="text-slate-300 font-semibold block mb-1">Dominio Web:</label>
-                <input type="text" placeholder="ej. negocio.com" value={nDomain} onChange={e => setNDomain(e.target.value)} className="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-500"/>
+                <input type="text" required placeholder="ej. negocio.com" value={nDomain} onChange={e => setNDomain(e.target.value)} className="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-500"/>
               </div>
               <div><label className="text-slate-300 font-semibold block mb-1">Oferta / Servicio Principal:</label>
                 <input type="text" placeholder={getInd(nType).defaultOffer} value={nOffer} onChange={e => setNOffer(e.target.value)} className="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-500"/>
@@ -1016,6 +1114,7 @@ export default function LegacyWorkspacePage() {
           </div>
         </div>
       )}
+      </main>
     </div>
   );
 }

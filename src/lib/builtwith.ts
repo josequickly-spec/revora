@@ -48,6 +48,24 @@ const primaryPlatform = (technologies: BuiltWithTechnology[]) => {
   ) || null;
 };
 
+export function profileHasTechnology(
+  profile: BuiltWithProfile,
+  technologyName: string,
+) {
+  const needle = technologyName.toLowerCase();
+  return (
+    profile.primaryPlatform?.toLowerCase().includes(needle) === true ||
+    profile.technologies.some(
+      technology =>
+        technology.name.toLowerCase().includes(needle) ||
+        technology.category?.toLowerCase().includes(needle) === true ||
+        technology.categories.some(category =>
+          category.toLowerCase().includes(needle),
+        ),
+    )
+  );
+}
+
 const epochDate = (value: unknown) => {
   const timestamp = Number(value);
   return Number.isFinite(timestamp) && timestamp > 0 ? new Date(timestamp).toISOString() : null;
@@ -135,7 +153,7 @@ export async function lookupBuiltWith(domainInput: string): Promise<BuiltWithPro
       provider: "builtwith",
       checkedAt: new Date().toISOString(),
       technologies,
-      primaryPlatform: null,
+      primaryPlatform: primaryPlatform(technologies),
       techSpendUsd: null,
       estimatedMonthlyEcommerceRevenueUsd: null,
       firstIndexed: epochDate(freePayload.first),

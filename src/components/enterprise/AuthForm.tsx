@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
+import TurnstileWidget from "@/components/security/TurnstileWidget";
 
 type Mode = "login" | "register" | "reset";
 
@@ -11,6 +12,7 @@ export default function AuthForm({ initialResetToken = "" }: { initialResetToken
   const [status, setStatus] = useState("");
   const [statusType, setStatusType] = useState<"error" | "success">("error");
   const [busy, setBusy] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -28,12 +30,13 @@ export default function AuthForm({ initialResetToken = "" }: { initialResetToken
         const confirmPassword = String(data.get("confirmPassword") || "");
         if (password !== confirmPassword) throw new Error("Passwords do not match.");
         endpoint = "/api/auth/password-reset-confirm";
-        body = { token: resetToken, password };
+        body = { token: resetToken, password, turnstileToken };
       } else if (mode === "login") {
         body = {
           email: data.get("email") || "",
           password: data.get("password") || "",
           ...(data.get("mfaCode") ? { mfaCode: data.get("mfaCode") || "" } : {}),
+          turnstileToken,
         };
       } else {
         body = {
@@ -41,6 +44,7 @@ export default function AuthForm({ initialResetToken = "" }: { initialResetToken
           password: data.get("password") || "",
           displayName: data.get("displayName") || "",
           organizationName: data.get("organizationName") || "",
+          turnstileToken,
         };
       }
 
@@ -127,10 +131,11 @@ export default function AuthForm({ initialResetToken = "" }: { initialResetToken
         {mode === "login" && (
           <Field name="mfaCode" label="MFA code (when enabled)" required={false} autoComplete="one-time-code" />
         )}
+        <TurnstileWidget onTokenChange={setTurnstileToken} />
         <button
           type="submit"
           disabled={busy}
-          className="w-full rounded-xl bg-cyan-300 px-4 py-3 text-sm font-black text-slate-950 disabled:opacity-50"
+          className="w-full rounded-xl bg-orange-500 px-4 py-3 text-sm font-black text-white disabled:opacity-50"
         >
           {busy
             ? "Working…"

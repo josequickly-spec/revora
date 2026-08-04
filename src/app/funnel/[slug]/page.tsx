@@ -6,6 +6,16 @@ import { ShieldCheck, Sparkles, CheckCircle2, Flame, ArrowRight, Gift, Lock, Hea
 
 const INDUSTRY_ICONS: Record<string,string> = { general:"🏢", ecommerce:"🛒", restaurant:"🍽️", gym:"💪", professional:"👨‍💼", healthcare:"🏥", saas:"💻", realestate:"🏠", coaching:"🎓", agency:"🚀" };
 
+function isLightColor(value: string) {
+  const match = /^#([0-9a-f]{6})$/i.exec(value);
+  if (!match) return false;
+  const number = Number.parseInt(match[1], 16);
+  const red = (number >> 16) & 255;
+  const green = (number >> 8) & 255;
+  const blue = number & 255;
+  return (red * 299 + green * 587 + blue * 114) / 1000 > 170;
+}
+
 export default function PublicFunnelPage() {
   const params = useParams();
   const router = useRouter();
@@ -64,12 +74,21 @@ export default function PublicFunnelPage() {
   const name = biz?.name || "Negocio";
   const storedContent = funnel?.contentJson;
   const content = storedContent?.translations?.[lang] || storedContent;
+  const pageSpec = content?.landingPage;
+  const otom = content?.otom;
   const offer = content?.offer || biz?.heroOffer || (lang === "en" ? "Special offer" : "Oferta especial");
   const rawPrice = biz?.heroPrice || "Gratis";
   const price = lang === "en" && /^(consultar|gratis)$/i.test(rawPrice)
     ? (/gratis/i.test(rawPrice) ? "Free" : "Ask for details")
     : rawPrice;
-  const color = funnel?.customPrimaryColor || biz?.brandColor || "#6366F1";
+  const color = content?.colorScheme?.primary || funnel?.customPrimaryColor || biz?.brandColor || "#6366F1";
+  const backgroundColor = pageSpec?.backgroundColor || "#0f172a";
+  const surfaceColor = pageSpec?.surfaceColor || "#1e293b";
+  const textColor = pageSpec?.textColor || "#f1f5f9";
+  const lightTheme = isLightColor(backgroundColor);
+  const mutedColor = lightTheme ? "#5f6368" : "#cbd5e1";
+  const panelStyle = { backgroundColor: surfaceColor, borderColor: `${color}30`, color: textColor };
+  const currency = biz?.country === "Colombia" ? "COP" : "USD";
   const type = biz?.businessType || "general";
   const icon = INDUSTRY_ICONS[type] || "🏢";
   const availableLanguages: string[] = storedContent?.availableLanguages || ["es"];
@@ -115,9 +134,17 @@ export default function PublicFunnelPage() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100">
+    <div
+      id="top"
+      className="min-h-screen"
+      style={{
+        backgroundColor,
+        color: textColor,
+        fontFamily: pageSpec?.fontFamily || "inherit",
+      }}
+    >
       {/* Flash Bar */}
-      <div className="bg-gradient-to-r from-amber-600 via-rose-600 to-emerald-600 text-white text-xs md:text-sm font-semibold py-2 px-4 text-center flex items-center justify-center gap-2 shadow-lg">
+      <div className="text-xs md:text-sm font-semibold py-2 px-4 text-center flex items-center justify-center gap-2 shadow-lg" style={{backgroundColor:color,color:isLightColor(color)?"#111":"#fff"}}>
         <Flame className="w-4 h-4 text-yellow-300 animate-bounce" /><span>{content?.offerBadge || funnel?.offerBadge || ui.special}</span>
         <span className="bg-black/30 px-2 py-0.5 rounded text-yellow-200">{ui.published}</span>
       </div>
@@ -141,17 +168,22 @@ export default function PublicFunnelPage() {
       </div>
 
       {/* Header */}
-      <header className="border-b border-slate-800/80 bg-slate-900/90 backdrop-blur sticky top-0 z-30">
+      <header className="border-b backdrop-blur sticky top-0 z-30" style={{...panelStyle,opacity:.97}}>
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-white text-lg shadow-md" style={{ backgroundColor: color }}>{name.charAt(0)}</div>
+            {pageSpec?.logoUrl ? <img src={pageSpec.logoUrl} alt={`${name} logo`} className="h-10 w-auto max-w-36 object-contain"/> : <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-white text-lg shadow-md" style={{ backgroundColor: color }}>{name.charAt(0)}</div>}
             <div>
-              <h1 className="font-bold text-lg text-white tracking-tight">{name}</h1>
-              <p className="text-[11px] text-emerald-400 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> {icon} {ui.verified} • {biz?.niche}</p>
+              <h1 className="font-bold text-lg tracking-tight" style={{color:textColor}}>{name}</h1>
+              <p className="text-[11px] flex items-center gap-1" style={{color:mutedColor}}><CheckCircle2 className="w-3 h-3" style={{color}} /> {icon} {ui.verified} • {biz?.niche}</p>
             </div>
           </div>
-          <div className="text-xs bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-full text-slate-300">
-            {ui.views}: {funnel?.viewCount || 0}
+          <div className="flex items-center gap-4">
+            <nav className="hidden items-center gap-4 lg:flex">
+              {(pageSpec?.navigation || []).slice(0, 4).map((item: string, index: number) => <a key={`${item}-${index}`} href={["#top", "#offer", "#benefits", "#faq"][index]} className="text-xs font-bold opacity-70 transition hover:opacity-100">{item}</a>)}
+            </nav>
+            <div className="text-xs bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-full text-slate-300">
+              {ui.views}: {funnel?.viewCount || 0}
+            </div>
           </div>
         </div>
       </header>
@@ -160,15 +192,15 @@ export default function PublicFunnelPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Left: Visual */}
           <div className="lg:col-span-6 space-y-6">
-            <div className="relative rounded-2xl overflow-hidden border border-slate-700/80 bg-slate-800 shadow-2xl group">
+            <div className="relative rounded-2xl overflow-hidden border shadow-2xl group" style={panelStyle}>
               <div className="absolute top-4 left-4 z-10 bg-rose-600 text-white text-xs font-black uppercase px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5">
                 <Flame className="w-4 h-4 fill-white" />{ui.special}
               </div>
               <div className="absolute top-4 right-4 z-10 bg-slate-950/80 backdrop-blur text-emerald-400 text-xs font-semibold px-3 py-1.5 rounded-full border border-slate-700 flex items-center gap-1">
                 <Sparkles className="w-3.5 h-3.5" /> {ui.available} — {biz?.country}
               </div>
-              <div className="h-80 sm:h-96 w-full bg-gradient-to-tr from-slate-900 via-emerald-950 to-slate-800 flex items-center justify-center p-8">
-                <div className="w-56 h-56 sm:w-64 sm:h-64 rounded-3xl p-6 flex flex-col justify-between shadow-2xl border border-white/20 transform group-hover:scale-105 transition duration-500" style={{ background: `linear-gradient(135deg, ${color}dd 0%, #1e1b4b 100%)` }}>
+              <div className="relative h-80 sm:h-96 w-full flex items-center justify-center p-8" style={{backgroundColor}}>
+                {pageSpec?.heroImageUrl ? <><img src={pageSpec.heroImageUrl} alt="" className="absolute inset-0 size-full object-cover"/><div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent"/><div className="absolute inset-x-0 bottom-0 z-10 p-6"><p className="max-w-xl text-2xl font-black text-white">{content?.headline || offer}</p><p className="mt-2 max-w-xl text-sm text-white/80">{content?.subheadline}</p></div></> : <div className="relative z-10 w-56 h-56 sm:w-64 sm:h-64 rounded-3xl p-6 flex flex-col justify-between shadow-2xl border border-white/20 transform group-hover:scale-105 transition duration-500" style={{ background: `linear-gradient(135deg, ${color}dd 0%, ${surfaceColor} 100%)` }}>
                   <div className="flex justify-between items-center text-white/90">
                     <span className="text-xs font-bold tracking-wider uppercase">{name}</span>
                     <Heart className="w-5 h-5 text-rose-300 fill-rose-300" />
@@ -181,30 +213,30 @@ export default function PublicFunnelPage() {
                   <div className="bg-black/40 backdrop-blur rounded-lg p-2 text-center text-xs font-semibold text-emerald-300">
                     {lang === "en" ? "Request information with no obligation" : "Solicita información sin compromiso"}
                   </div>
-                </div>
+                </div>}
               </div>
             </div>
-            <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 text-xs text-slate-300">
+            <div className="border rounded-xl p-4 text-xs" style={{...panelStyle,color:mutedColor}}>
               {ui.disclaimer}
             </div>
           </div>
 
           {/* Right: Funnel Offer */}
-          <div className="lg:col-span-6 bg-slate-800/90 border border-slate-700 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6">
+          <div id="offer" className="lg:col-span-6 border rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6" style={panelStyle}>
             <div>
               <div className="inline-flex items-center gap-2 bg-emerald-950/80 border border-emerald-700/50 text-emerald-300 px-3 py-1 rounded-full text-xs font-semibold mb-3">
                 <Sparkles className="w-3.5 h-3.5 text-emerald-400" />{content?.eyebrow || content?.offerBadge || funnel?.offerBadge}
               </div>
-              <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight">{content?.headline || funnel?.headline || offer}</h2>
-              <p className="text-sm text-slate-300 mt-2 leading-relaxed">{content?.subheadline || funnel?.subheadline}</p>
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight" style={{color:textColor}}>{content?.headline || funnel?.headline || offer}</h2>
+              <p className="text-sm mt-2 leading-relaxed" style={{color:mutedColor}}>{content?.subheadline || funnel?.subheadline}</p>
             </div>
 
             {/* Price */}
-            <div className="bg-slate-900/90 border border-slate-700/80 rounded-xl p-4 flex items-center justify-between">
+            <div className="border rounded-xl p-4 flex items-center justify-between" style={{backgroundColor,borderColor:`${color}25`}}>
               <div>
                 <span className="text-xs text-slate-400 uppercase tracking-wider block">{ui.price}</span>
                 <div className="flex items-baseline gap-2 mt-0.5">
-                  <span className="text-3xl font-black text-white">{/^\d+(?:[.,]\d+)?$/.test(price) ? `${price}€` : price}</span>
+                  <span className="text-3xl font-black" style={{color:textColor}}>{/^\d+(?:[.,]\d+)?$/.test(price) ? new Intl.NumberFormat(lang === "en" ? "en-US" : "es-CO", {style:"currency",currency}).format(Number(price.replace(",", "."))) : price}</span>
                 </div>
               </div>
               <div className="text-right">
@@ -234,10 +266,10 @@ export default function PublicFunnelPage() {
                 </div>
               ) : (
                 <form onSubmit={submitLead} className="space-y-3">
-                  <input required value={leadName} onChange={e => setLeadName(e.target.value)} placeholder={ui.name} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3" />
-                  <input required type="email" value={leadEmail} onChange={e => setLeadEmail(e.target.value)} placeholder="Email" className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3" />
-                  <input value={leadPhone} onChange={e => setLeadPhone(e.target.value)} placeholder={ui.phone} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3" />
-                  <label className="flex items-start gap-2 text-xs text-slate-300">
+                  <input required value={leadName} onChange={e => setLeadName(e.target.value)} placeholder={ui.name} className="w-full border rounded-xl px-4 py-3" style={{backgroundColor,color:textColor,borderColor:`${color}35`}} />
+                  <input required type="email" value={leadEmail} onChange={e => setLeadEmail(e.target.value)} placeholder="Email" className="w-full border rounded-xl px-4 py-3" style={{backgroundColor,color:textColor,borderColor:`${color}35`}} />
+                  <input value={leadPhone} onChange={e => setLeadPhone(e.target.value)} placeholder={ui.phone} className="w-full border rounded-xl px-4 py-3" style={{backgroundColor,color:textColor,borderColor:`${color}35`}} />
+                  <label className="flex items-start gap-2 text-xs" style={{color:mutedColor}}>
                     <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} className="mt-0.5" />
                     {ui.consent}
                   </label>
@@ -258,24 +290,24 @@ export default function PublicFunnelPage() {
         {content && (
           <section className="mt-12 space-y-8">
             <div className="grid md:grid-cols-2 gap-6">
-              <article className="bg-slate-800/70 border border-slate-700 rounded-2xl p-6">
+              <article className="border rounded-2xl p-6" style={panelStyle}>
                 <p className="text-xs font-bold uppercase tracking-wider text-rose-400">{ui.challenge}</p>
                 <h3 className="text-xl font-black mt-2">{content.painPoint}</h3>
-                <p className="text-slate-300 mt-3 leading-relaxed">{content.agitationCopy}</p>
+                <p className="mt-3 leading-relaxed" style={{color:mutedColor}}>{content.agitationCopy}</p>
               </article>
-              <article className="bg-slate-800/70 border border-slate-700 rounded-2xl p-6">
+              <article className="border rounded-2xl p-6" style={panelStyle}>
                 <p className="text-xs font-bold uppercase tracking-wider text-emerald-400">{ui.solution}</p>
                 <h3 className="text-xl font-black mt-2">{content.offer}</h3>
-                <p className="text-slate-300 mt-3 leading-relaxed">{content.solutionCopy}</p>
+                <p className="mt-3 leading-relaxed" style={{color:mutedColor}}>{content.solutionCopy}</p>
               </article>
             </div>
             {(Array.isArray(content.fascinationBullets) || Array.isArray(content.benefits)) && (
-              <div>
+              <div id="benefits">
                 <h3 className="text-2xl font-black text-center mb-2">{content.leadMagnet?.name || "Qué vas a descubrir"}</h3>
                 <p className="text-slate-400 text-center mb-5">{content.leadMagnet?.format}</p>
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {(content.fascinationBullets || content.benefits).map((benefit: string) => (
-                    <div key={benefit} className="bg-slate-800 border border-slate-700 rounded-xl p-4 flex gap-3">
+                    <div key={benefit} className="border rounded-xl p-4 flex gap-3" style={panelStyle}>
                       <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0"/><span>{benefit}</span>
                     </div>
                   ))}
@@ -288,22 +320,42 @@ export default function PublicFunnelPage() {
                 <h3 className="text-2xl font-black text-center mt-2 mb-5">{ui.steps}</h3>
                 <div className="grid md:grid-cols-3 gap-4">
                   {content.processSteps.map((step: {title:string;description:string}, index: number) => (
-                    <article key={`${step.title}-${index}`} className="bg-slate-800 border border-slate-700 rounded-2xl p-5">
+                    <article key={`${step.title}-${index}`} className="border rounded-2xl p-5" style={panelStyle}>
                       <span className="w-8 h-8 rounded-full inline-flex items-center justify-center text-sm font-black text-white" style={{backgroundColor: color}}>{index + 1}</span>
                       <h4 className="font-black text-lg mt-4">{step.title}</h4>
-                      <p className="text-sm text-slate-300 mt-2 leading-relaxed">{step.description}</p>
+                      <p className="text-sm mt-2 leading-relaxed" style={{color:mutedColor}}>{step.description}</p>
                     </article>
                   ))}
                 </div>
               </div>
             )}
-            <div className="bg-slate-800/70 border border-slate-700 rounded-2xl p-6">
+            {otom && (
+              <div className="rounded-3xl border p-6 sm:p-8" style={panelStyle}>
+                <p className="text-center text-xs font-black uppercase tracking-[.2em]" style={{color}}>Oferta diseñada para avanzar</p>
+                <h3 className="mt-2 text-center text-2xl font-black">El siguiente paso, sin saltos ni sorpresas</h3>
+                <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  {[
+                    {label:"Entrada", item:otom.hook},
+                    {label:"Oferta principal", item:otom.coreOffer},
+                    {label:"Mejora opcional", item:otom.upsell},
+                    {label:"Alternativa", item:otom.downsell},
+                  ].map(({label,item}) => <article key={label} className="rounded-2xl border p-5" style={{backgroundColor,borderColor:`${color}25`}}>
+                    <span className="text-[10px] font-black uppercase tracking-widest opacity-55">{label}</span>
+                    <h4 className="mt-2 text-lg font-black">{item?.name}</h4>
+                    <p className="mt-2 text-sm leading-6" style={{color:mutedColor}}>{item?.description}</p>
+                    {item?.pricePoint > 0 && <p className="mt-4 text-xl font-black" style={{color}}>{new Intl.NumberFormat(lang === "en" ? "en-US" : "es-CO", {style:"currency",currency}).format(item.pricePoint)}</p>}
+                  </article>)}
+                </div>
+                {Array.isArray(otom.customerJourney) && otom.customerJourney.length > 0 && <div className="mt-8"><h4 className="text-lg font-black">{lang === "en" ? "Connected customer journey" : "Recorrido conectado"}</h4><ol className="mt-4 grid gap-3 md:grid-cols-2">{otom.customerJourney.map((step: {step:number;action:string;trigger:string;expectedResult:string}) => <li key={`${step.step}-${step.action}`} className="rounded-xl border p-4" style={{backgroundColor,borderColor:`${color}25`}}><span className="text-xs font-black" style={{color}}>0{step.step}</span><strong className="ml-3">{step.action}</strong><p className="mt-2 text-sm" style={{color:mutedColor}}>{step.expectedResult}</p></li>)}</ol></div>}
+              </div>
+            )}
+            <div className="border rounded-2xl p-6" style={panelStyle}>
               <h3 className="text-xl font-black">{ui.next}</h3>
-              <p className="text-slate-300 mt-2">{content.proofCopy}</p>
+              <p className="mt-2" style={{color:mutedColor}}>{content.proofCopy}</p>
               {Array.isArray(content.trustPoints) && (
                 <ul className="grid sm:grid-cols-3 gap-3 mt-5">
                   {content.trustPoints.map((point: string) => (
-                    <li key={point} className="bg-slate-900 rounded-xl p-3 flex gap-2 text-sm">
+                    <li key={point} className="rounded-xl p-3 flex gap-2 text-sm" style={{backgroundColor}}>
                       <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"/>{point}
                     </li>
                   ))}
@@ -311,13 +363,13 @@ export default function PublicFunnelPage() {
               )}
             </div>
             {Array.isArray(content.objections) && (
-              <div>
+              <div id="faq">
                 <h3 className="text-2xl font-black text-center mb-5">{ui.faq}</h3>
                 <div className="space-y-3">
                   {content.objections.map((item: {question:string;answer:string}) => (
-                    <article key={item.question} className="bg-slate-800 border border-slate-700 rounded-xl p-5">
+                    <article key={item.question} className="border rounded-xl p-5" style={panelStyle}>
                       <h4 className="font-bold">{item.question}</h4>
-                      <p className="text-sm text-slate-300 mt-2">{item.answer}</p>
+                      <p className="text-sm mt-2" style={{color:mutedColor}}>{item.answer}</p>
                     </article>
                   ))}
                 </div>

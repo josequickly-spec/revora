@@ -49,9 +49,77 @@ export type FunnelSpyAnalysis = {
   };
   screenshot: string | null;
   screenshotMobile: string | null;
+  visualIdentity?: {
+    logoUrl: string;
+    heroImageUrl: string;
+    colors: string[];
+    fonts: string[];
+    navigation: string[];
+    layout: string;
+  };
   discovery: { robotsAllowed: boolean | null; sitemapUrls: number; renderedWithBrowser: boolean };
   warnings: string[];
 };
+
+function absoluteAssetUrl(value: string | undefined, baseUrl: string) {
+  if (!value || value.startsWith("data:")) return "";
+  try {
+    const url = new URL(value, baseUrl);
+    return ["http:", "https:"].includes(url.protocol) ? url.toString() : "";
+  } catch {
+    return "";
+  }
+}
+
+function extractVisualIdentity(url: string, html: string): FunnelSpyAnalysis["visualIdentity"] {
+  const $ = cheerio.load(html);
+  const logoElement = $('header img, nav img, img[alt*="logo" i], img[class*="logo" i]').first();
+  const heroElement = $('[class*="hero" i] img, main img, article img').first();
+  const logoUrl = absoluteAssetUrl(
+    logoElement.attr("src") || logoElement.attr("data-src") || logoElement.attr("srcset")?.split(/[ ,]/)[0],
+    url,
+  );
+  const heroImageUrl = absoluteAssetUrl(
+    $('meta[property="og:image"]').attr("content") || heroElement.attr("src") || heroElement.attr("data-src") || heroElement.attr("srcset")?.split(/[ ,]/)[0],
+    url,
+  );
+  const styleText = `${$("style").text()} ${$("[style]").map((_, element) => $(element).attr("style") || "").get().join(" ")}`;
+  const colorCounts = new Map<string, number>();
+  for (const match of styleText.matchAll(/#[0-9a-f]{3,8}\b/gi)) {
+    const color = match[0].toLowerCase();
+    colorCounts.set(color, (colorCounts.get(color) || 0) + 1);
+  }
+  const rankedColors = [...colorCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([color]) => color);
+  const nonNeutralColors = rankedColors.filter((color) => !["#fff", "#ffffff", "#000", "#000000", "#333", "#333333"].includes(color));
+  const colors = unique([...nonNeutralColors, ...rankedColors]).slice(0, 8);
+  const linkedFontFamilies = $('link[href*="fonts.googleapis.com"]').map((_, element) => {
+    try {
+      const href = new URL($(element).attr("href") || "", url);
+      return href.searchParams.getAll("family").map((family) => family.split(":")[0].replaceAll("+", " "));
+    } catch {
+      return [];
+    }
+  }).get();
+  const fonts = unique([
+    ...linkedFontFamilies,
+    ...[...styleText.matchAll(/font-family\s*:\s*([^;}]+)/gi)].map((match) => match[1].replace(/["']/g, "").trim()),
+  ]).slice(0, 6);
+  const navigation = unique($("header nav a, nav a, header a").map((_, element) => $(element).text().trim()).get())
+    .filter((item) => item.length >= 2 && item.length <= 40)
+    .slice(0, 8);
+  const hasHero = $('[class*="hero" i], main h1').length > 0;
+  const hasSplitHero = $('[class*="hero" i] img, main h1').length > 1;
+  return {
+    logoUrl,
+    heroImageUrl,
+    colors,
+    fonts,
+    navigation,
+    layout: `${navigation.length ? "Header with navigation" : "Compact header"}; ${hasHero ? (hasSplitHero ? "split hero with visual" : "headline-led hero") : "content-led opening"}; preserve the original section rhythm and brand density.`,
+  };
+}
 
 const PAGE_LIMIT = 8;
 const FETCH_TIMEOUT = 12_000;
@@ -316,6 +384,7 @@ export async function analyzeFunnel(input: string): Promise<FunnelSpyAnalysis> {
     renderWithBrowser(origin.toString()),
   ]);
   const homeHtml = rendered?.html || rawHomeHtml;
+  const visualIdentity = extractVisualIdentity(origin.toString(), homeHtml);
   const prioritySitemapUrls = publicFiles.urls
     .filter((url) => /checkout|cart|thank|contact|apply|demo|book|product|pricing|offer|landing|quote/i.test(url))
     .slice(0, 3);
@@ -375,6 +444,7 @@ export async function analyzeFunnel(input: string): Promise<FunnelSpyAnalysis> {
     domainIntel,
     screenshot,
     screenshotMobile: rendered?.mobile || null,
+    visualIdentity,
     discovery: {
       robotsAllowed: publicFiles.robotsAllowed,
       sitemapUrls: publicFiles.urls.length,

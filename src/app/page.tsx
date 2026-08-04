@@ -5,8 +5,8 @@ import OverviewDashboard from "@/components/platform/OverviewDashboard";
 import { brand } from "@/lib/brand";
 
 export const metadata: Metadata = {
-  title: "Dashboard",
-  description: "Live workspace totals, recent intelligence, audits and campaigns.",
+  title: "Command Center",
+  description: "Live command center for leads, intelligence, funnels, proposals, outreach and CRM.",
 };
 
 export default function OverviewPage() {
@@ -14,12 +14,12 @@ export default function OverviewPage() {
     <AppShell>
       <>
         <PageHeader
-          eyebrow={brand.product}
-          title="Dashboard"
-          description={`A live view of the businesses, contacts, funnels, audits and campaigns stored in ${brand.name}.`}
+          eyebrow={`${brand.product} · Command Center`}
+          title="Operate growth from one place"
+          description={`A live workspace for moving evidence-backed opportunities through ${brand.name}: lead discovery, FunnelSpy, strategy, proposals, outreach and CRM.`}
           actions={[
             { label: "Find leads", href: "/leads" },
-            { label: "New audit", href: "/funnelspy", tone: "secondary" },
+            { label: "Open Funnel Builder", href: "/funnelspy", tone: "secondary" },
           ]}
         />
         <OverviewDashboard />

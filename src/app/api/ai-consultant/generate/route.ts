@@ -5,7 +5,7 @@ import { ConsultantContextError } from "@/lib/ai-consultant/context";
 import { generateConsultantReport } from "@/lib/ai-consultant/generate";
 
 export const runtime = "nodejs";
-export const maxDuration = 90;
+export const maxDuration = 180;
 
 export async function POST(request: Request) {
   try {

@@ -6,14 +6,21 @@ import {
   authenticateRequest,loginEnterprise,refreshEnterprise,registerEnterprise,
   revokeSession,requestPasswordReset,confirmPasswordReset,
 } from "@/lib/enterprise/store";
+import { requestIp, validateTurnstile } from "@/lib/turnstile";
 
 export async function POST(request:NextRequest,{params}:{params:Promise<{action:string}>}) {
   try {
     const {action}=await params;
     if(action==="register"||action==="login") {
+      const body=await safeJson(request) as Record<string,unknown>;
+      const turnstile=await validateTurnstile(body.turnstileToken,requestIp(request));
+      // Allow login/register in development mode without Turnstile validation
+      const isDev = process.env.NODE_ENV === "development";
+      if(!turnstile.valid && !isDev) return NextResponse.json({error:"Bot verification failed.",code:"turnstile_failed"},{status:403});
+      delete body.turnstileToken;
       const session=action==="register"
-        ? await registerEnterprise(request,registrationSchema.parse(await safeJson(request)))
-        : await loginEnterprise(request,loginSchema.parse(await safeJson(request)));
+        ? await registerEnterprise(request,registrationSchema.parse(body))
+        : await loginEnterprise(request,loginSchema.parse(body));
       const response=NextResponse.json(session,{status:action==="register"?201:200});
       const secure=shouldUseSecureCookies(request);
       response.cookies.set("revora_access",session.accessToken,{httpOnly:true,secure,sameSite:"lax",path:"/",maxAge:900});
@@ -53,7 +60,11 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{action:
       return NextResponse.json({success:true,message:"If an active account exists, reset instructions were sent."});
     }
     if(action==="password-reset-confirm") {
-      const input=z.object({token:z.string().min(32).max(500),password:z.string().min(12).max(200)}).strict().parse(await safeJson(request));
+      const body=await safeJson(request) as Record<string,unknown>;
+      const turnstile=await validateTurnstile(body.turnstileToken,requestIp(request));
+      if(!turnstile.valid)return NextResponse.json({error:"Bot verification failed.",code:"turnstile_failed"},{status:403});
+      delete body.turnstileToken;
+      const input=z.object({token:z.string().min(32).max(500),password:z.string().min(12).max(200)}).strict().parse(body);
       await confirmPasswordReset(input.token,input.password);
       return NextResponse.json({success:true});
     }

@@ -49,6 +49,16 @@ export async function generateConsultantReport(
     if (!completed) throw new Error("report_state_conflict");
     return { report: completed, reused: false };
   } catch (error) {
+    const providerError = error as { name?: string; code?: string; status?: number; message?: string };
+    console.error("AI consultant generation failed", {
+      name: providerError?.name,
+      code: providerError?.code,
+      status: providerError?.status,
+      message: providerError?.message,
+      attempts: Array.isArray((error as { attempts?: unknown }).attempts)
+        ? (error as { attempts: unknown[] }).attempts.slice(0, 4)
+        : undefined,
+    });
     const failure = (error as { code?: string })?.code === "missing_api_key"
       ? { code: "missing_api_key", message: "AI Consultant is not configured." }
       : error instanceof Error && /unknown_evidence|altered_evidence|unsupported_numeric_claim|recommendation_without_evidence|malformed|validation/i.test(error.message)

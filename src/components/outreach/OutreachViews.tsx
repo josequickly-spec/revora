@@ -143,28 +143,52 @@ export function CampaignDetailView({id}:{id:string}) {
   const [contactId,setContactId]=useState(0);
   const [templateId,setTemplateId]=useState("simple-introduction");
   const [message,setMessage]=useState("");
-  const load=useCallback(()=>fetch(`/api/outreach/campaigns/${id}`).then(response=>response.json()).then(data=>setCampaign(data.campaign)),[id]);
-  useEffect(()=>{load();fetch("/api/contacts").then(response=>response.json()).then(data=>setContacts(data.contacts||[]));},[load]);
-  async function action(path:string,body:Record<string,unknown>={}) {
-    if(!campaign) return;
-    const response=await fetch(`/api/outreach/campaigns/${id}/${path}`,{
-      method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({expectedVersion:campaign.version,...body}),
-    });
+  const [busyAction,setBusyAction]=useState("");
+  const load=useCallback(()=>fetch(`/api/outreach/campaigns/${id}`).then(async response=>{
     const data=await response.json();
-    setMessage(response.ok?"Action completed.":data.error);
-    if(response.ok) await load();
+    if(!response.ok||!data.campaign)throw new Error(data.error||"Campaign could not be loaded.");
+    setCampaign(data.campaign);
+  }),[id]);
+  useEffect(()=>{load();fetch("/api/contacts").then(response=>response.json()).then(data=>setContacts(data.contacts||[]));},[load]);
+  function actionError(value:unknown) {
+    const code=String(value||"");
+    if(code.includes("duplicate")||code.includes("unique"))return "This contact or sequence position is already present.";
+    if(code.includes("maximum_five_steps"))return "This campaign already has the maximum of five sequence steps.";
+    if(code.includes("campaign_not_editable"))return "This campaign is no longer editable. Return it to draft before changing recipients or steps.";
+    if(code.includes("suppressed"))return "This contact is suppressed and cannot be added to the campaign.";
+    if(code.includes("sender")||code.includes("provider"))return "Configure and verify a sender before completing compliance review.";
+    if(code.includes("recipient")||code.includes("contact"))return "Select a valid associated contact that has not already been added.";
+    return code||"The action could not be completed.";
+  }
+  async function action(path:string,body:Record<string,unknown>={},successMessage="Action completed.") {
+    if(!campaign) return;
+    setBusyAction(path);setMessage("");
+    try{
+      const versioned=!['recipients','sequence'].includes(path);
+      const response=await fetch(`/api/outreach/campaigns/${id}/${path}`,{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({...body,...(versioned?{expectedVersion:campaign.version}:{})}),
+      });
+      const data=await response.json();
+      if(!response.ok)throw new Error(actionError(data.error));
+      setMessage(successMessage);
+      setContactId(0);
+      await load();
+    }catch(error){setMessage(actionError(error instanceof Error?error.message:error));}
+    finally{setBusyAction("");}
   }
   async function addRecipient() {
-    await action("recipients",{contactId,provenance:"existing_repository_data",verificationStatus:"syntax_valid",verificationSource:"existing repository contact",verificationDate:new Date().toISOString(),riskyApproved:false});
+    if(!contactId){setMessage("Select an available associated contact first.");return;}
+    await action("recipients",{contactId,provenance:"existing_repository_data",verificationStatus:"syntax_valid",verificationSource:"existing repository contact",verificationDate:new Date().toISOString(),riskyApproved:false},"Contact added and validated for this campaign.");
   }
   async function addStep() {
     if(!campaign) return;
     const template=outreachTemplates.find(item=>item.id===templateId)!;
-    await action("sequence",{position:campaign.steps.length+1,delayValue:campaign.steps.length?2:0,delayUnit:"day",subjectTemplate:template.subject,bodyTemplate:template.body,messageType:template.messageType,requiresManualReview:true,enabled:true});
+    await action("sequence",{position:campaign.steps.length+1,delayValue:campaign.steps.length?2:0,delayUnit:"day",subjectTemplate:template.subject,bodyTemplate:template.body,messageType:template.messageType,requiresManualReview:true,enabled:true},`Step ${campaign.steps.length+1} added for manual review.`);
   }
   if(!campaign) return <Card>Loading campaign…</Card>;
-  const eligibleContacts=contacts.filter(contact=>Number(contact.businessId)===campaign.businessId);
+  const existingContactIds=new Set(campaign.recipients.map(recipient=>Number(recipient.contact_id??recipient.contactId)));
+  const eligibleContacts=contacts.filter(contact=>Number(contact.businessId)===campaign.businessId&&!existingContactIds.has(contact.id));
   const live=campaign.providerName==="resend"&&campaign.providerStatus==="verified"&&campaign.senderStatus==="provider_verified";
   return <div className="space-y-4">
     <Card>
@@ -176,19 +200,18 @@ export function CampaignDetailView({id}:{id:string}) {
         <div className="text-right"><strong className="text-violet-200">{campaign.status}</strong><p className="text-xs text-slate-500">version {campaign.version}</p></div>
       </div>
     </Card>
-    {message&&<Card><p className="text-amber-100">{message}</p></Card>}
+    {message&&<Card><p role="status" className="text-amber-100">{message}</p></Card>}
     <div className="grid gap-4 md:grid-cols-3"><Card><strong>Recipients</strong><p className="mt-2 text-3xl">{campaign.recipients.length}</p></Card><Card><strong>Sequence steps</strong><p className="mt-2 text-3xl">{campaign.steps.length}</p></Card><Card><strong>Messages</strong><p className="mt-2 text-3xl">{campaign.messages.length}</p></Card></div>
     {campaign.status==="draft"&&<div className="grid gap-4 lg:grid-cols-2">
-      <Card><h3 className="font-black">Add verified contact candidate</h3><select value={contactId} onChange={event=>setContactId(Number(event.target.value))} className="mt-3 w-full rounded-xl bg-[#0c1220] p-3"><option value={0}>Select associated contact</option>{eligibleContacts.map(contact=><option value={contact.id} key={contact.id}>{contact.name} · {contact.role} · {contact.status}</option>)}</select><button disabled={!contactId} onClick={addRecipient} className="mt-3 rounded-xl border border-cyan-300/20 px-4 py-2 disabled:opacity-40">Add recipient</button><p className="mt-2 text-xs text-slate-500">Association, syntax, provenance and suppression are validated by the server.</p></Card>
-      <Card><h3 className="font-black">Add reviewed sequence step</h3><select value={templateId} onChange={event=>setTemplateId(event.target.value)} className="mt-3 w-full rounded-xl bg-[#0c1220] p-3">{outreachTemplates.map(template=><option value={template.id} key={template.id}>{template.name}</option>)}</select><button disabled={campaign.steps.length>=5} onClick={addStep} className="mt-3 rounded-xl border border-violet-300/20 px-4 py-2 disabled:opacity-40">Add template step</button><p className="mt-2 text-xs text-slate-500">Maximum five steps. Every step requires manual review.</p></Card>
+      <Card><h3 className="font-black">Add verified contact candidate</h3>{eligibleContacts.length?<><select value={contactId} onChange={event=>setContactId(Number(event.target.value))} className="mt-3 w-full rounded-xl bg-[#0c1220] p-3"><option value={0}>Select associated contact</option>{eligibleContacts.map(contact=><option value={contact.id} key={contact.id}>{contact.name} · {contact.role} · {contact.status}</option>)}</select><button disabled={!contactId||Boolean(busyAction)} onClick={addRecipient} className="mt-3 rounded-xl border border-cyan-300/20 px-4 py-2 disabled:cursor-not-allowed disabled:opacity-40">{busyAction==="recipients"?"Validating…":"Add recipient"}</button></>:<p className="mt-3 rounded-xl bg-emerald-400/[.07] p-3 text-sm text-emerald-200">All associated contacts are already added. Add another contact from the business profile if needed.</p>}<p className="mt-2 text-xs text-slate-500">Association, syntax, provenance and suppression are validated by the server.</p></Card>
+      <Card><h3 className="font-black">Add reviewed sequence step</h3><select value={templateId} onChange={event=>setTemplateId(event.target.value)} disabled={campaign.steps.length>=5||Boolean(busyAction)} className="mt-3 w-full rounded-xl bg-[#0c1220] p-3 disabled:opacity-40">{outreachTemplates.map(template=><option value={template.id} key={template.id}>{template.name}</option>)}</select><button disabled={campaign.steps.length>=5||Boolean(busyAction)} onClick={addStep} className="mt-3 rounded-xl border border-violet-300/20 px-4 py-2 disabled:cursor-not-allowed disabled:opacity-40">{busyAction==="sequence"?"Adding…":campaign.steps.length>=5?"Five-step limit reached":"Add template step"}</button><p className="mt-2 text-xs text-slate-500">{campaign.steps.length}/5 steps configured. Every step requires manual review.</p></Card>
     </div>}
-    <Card><h3 className="font-black">Compliance review</h3><ul className="mt-3 space-y-1 text-sm text-slate-400"><li>Verification and provenance required</li><li>Suppression checked before scheduling and delivery</li><li>Private unsubscribe link and physical address required</li><li>Approval and scheduling are separate explicit actions</li><li>Daily and hourly limits are enforced by the worker</li></ul></Card>
+    <Card><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-black">Compliance review</h3><p className="mt-1 text-xs text-slate-500">This validates readiness; it never sends or schedules messages.</p></div>{campaign.status==="draft"&&<button disabled={!campaign.recipients.length||!campaign.steps.length||Boolean(busyAction)} onClick={()=>action("review",{},"Compliance review completed. Campaign now requires explicit approval.")} className="rounded-xl border border-cyan-300/20 px-4 py-2 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-40">{busyAction==="review"?"Reviewing…":"Run compliance review"}</button>}</div><ul className="mt-3 space-y-1 text-sm text-slate-400"><li>{campaign.recipients.length?"✓":"○"} At least one validated recipient</li><li>{campaign.steps.length?"✓":"○"} Reviewed sequence step configured</li><li>{live?"✓":"○"} Provider-verified sender {live?"ready":"still required for live delivery"}</li><li>✓ Suppression is checked before scheduling and delivery</li><li>✓ Approval and scheduling remain separate actions</li></ul></Card>
     {!live&&<Card><p className="text-amber-200"><AlertTriangle className="mr-2 inline size-4"/>Create a provider-verified sender identity before reviewing a live campaign.</p></Card>}
     <div className="flex flex-wrap gap-2">
-      <button onClick={()=>action("review")} className="rounded-xl border border-cyan-300/20 px-4 py-2"><ShieldCheck className="mr-2 inline size-4"/>Review</button>
-      <button onClick={()=>action("approve")} className="rounded-xl border border-emerald-300/20 px-4 py-2"><CheckCircle2 className="mr-2 inline size-4"/>Approve explicitly</button>
-      <button onClick={()=>action("schedule",{startAt:new Date(Date.now()+86_400_000).toISOString()})} className="rounded-xl border border-violet-300/20 px-4 py-2"><Clock3 className="mr-2 inline size-4"/>Schedule explicitly</button>
-      <button onClick={()=>action(campaign.status==="paused"?"resume":"pause")} className="rounded-xl border border-white/10 px-4 py-2">{campaign.status==="paused"?<Play className="mr-2 inline size-4"/>:<Pause className="mr-2 inline size-4"/>}{campaign.status==="paused"?"Resume":"Pause"}</button>
+      {campaign.status==="review_required"&&<button disabled={Boolean(busyAction)} onClick={()=>action("approve",{},"Campaign approved explicitly. It is not scheduled yet.")} className="rounded-xl border border-emerald-300/20 px-4 py-2 disabled:opacity-40"><CheckCircle2 className="mr-2 inline size-4"/>Approve explicitly</button>}
+      {campaign.status==="approved"&&<button disabled={Boolean(busyAction)} onClick={()=>action("schedule",{startAt:new Date(Date.now()+86_400_000).toISOString()},"Campaign scheduled explicitly.")} className="rounded-xl border border-violet-300/20 px-4 py-2 disabled:opacity-40"><Clock3 className="mr-2 inline size-4"/>Schedule explicitly</button>}
+      {["running","paused"].includes(campaign.status)&&<button disabled={Boolean(busyAction)} onClick={()=>action(campaign.status==="paused"?"resume":"pause",{},campaign.status==="paused"?"Campaign resumed.":"Campaign paused.")} className="rounded-xl border border-white/10 px-4 py-2 disabled:opacity-40">{campaign.status==="paused"?<Play className="mr-2 inline size-4"/>:<Pause className="mr-2 inline size-4"/>}{campaign.status==="paused"?"Resume":"Pause"}</button>}
     </div>
     <Card><h3 className="font-black">Events</h3><ul className="mt-3 space-y-2 text-sm text-slate-400">{campaign.events.map((event,index)=><li key={`${event.created_at}-${index}`}>{event.event_type} · {new Date(event.created_at).toLocaleString()}</li>)}</ul></Card>
   </div>;

@@ -11,11 +11,12 @@ export type StoredAudit = {
   createdAt: string;
   shareToken: string;
   businessId: number | null;
-  storageMode: "postgres" | "memory";
+  otom: Record<string, unknown> | null;
+  webBuilder: Record<string, unknown> | null;
+  storageMode: "postgres";
   businessName: string | null;
 };
 
-const memory = new Map<string, StoredAudit>();
 let schemaReady = false;
 
 async function ensureSchema() {
@@ -31,6 +32,8 @@ async function ensureSchema() {
     );
     ALTER TABLE funnelspy_audits
       ADD COLUMN IF NOT EXISTS business_id BIGINT REFERENCES businesses(id) ON DELETE SET NULL;
+    ALTER TABLE funnelspy_audits ADD COLUMN IF NOT EXISTS otom JSONB;
+    ALTER TABLE funnelspy_audits ADD COLUMN IF NOT EXISTS web_builder JSONB;
     CREATE INDEX IF NOT EXISTS funnelspy_audits_domain_created_idx
       ON funnelspy_audits(domain, created_at DESC);
     CREATE INDEX IF NOT EXISTS funnelspy_audits_business_created_idx
@@ -59,6 +62,8 @@ function normalizeRow(row: Record<string, unknown>): StoredAudit {
     createdAt: new Date(String(row.created_at)).toISOString(),
     shareToken: String(row.share_token),
     businessId: row.business_id == null ? null : Number(row.business_id),
+    otom: (row.otom as Record<string, unknown> | null) || null,
+    webBuilder: (row.web_builder as Record<string, unknown> | null) || null,
     storageMode: "postgres",
     businessName: row.business_name == null ? null : String(row.business_name),
   };
@@ -69,58 +74,47 @@ export async function saveAudit(
   report: FunnelAIReport | null = null,
   options: { businessId?: number | null } = {},
 ) {
-  const audit: StoredAudit = {
-    id: randomUUID(),
-    domain: analysis.domain,
-    analysis,
-    report,
-    createdAt: new Date().toISOString(),
-    shareToken: randomUUID(),
-    businessId: options.businessId || null,
-    storageMode: "memory",
-    businessName: null,
-  };
-  memory.set(audit.id, audit);
-  try {
-    await ensureSchema();
-    const result = await pool.query(
-      `INSERT INTO funnelspy_audits (id, domain, analysis, report, share_token, created_at, business_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [audit.id, audit.domain, JSON.stringify(analysis), report ? JSON.stringify(report) : null, audit.shareToken, audit.createdAt, audit.businessId],
-    );
-    return normalizeRow(result.rows[0]);
-  } catch (error) {
-    console.warn("FunnelSpy persistence unavailable; using memory store.", error);
-    return audit;
-  }
+  await ensureSchema();
+  const result = await pool.query(
+    `INSERT INTO funnelspy_audits (id, domain, analysis, report, share_token, created_at, business_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+    [randomUUID(), analysis.domain, JSON.stringify(analysis), report ? JSON.stringify(report) : null, randomUUID(), new Date().toISOString(), options.businessId || null],
+  );
+  return normalizeRow(result.rows[0]);
 }
 
 export async function attachReport(id: string, report: FunnelAIReport) {
-  const cached = memory.get(id);
-  if (cached) memory.set(id, { ...cached, report });
-  try {
-    await ensureSchema();
-    await pool.query("UPDATE funnelspy_audits SET report = $1 WHERE id = $2", [JSON.stringify(report), id]);
-  } catch {
-    // Memory remains the graceful local fallback.
-  }
+  await ensureSchema();
+  await pool.query("UPDATE funnelspy_audits SET report = $1 WHERE id = $2", [JSON.stringify(report), id]);
+}
+
+export async function attachOtom(id: string, otom: Record<string, unknown>) {
+  await ensureSchema();
+  await pool.query("UPDATE funnelspy_audits SET otom = $1 WHERE id = $2", [JSON.stringify(otom), id]);
+}
+
+export async function attachWebBuilder(id: string, webBuilder: Record<string, unknown>) {
+  await ensureSchema();
+  await pool.query("UPDATE funnelspy_audits SET web_builder = $1 WHERE id = $2", [JSON.stringify(webBuilder), id]);
+}
+
+export async function attachVisualIdentity(id: string, visualIdentity: FunnelSpyAnalysis["visualIdentity"]) {
+  if (!visualIdentity) return;
+  await ensureSchema();
+  await pool.query(
+    "UPDATE funnelspy_audits SET analysis = jsonb_set(analysis, '{visualIdentity}', $1::jsonb, true) WHERE id = $2",
+    [JSON.stringify(visualIdentity), id],
+  );
 }
 
 export async function listAudits(domain?: string, limit = 30, businessId?: number) {
-  try {
-    await ensureSchema();
-    const result = businessId
-      ? await pool.query("SELECT fa.*, b.name AS business_name FROM funnelspy_audits fa LEFT JOIN businesses b ON b.id=fa.business_id WHERE fa.business_id = $1 ORDER BY fa.created_at DESC LIMIT $2", [businessId, limit])
-      : domain
-        ? await pool.query("SELECT fa.*, b.name AS business_name FROM funnelspy_audits fa LEFT JOIN businesses b ON b.id=fa.business_id WHERE lower(regexp_replace(fa.domain, '^www\\.', '')) = lower(regexp_replace($1, '^www\\.', '')) ORDER BY fa.created_at DESC LIMIT $2", [domain, limit])
-        : await pool.query("SELECT fa.*, b.name AS business_name FROM funnelspy_audits fa LEFT JOIN businesses b ON b.id=fa.business_id ORDER BY fa.created_at DESC LIMIT $1", [limit]);
-    return result.rows.map(normalizeRow);
-  } catch {
-    return [...memory.values()]
-      .filter((item) => (!domain || item.domain === domain) && (!businessId || item.businessId === businessId))
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-      .slice(0, limit);
-  }
+  await ensureSchema();
+  const result = businessId
+    ? await pool.query("SELECT fa.*, b.name AS business_name FROM funnelspy_audits fa LEFT JOIN businesses b ON b.id=fa.business_id WHERE fa.business_id = $1 ORDER BY fa.created_at DESC LIMIT $2", [businessId, limit])
+    : domain
+      ? await pool.query("SELECT fa.*, b.name AS business_name FROM funnelspy_audits fa LEFT JOIN businesses b ON b.id=fa.business_id WHERE lower(regexp_replace(fa.domain, '^www\\.', '')) = lower(regexp_replace($1, '^www\\.', '')) ORDER BY fa.created_at DESC LIMIT $2", [domain, limit])
+      : await pool.query("SELECT fa.*, b.name AS business_name FROM funnelspy_audits fa LEFT JOIN businesses b ON b.id=fa.business_id ORDER BY fa.created_at DESC LIMIT $1", [limit]);
+  return result.rows.map(normalizeRow);
 }
 
 export async function findLatestAudit(domain: string, businessId?: number) {
@@ -129,43 +123,32 @@ export async function findLatestAudit(domain: string, businessId?: number) {
 }
 
 export function storageWarning(audit: StoredAudit) {
-  return audit.storageMode === "memory"
-    ? "Audit persistence is using non-durable in-memory storage."
-    : null;
+  void audit;
+  return null;
 }
 
 export async function getAudit(idOrShareToken: string) {
-  const cached = [...memory.values()].find((item) => item.id === idOrShareToken || item.shareToken === idOrShareToken);
-  try {
-    await ensureSchema();
-    const result = await pool.query("SELECT fa.*, b.name AS business_name FROM funnelspy_audits fa LEFT JOIN businesses b ON b.id=fa.business_id WHERE fa.id::text = $1 OR fa.share_token::text = $1 LIMIT 1", [idOrShareToken]);
-    return result.rows[0] ? normalizeRow(result.rows[0]) : cached || null;
-  } catch {
-    return cached || null;
-  }
+  await ensureSchema();
+  const result = await pool.query("SELECT fa.*, b.name AS business_name FROM funnelspy_audits fa LEFT JOIN businesses b ON b.id=fa.business_id WHERE fa.id::text = $1 OR fa.share_token::text = $1 LIMIT 1", [idOrShareToken]);
+  return result.rows[0] ? normalizeRow(result.rows[0]) : null;
 }
 
 export async function upsertMonitor(domain: string, frequency = "weekly", businessId?: number | null) {
   const id = randomUUID();
-  try {
-    await ensureSchema();
-    const result = await pool.query(
-      `INSERT INTO funnelspy_monitors (id, domain, frequency, business_id) VALUES ($1, $2, $3, $4)
-       ON CONFLICT (domain) DO UPDATE SET frequency = EXCLUDED.frequency, enabled = TRUE,
-         business_id = COALESCE(EXCLUDED.business_id, funnelspy_monitors.business_id)
-       RETURNING *`,
-      [id, domain, frequency, businessId || null],
-    );
-    return result.rows[0];
-  } catch {
-    return { id, domain, frequency, business_id: businessId || null, enabled: true, created_at: new Date().toISOString() };
-  }
+  await ensureSchema();
+  const result = await pool.query(
+    `INSERT INTO funnelspy_monitors (id, domain, frequency, business_id) VALUES ($1, $2, $3, $4)
+     ON CONFLICT (domain) DO UPDATE SET frequency = EXCLUDED.frequency, enabled = TRUE,
+       business_id = COALESCE(EXCLUDED.business_id, funnelspy_monitors.business_id)
+     RETURNING *`,
+    [id, domain, frequency, businessId || null],
+  );
+  return result.rows[0];
 }
 
 export async function listDueMonitors() {
-  try {
-    await ensureSchema();
-    const result = await pool.query(`
+  await ensureSchema();
+  const result = await pool.query(`
       SELECT * FROM funnelspy_monitors
       WHERE enabled = TRUE AND (
         last_checked_at IS NULL OR
@@ -176,20 +159,13 @@ export async function listDueMonitors() {
       ORDER BY last_checked_at NULLS FIRST
       LIMIT 5
     `);
-    return result.rows as Array<{ id: string; domain: string; frequency: string; business_id: number | null }>;
-  } catch {
-    return [];
-  }
+  return result.rows as Array<{ id: string; domain: string; frequency: string; business_id: number | null }>;
 }
 
 export async function markMonitorChecked(id: string, auditId: string) {
-  try {
-    await ensureSchema();
-    await pool.query(
-      "UPDATE funnelspy_monitors SET last_audit_id = $1, last_checked_at = NOW() WHERE id = $2",
-      [auditId, id],
-    );
-  } catch {
-    // Optional persistence.
-  }
+  await ensureSchema();
+  await pool.query(
+    "UPDATE funnelspy_monitors SET last_audit_id = $1, last_checked_at = NOW() WHERE id = $2",
+    [auditId, id],
+  );
 }

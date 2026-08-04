@@ -3,6 +3,7 @@ import { FunnelLanguageMode, generateLocalizedFunnel } from "@/lib/funnel-genera
 import { getIndustry } from "@/lib/industries";
 import { funnelSelect, pool } from "@/lib/postgres";
 import { auditSite } from "@/lib/site-audit";
+import { findLatestAudit } from "@/lib/funnelspy-store";
 
 interface FunnelGenerateRequest {
   businessId: number;
@@ -27,7 +28,7 @@ export async function POST(req: Request) {
 
     console.log(`Generating funnel for: ${businessName}`);
     const businessResult = businessId ? await pool.query(
-      `SELECT domain,country,platform,hero_offer,hero_price,pain_point,niche,business_type
+      `SELECT domain,country,platform,hero_offer,hero_price,pain_point,niche,business_type,logo_url,brand_color,brand_accent
        FROM businesses WHERE id=$1`, [businessId]
     ) : null;
     const business = businessResult?.rows[0];
@@ -35,6 +36,17 @@ export async function POST(req: Request) {
     const audit = business?.domain
       ? await auditSite(business.domain).catch(() => null)
       : null;
+    const latestFunnelSpy = business?.domain
+      ? await findLatestAudit(business.domain).catch(() => null)
+      : null;
+    const visualIdentity = latestFunnelSpy?.analysis.visualIdentity || {
+      logoUrl: business?.logo_url || "",
+      heroImageUrl: "",
+      colors: [business?.brand_color, business?.brand_accent].filter(Boolean),
+      fonts: [],
+      navigation: [],
+      layout: "",
+    };
 
     const generatedFunnel = await generateLocalizedFunnel(
       businessName,
@@ -48,6 +60,7 @@ export async function POST(req: Request) {
         offer: business?.hero_offer && business.hero_offer !== ind.defaultOffer ? business.hero_offer : undefined,
         price: business?.hero_price && business.hero_price !== ind.defaultPrice ? business.hero_price : undefined,
         audit,
+        visualIdentity,
       },
       body.languageMode || "bilingual"
     );

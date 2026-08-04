@@ -1,6 +1,11 @@
+import { z } from "zod";
+import { generateStructured } from "@/lib/ai-provider-router";
+
 export interface EmailSequence {
   subject: string;
   body: string;
+  cta: string;
+  purpose: string;
   delay: number;
   index: number;
 }
@@ -10,12 +15,29 @@ export interface VideoPitch {
   script: string;
   duration: string;
   cta: string;
-  videoUrl?: string;
+  segments: Array<{ time: string; label: string; copy: string }>;
+  videoUrl?: string | null;
+}
+
+export interface OutreachBusinessContext {
+  website?: string;
+  contactRole?: string;
+  industry?: string;
+  location?: string;
+  audience?: string;
+  problems?: string[];
+  opportunity?: string;
+  previewUrl?: string;
+  objective?: string;
+  senderName?: string;
+  senderCompany?: string;
 }
 
 export interface GeneratedOutreach {
   emailSequence: EmailSequence[];
   videoPitch: VideoPitch;
+  personalizationUsed: string[];
+  claimsToVerify: string[];
   followUpTiming: {
     firstEmail: string;
     videoEmail: string;
@@ -24,110 +46,87 @@ export interface GeneratedOutreach {
   };
 }
 
+const outreachSchema = z.object({
+  emailSequence: z.array(z.object({
+    subject: z.string(),
+    body: z.string(),
+    cta: z.string(),
+    purpose: z.string(),
+    delay: z.number().int().min(0),
+    index: z.number().int().min(1).max(5),
+  })).length(5),
+  videoPitch: z.object({
+    title: z.string(),
+    script: z.string(),
+    duration: z.string(),
+    cta: z.string(),
+    segments: z.array(z.object({ time: z.string(), label: z.string(), copy: z.string() })).length(4),
+    videoUrl: z.string().nullable(),
+  }),
+  personalizationUsed: z.array(z.string()).max(12),
+  claimsToVerify: z.array(z.string()).max(12),
+  followUpTiming: z.object({ firstEmail: z.string(), videoEmail: z.string(), followUp1: z.string(), followUp2: z.string() }),
+});
+
 export async function generateOutreachSequence(
   contactName: string,
   businessName: string,
   offerHeadline: string,
   painPoint: string,
-  bonusOffer: string
+  bonusOffer: string,
+  context: OutreachBusinessContext = {},
 ): Promise<GeneratedOutreach> {
-  const prompt = `Eres un experto en copywriting de cold email y outreach de alto rendimiento.
+  const generation = await generateStructured({
+    task: "strategy",
+    schemaName: "professional_b2b_outreach",
+    schema: outreachSchema,
+    timeoutMs: 120_000,
+    system: "Actúa como estratega senior de ventas B2B, copywriter de cold email y consultor de optimización de conversión. Escribe en español neutro y usa solamente los hechos suministrados.",
+    user: `Crea una secuencia profesional de cinco emails y un guion Loom de 90 segundos.
 
-Genera una secuencia de OUTREACH COMPLETA para:
-Contacto: ${contactName}
-Negocio Objetivo: ${businessName}
-Oferta: ${offerHeadline}
-Problema del Cliente: ${painPoint}
-Bonus: ${bonusOffer}
+DATOS DEL NEGOCIO
+- Nombre: ${businessName}
+- Web: ${context.website || "no confirmada"}
+- Decisor: ${contactName || "decisor no identificado"}
+- Cargo: ${context.contactRole || "no confirmado"}
+- Industria: ${context.industry || "no confirmada"}
+- Ubicación: ${context.location || "no confirmada"}
+- Oferta: ${offerHeadline || "no confirmada"}
+- Audiencia: ${context.audience || "no confirmada"}
+- Problemas detectados: ${JSON.stringify(context.problems?.length ? context.problems : [painPoint].filter(Boolean))}
+- Oportunidad principal: ${context.opportunity || bonusOffer || "mejorar el recorrido comercial"}
+- Preview creado: ${context.previewUrl || "todavía no disponible"}
+- Objetivo: ${context.objective || "conseguir que el decisor revise la propuesta y acepte una conversación de 15 minutos"}
+- Remitente: ${context.senderName || "Equipo de estrategia"}
+- Empresa remitente: ${context.senderCompany || "EcoScale Partner"}
 
-Responde SOLO JSON valido:
-{
-  "emailSequence": [
-    {
-      "subject": "Subject line corto y atractivo (max 50 caracteres)",
-      "body": "Email body personalizado 100-150 palabras. Debe ser corto, directo, hiperpersonalizado. Incluir: situacion actual → problema → solucion → beneficio → CTA",
-      "delay": 0,
-      "index": 1
-    },
-    {
-      "subject": "Subject seguimiento",
-      "body": "Segundo email 80-120 palabras. Agregar valor, no repetir. Mencionar video disponible.",
-      "delay": 2,
-      "index": 2
-    },
-    {
-      "subject": "Video breve dentro",
-      "body": "Tercer email 70-100 palabras. Compartir video pitch. Social proof. Ultimo intento.",
-      "delay": 4,
-      "index": 3
-    }
-  ],
-  "videoPitch": {
-    "title": "30-segundo pitch video titulo",
-    "script": "Guion para video 60-90 segundos. Formato: Hook (3s) → Problem (15s) → Solution (30s) → CTA (12s). Debe ser conversacional, energetico.",
-    "duration": "0:60 a 0:90",
-    "cta": "Call to action claro"
-  },
-  "followUpTiming": {
-    "firstEmail": "Day 1 at 9am",
-    "videoEmail": "Day 4 at 10am",
-    "followUp1": "Day 7 at 11am",
-    "followUp2": "Day 14 at 3pm"
-  }
-}`;
+REGLAS DEL EMAIL
+- Cada email debe tener entre 80 y 140 palabras y un asunto diferente.
+- Email 1: apertura; no incluir enlace; preguntar si desea recibir la propuesta.
+- Email 2: compartir el preview y pedir que lo revise.
+- Email 3: explicar impacto en captación, conversión y seguimiento sin prometer resultados.
+- Email 4: diferenciar una estructura comercial adaptada de un rediseño genérico.
+- Email 5: cierre respetuoso y sin presión.
+- Demuestra que el negocio fue revisado y menciona uno o dos problemas concretos sin atacar la marca.
+- Presenta el preview como propuesta conceptual, nunca como auditoría definitiva.
+- No inventes cifras, clientes, testimonios, urgencia, ingresos ni resultados.
+- No uses jerga técnica, emojis, lenguaje agresivo ni más de una pregunta por email.
+- El CTA debe ser de baja fricción y la llamada debe plantearse como conversación de 15 minutos.
 
-  try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: 1500,
-        temperature: 0.8,
-      }),
-    });
+REGLAS DEL LOOM
+- Devuelve exactamente cuatro segmentos: 00:00–00:15 Gancho, 00:15–00:45 Demostración, 00:45–01:15 Oferta, 01:15–01:30 CTA.
+- El guion debe ser consultivo, específico y coherente con los emails.
+- Si falta el enlace del preview, indica que debe añadirse antes de enviar y agrega esa advertencia a claimsToVerify.
 
-    if (!response.ok) {
-      throw new Error("OpenAI API error");
-    }
-
-    const data = (await response.json()) as {
-      choices: Array<{ message: { content: string } }>;
-    };
-    let content = data.choices[0].message.content;
-
-    // Remove markdown code blocks
-    content = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-
-    const result = JSON.parse(content) as GeneratedOutreach;
-    return result;
-  } catch (error) {
-    console.error("Outreach generation error:", error);
-    throw error;
-  }
+SALIDA
+- emailSequence debe contener exactamente cinco objetos, indexados 1–5, con purpose, subject, body, cta y delay.
+- personalizationUsed enumera únicamente los datos realmente usados.
+- claimsToVerify enumera cualquier dato que deba confirmarse antes de aprobar el envío.`,
+  });
+  return generation.output;
 }
 
-export async function generateVideoPitch(
-  contactName: string,
-  businessName: string,
-  offer: string
-): Promise<string> {
-  const pitch = `
-  ¡Hola ${contactName}!
-  
-  Vi que ${businessName} está en el espacio de [industry]. 
-  Tenemos un método probado que ayuda negocios como el tuyo a [benefit].
-  
-  En realidad, solo tomamos 3 clientes por mes y tenemos un slot disponible ahora.
-  
-  ¿Tienes 15 minutos esta semana para ver cómo funciona?
-  
-  ${offer}
-  `;
-
-  return pitch;
+export async function generateVideoPitch(contactName: string, businessName: string, offer: string): Promise<string> {
+  const generated = await generateOutreachSequence(contactName, businessName, offer, "", "");
+  return generated.videoPitch.script;
 }

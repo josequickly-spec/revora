@@ -82,11 +82,12 @@ export async function proxy(request: NextRequest) {
     "frame-ancestors 'none'",
     "form-action 'self'",
     "object-src 'none'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://challenges.cloudflare.com`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https:",
     "font-src 'self' data:",
-    "connect-src 'self' https://api.openai.com https://api.stripe.com https://*.upstash.io",
+    "frame-src 'self' https://challenges.cloudflare.com",
+    "connect-src 'self' https://api.openai.com https://api.stripe.com https://*.upstash.io https://challenges.cloudflare.com",
   ].join("; ");
   const reject = (body: Record<string, string>, status: number, headers?: Record<string, string>) =>
     NextResponse.json(body, {
@@ -99,29 +100,39 @@ export async function proxy(request: NextRequest) {
     const ip = process.env.TRUST_PROXY === "true"
       ? request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "proxy-unknown"
       : "direct";
-    const apiClass = pathname.startsWith("/api/auth/")
-      ? "auth"
-      : pathname === "/api/funnel-leads"
-        ? "lead-capture"
-        : pathname.includes("/ai") || pathname.includes("/generate") || pathname.includes("/analyze")
-          ? "expensive"
-          : "api";
-    const windowMs = 60_000;
-    const limit = apiClass === "auth" ? 20 : apiClass === "lead-capture" ? 10 : apiClass === "expensive" ? 12 : 300;
-    let bucket;
-    try {
-      bucket = await rateLimit(`${ip}:${apiClass}`, limit, windowMs / 1000);
-    } catch {
-      return reject(
-        { error: "Rate limiting unavailable.", code: "rate_limit_unavailable" },
-        503,
+    if (!["/api/health", "/api/observability/health"].includes(pathname)) {
+      const apiClass = pathname.startsWith("/api/auth/")
+        ? "auth"
+        : pathname === "/api/funnel-leads"
+          ? "lead-capture"
+          : pathname.includes("/ai") || pathname.includes("/generate") || pathname.includes("/analyze")
+            ? "expensive"
+            : "api";
+      const windowMs = 60_000;
+      const limit = apiClass === "auth"
+        ? 20
+        : apiClass === "lead-capture"
+          ? 10
+          : apiClass === "expensive"
+            ? 12
+            : process.env.LOCAL_ISOLATED_RUNTIME === "true"
+              ? 1_200
+              : 300;
+      let bucket;
+      try {
+        bucket = await rateLimit(`${ip}:${apiClass}`, limit, windowMs / 1000);
+      } catch {
+        return reject(
+          { error: "Rate limiting unavailable.", code: "rate_limit_unavailable" },
+          503,
+        );
+      }
+      if (!bucket.allowed) return reject(
+        { error: "Rate limit exceeded.", code: "rate_limited" },
+        429,
+        { "Retry-After": String(bucket.retryAfter) },
       );
     }
-    if (!bucket.allowed) return reject(
-      { error: "Rate limit exceeded.", code: "rate_limited" },
-      429,
-      { "Retry-After": String(bucket.retryAfter) },
-    );
     const unsafe = !["GET", "HEAD", "OPTIONS"].includes(request.method);
     const hasSessionCookie = request.cookies.has("revora_access") || request.cookies.has("revora_refresh");
     const hasBearer = request.headers.has("authorization");

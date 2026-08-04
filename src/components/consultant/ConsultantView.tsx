@@ -117,10 +117,11 @@ export function BusinessConsultantView({ businessId, initialAuditId }: { busines
   }
 
   const selectedAudit = useMemo(() => audits.find(item => item.id === auditId), [audits, auditId]);
+  const latestCompleted = reports.find(item => item.status === "completed" && item.report);
   return (
     <div className="space-y-5">
       <Card className="border-violet-400/20 bg-violet-400/[.05]">
-        <div className="flex gap-3"><Bot className="mt-1 size-5 shrink-0 text-violet-300" /><div><h2 className="font-black text-white">AI-generated advisory content</h2><p className="mt-1 text-sm leading-6 text-slate-400">This strategy is generated, advisory, evidence-grounded and subject to review. FunnelSpy evidence and deterministic opportunities remain separate sources of truth.</p></div></div>
+        <div className="flex gap-3"><Bot className="mt-1 size-5 shrink-0 text-violet-300" /><div className="min-w-0 flex-1"><h2 className="font-black text-white">{latestCompleted ? "Latest AI strategy" : "AI Strategy Generator"}</h2>{latestCompleted?.report ? <><p className="mt-2 text-sm leading-6 text-slate-300">{latestCompleted.report.executiveSummary}</p><div className="mt-4 grid gap-2 md:grid-cols-3">{latestCompleted.report.topPriorities.slice(0, 3).map(item => <div key={item.title} className="rounded-xl border border-white/[.07] bg-black/15 p-3"><span className="text-[9px] font-black uppercase text-cyan-300">{item.priority}</span><p className="mt-1 text-xs font-bold text-white">{item.title}</p></div>)}</div><Link href={`/consultant/${latestCompleted.id}`} className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-cyan-300">Open the complete generated report →</Link></> : <p className="mt-1 text-sm leading-6 text-slate-400">Choose an audit and objective below. The generated summary and priorities will appear here and remain available in report history.</p>}</div></div>
       </Card>
       {audits.length === 0 ? (
         <Card><FileSearch className="size-6 text-slate-500" /><h2 className="mt-3 font-black">A persisted audit is required</h2><p className="mt-2 text-sm text-slate-400">AI Consultant never runs FunnelSpy automatically.</p><Link href={`/funnelspy?businessId=${businessId}`} className="mt-4 inline-flex rounded-xl bg-cyan-300 px-4 py-2 text-sm font-black text-slate-950">Run Funnel Audit</Link></Card>

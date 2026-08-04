@@ -21,5 +21,5 @@ export async function POST(req: Request) {
 }
 
 export async function GET() {
-  return NextResponse.json({ success: true, provider: "OpenStreetMap Overpass", compatibilityAdapter: true, persistedMocks: false });
+  return NextResponse.json({ success: true, provider: "OpenStreetMap Overpass", compatibilityAdapter: true });
 }
