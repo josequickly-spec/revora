@@ -50,9 +50,6 @@ services:
       PGDATABASE: revora
       PGUSER: revora
       METRICS_BEARER_TOKEN_FILE: /run/secrets/metrics_token
-      LOCAL_ISOLATED_RUNTIME: "true"
-      TURNSTILE_SECRET_KEY: ""
-      NEXT_PUBLIC_TURNSTILE_SITE_KEY: ""
     command: ["sh","-c","export DATABASE_URL=\"postgresql://revora:$(cat /run/secrets/postgres_password)@postgres:5432/revora\"; export METRICS_BEARER_TOKEN=\"$(cat /run/secrets/metrics_token)\"; exec node server.js"]
     secrets: [postgres_password, metrics_token]
     ports: ["3000:3000"]
