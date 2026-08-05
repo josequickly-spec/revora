@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import PageHeader from "@/components/app-shell/PageHeader";
 import IntegrationsView from "@/components/platform/IntegrationsView";
+import ParseHubPanel from "@/components/platform/ParseHubPanel";
 
 export const metadata: Metadata = {
   title: "Integrations",
@@ -17,6 +18,7 @@ export default function IntegrationsPage() {
         actions={[{ label: "Back to settings", href: "/settings", tone: "secondary" }]}
       />
       <IntegrationsView />
+      <ParseHubPanel />
     </>
   );
 }

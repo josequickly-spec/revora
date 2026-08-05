@@ -11,6 +11,12 @@ export async function GET() {
     hunter: { ready: Boolean(process.env.HUNTER_API_KEY), required: ["HUNTER_API_KEY"] },
     linkedin: { ready: true, mode: "guided_research", required: [] as string[] },
     builtWith: { ready: Boolean(process.env.BUILTWITH_API_KEY), required: ["BUILTWITH_API_KEY"] },
+    parseHub: {
+      ready: Boolean(process.env.PARSEHUB_API_KEY),
+      required: ["PARSEHUB_API_KEY"],
+      hasDefaultProject: Boolean(process.env.PARSEHUB_PROJECT_TOKEN),
+      webhookProtected: Boolean(process.env.PARSEHUB_WEBHOOK_SECRET),
+    },
     resend: {
       ready: Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL),
       required: ["RESEND_API_KEY", "RESEND_FROM_EMAIL"],

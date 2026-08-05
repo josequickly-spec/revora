@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { CheckCircle2, CircleAlert, PlugZap } from "lucide-react";
 
-type Integration = { ready: boolean; required: string[]; missing: string[] };
+type Integration = { ready: boolean; required: string[]; missing: string[]; hasDefaultProject?: boolean; webhookProtected?: boolean };
 
 export default function IntegrationsView() {
   const [integrations, setIntegrations] = useState<Record<string, Integration>>({});
@@ -41,6 +41,7 @@ export default function IntegrationsView() {
             <p className="mt-2 text-xs leading-5 text-slate-500">
               {integration.ready ? "Required environment configuration is present." : `Missing: ${integration.missing.join(", ") || "provider configuration"}`}
             </p>
+            {name === "parseHub" && integration.ready && <p className="mt-2 text-xs leading-5 text-cyan-200/70">Default project: {integration.hasDefaultProject ? "configured" : "choose in operator"} · Webhook: {integration.webhookProtected ? "protected" : "secret required"}</p>}
           </article>
         ))}
       </div>
