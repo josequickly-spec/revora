@@ -87,8 +87,7 @@ export class BusinessDiscoveryScraper {
           contactEmails: business?.email ? [business.email] : [],
           phoneNumbers: business?.phone ? [business.phone] : [],
           address: business?.address || "Not found",
-          socialMediaLinks: [],
-          rating: business?.rating || 0,
+          socialMediaLinks: {},
         },
         metadata: {
           scrapedAt: new Date(),

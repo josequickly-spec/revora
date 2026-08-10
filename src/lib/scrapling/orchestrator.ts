@@ -128,7 +128,7 @@ export class ScraplingOrchestrator {
    * Execute funnel analysis job
    */
   private async executeFunnelAnalysis(job: ScrapingJob): Promise<void> {
-    const { url, businessId } = job;
+    const { url = "", businessId } = job;
     job.progress = 20;
 
     const analysis = await this.funnelAnalyzer.analyzeFunnel(url);
