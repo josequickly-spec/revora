@@ -8,12 +8,12 @@ function csvCell(value: unknown) {
 export async function GET(request: NextRequest) {
   const id = request.nextUrl.searchParams.get("id");
   const format = request.nextUrl.searchParams.get("format") || "json";
-  if (!id) return NextResponse.json({ error: "Falta el identificador." }, { status: 400 });
+  if (!id) return NextResponse.json({ error: "Missing identifier." }, { status: 400 });
   const audit = await getAudit(id);
-  if (!audit) return NextResponse.json({ error: "Auditoría no encontrada." }, { status: 404 });
+  if (!audit) return NextResponse.json({ error: "Audit not found." }, { status: 404 });
 
   if (format === "csv") {
-    const header = ["url", "tipo", "titulo", "ctas", "formularios", "tecnologias", "pixeles"];
+    const header = ["url", "type", "title", "ctas", "forms", "technologies", "pixels"];
     const rows = audit.analysis.pages.map((page) => [
       page.url, page.kind, page.title, page.ctas.join(" | "), page.forms,
       page.technologies.join(" | "), page.pixels.join(" | "),

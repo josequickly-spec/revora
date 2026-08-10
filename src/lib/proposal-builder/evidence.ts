@@ -12,12 +12,23 @@ export class ProposalContextError extends Error {
   constructor(code: string, message: string, status: number) { super(message); this.code = code; this.status = status; }
 }
 
+function normalizedDomain(value: unknown) {
+  return String(value || "").trim().toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0];
+}
+
 export async function buildProposalEvidence(request: ProposalCreateRequest) {
   await ensureTechnologyDataColumn();
   const businessResult = await pool.query(`SELECT ${businessSelect} FROM businesses WHERE id=$1 LIMIT 1`, [request.businessId]);
   if (!businessResult.rows[0]) throw new ProposalContextError("business_not_found", "Business not found.", 404);
-  const audit = await getAudit(request.auditId);
+  let audit = await getAudit(request.auditId);
   if (!audit) throw new ProposalContextError("audit_not_found", "Audit not found.", 404);
+  if (audit.businessId === null && normalizedDomain(audit.domain) === normalizedDomain(businessResult.rows[0].domain)) {
+    const associated = await pool.query(
+      "UPDATE funnelspy_audits SET business_id=$1 WHERE id=$2 AND business_id IS NULL RETURNING id",
+      [request.businessId, request.auditId],
+    );
+    if (associated.rowCount) audit = { ...audit, businessId: request.businessId };
+  }
   if (audit.businessId !== request.businessId) throw new ProposalContextError("association_mismatch", "Audit is not associated with this business.", 409);
   const opportunityResult = deriveOpportunities(audit);
   const opportunities = request.selectedOpportunityIds?.length

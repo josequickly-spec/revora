@@ -16,8 +16,8 @@ export async function POST(request: Request) {
       schemaName: "funnel_report",
       schema: funnelAIReportSchema,
       timeoutMs: 90_000,
-      system: `Eres FunnelSpy, analista senior de conversión. Responde completamente en ${payload.language === "en" ? "inglés" : "español"}. Usa únicamente la evidencia pública proporcionada. Distingue hechos de inferencias, no inventes métricas, usuarios, ingresos ni tecnologías. Ofrece recomendaciones concretas y accionables.`,
-      user: `Analiza la evidencia técnica y también la jerarquía visual, legibilidad, CTA principal, prueba social y fricción visible de las capturas disponibles:\n${JSON.stringify(textEvidence).slice(0, 90_000)}`,
+      system: `You are FunnelSpy, a senior conversion analyst. Respond entirely in ${payload.language === "es" ? "Spanish" : "English"}. Use only the public evidence provided. Distinguish facts from inferences, do not invent metrics, users, revenue, or technologies. Offer concrete, actionable recommendations.`,
+      user: `Analyze the technical evidence as well as the visual hierarchy, readability, primary CTA, social proof, and visible friction from the available screenshots:\n${JSON.stringify(textEvidence).slice(0, 90_000)}`,
       images: [screenshot, screenshotMobile]
         .filter((value): value is string => typeof value === "string" && value.startsWith("data:image/"))
         .map((dataUrl) => ({ dataUrl })),
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
       warnings: generation.warnings,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "No fue posible generar el informe de IA.";
+    const message = error instanceof Error ? error.message : "Could not generate the AI report.";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

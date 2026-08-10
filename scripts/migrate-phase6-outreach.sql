@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS outreach_campaigns (
   approved_at TIMESTAMPTZ, scheduled_at TIMESTAMPTZ, paused_at TIMESTAMPTZ, completed_at TIMESTAMPTZ,
   cancelled_at TIMESTAMPTZ, archived_at TIMESTAMPTZ, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE outreach_campaigns ADD COLUMN IF NOT EXISTS video_pitch JSONB;
 CREATE TABLE IF NOT EXISTS outreach_recipients (
   id UUID PRIMARY KEY, campaign_id UUID NOT NULL REFERENCES outreach_campaigns(id) ON DELETE RESTRICT,
   business_id BIGINT NOT NULL REFERENCES businesses(id) ON DELETE RESTRICT,
@@ -45,6 +46,10 @@ CREATE TABLE IF NOT EXISTS outreach_sequence_steps (
   version INTEGER NOT NULL DEFAULT 1, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE(campaign_id, position)
 );
+ALTER TABLE outreach_sequence_steps ADD COLUMN IF NOT EXISTS selected_insights JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE outreach_sequence_steps ADD COLUMN IF NOT EXISTS subject_options JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE outreach_sequence_steps ADD COLUMN IF NOT EXISTS generation_warnings JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE outreach_sequence_steps ADD COLUMN IF NOT EXISTS confidence INTEGER;
 CREATE TABLE IF NOT EXISTS outbound_messages (
   id UUID PRIMARY KEY, campaign_id UUID NOT NULL REFERENCES outreach_campaigns(id) ON DELETE RESTRICT,
   recipient_id UUID NOT NULL REFERENCES outreach_recipients(id) ON DELETE RESTRICT,

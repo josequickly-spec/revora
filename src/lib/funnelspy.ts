@@ -204,7 +204,7 @@ function parsePage(url: string, html: string): FunnelPage {
   const $ = cheerio.load(html);
   $("script, style, noscript, svg").remove();
   const title = $("title").first().text().trim() || $("h1").first().text().trim() || new URL(url).hostname;
-  const description = $('meta[name="description"]').attr("content")?.trim() || $("main p, article p, p").first().text().trim().slice(0, 220) || "Sin descripción pública.";
+  const description = $('meta[name="description"]').attr("content")?.trim() || $("main p, article p, p").first().text().trim().slice(0, 220) || "No public description.";
   const ctas = unique(
     $("a, button, input[type=submit]")
       .map((_, element) => $(element).text().trim() || $(element).attr("value") || "")
@@ -399,7 +399,7 @@ export async function analyzeFunnel(input: string): Promise<FunnelSpyAnalysis> {
     }),
   ).then((items) => items.filter(Boolean) as FunnelPage[]);
 
-  if (!pages.length) throw new Error("No fue posible leer páginas HTML públicas del dominio.");
+  if (!pages.length) throw new Error("Could not read public HTML pages for the domain.");
   const technologies = unique(pages.flatMap((page) => page.technologies));
   const pixels = unique(pages.flatMap((page) => page.pixels));
   const allCtas = pages.flatMap((page) => page.ctas);
@@ -428,14 +428,14 @@ export async function analyzeFunnel(input: string): Promise<FunnelSpyAnalysis> {
     origin: origin.origin,
     domain: origin.hostname,
     score,
-    scoreLabel: score >= 80 ? "Embudo avanzado" : score >= 60 ? "Embudo sólido" : score >= 40 ? "Embudo básico" : "Presencia sin embudo claro",
+    scoreLabel: score >= 80 ? "Advanced funnel" : score >= 60 ? "Solid funnel" : score >= 40 ? "Basic funnel" : "Presence with no clear funnel",
     pages,
     funnelStages: [
-      stage("Descubrimiento", true, true, `${pages.length} páginas públicas encontradas`),
-      stage("Oferta", hasOffer, allCtas.length > 2, hasOffer ? "Página de oferta o producto detectada" : "CTAs sugieren una oferta"),
-      stage("Captura", formCount > 0, pages.some((page) => page.kind === "form"), `${formCount} formularios encontrados`),
-      stage("Conversión", hasCheckout, formCount > 0, hasCheckout ? "Checkout público detectado" : "Inferido a partir de formularios"),
-      stage("Confirmación", hasThankYou, hasCheckout || formCount > 0, hasThankYou ? "Página de confirmación detectada" : "La página podría estar protegida tras una acción"),
+      stage("Discovery", true, true, `${pages.length} public pages found`),
+      stage("Offer", hasOffer, allCtas.length > 2, hasOffer ? "Offer or product page detected" : "CTAs suggest an offer"),
+      stage("Capture", formCount > 0, pages.some((page) => page.kind === "form"), `${formCount} forms found`),
+      stage("Conversion", hasCheckout, formCount > 0, hasCheckout ? "Public checkout detected" : "Inferred from forms"),
+      stage("Confirmation", hasThankYou, hasCheckout || formCount > 0, hasThankYou ? "Confirmation page detected" : "The page may be protected behind an action"),
     ],
     totals: { pages: pages.length, ctas: unique(allCtas).length, forms: formCount, pixels: pixels.length, technologies: technologies.length },
     technologies,
@@ -451,9 +451,9 @@ export async function analyzeFunnel(input: string): Promise<FunnelSpyAnalysis> {
       renderedWithBrowser: Boolean(rendered),
     },
     warnings: [
-      "El análisis usa únicamente contenido público y no envía formularios ni accede a áreas privadas.",
-      ...(performance.status === "unavailable" ? ["PageSpeed no devolvió datos en esta ejecución."] : []),
-      ...(domainIntel.status === "unavailable" ? ["RDAP no devolvió datos para este dominio."] : []),
+      "The analysis uses only public content and does not submit forms or access private areas.",
+      ...(performance.status === "unavailable" ? ["PageSpeed did not return data for this run."] : []),
+      ...(domainIntel.status === "unavailable" ? ["RDAP did not return data for this domain."] : []),
     ],
   };
 }

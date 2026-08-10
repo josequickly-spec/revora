@@ -62,7 +62,7 @@ export async function POST(req: Request) {
         audit,
         visualIdentity,
       },
-      body.languageMode || "bilingual"
+      body.languageMode || "en"
     );
 
     const slug =
@@ -74,7 +74,7 @@ export async function POST(req: Request) {
       `INSERT INTO funnels
        (business_id,funnel_name,template_type,headline,subheadline,cta_text,offer_badge,bonus_offer,custom_primary_color,slug,content_json)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING ${funnelSelect}`,
-      [businessId || null, `Embudo para ${businessName}`, ind.funnelType,
+      [businessId || null, `Funnel for ${businessName}`, ind.funnelType,
        generatedFunnel.headline, generatedFunnel.subheadline, generatedFunnel.ctaText,
        generatedFunnel.offerBadge, generatedFunnel.bonusOffer,
        generatedFunnel.colorScheme.primary, slug, JSON.stringify(generatedFunnel)]
@@ -85,7 +85,7 @@ export async function POST(req: Request) {
       success: true,
       funnel: newFunnel,
       generatedContent: generatedFunnel,
-      message: `Embudo generado automaticamente para "${businessName}"`,
+      message: `Funnel automatically generated for "${businessName}"`,
       availableLanguages: generatedFunnel.availableLanguages,
     });
   } catch (error) {

@@ -108,7 +108,7 @@ export async function lookupBuiltWith(domainInput: string): Promise<BuiltWithPro
         headers: { Accept: "application/json" },
         signal: AbortSignal.timeout(20000),
       });
-      if (!freeResponse.ok) throw new Error(`BuiltWith Free respondió ${freeResponse.status}`);
+      if (!freeResponse.ok) throw new Error(`BuiltWith Free responded ${freeResponse.status}`);
       return await freeResponse.json() as {
         domain?: string;
         first?: number;
@@ -177,7 +177,7 @@ export async function lookupBuiltWith(domainInput: string): Promise<BuiltWithPro
   });
   if (!response.ok) {
     const message = await response.text().catch(() => "");
-    throw new Error(`BuiltWith respondió ${response.status}${message ? `: ${message.slice(0, 160)}` : ""}`);
+    throw new Error(`BuiltWith responded ${response.status}${message ? `: ${message.slice(0, 160)}` : ""}`);
   }
 
   const payload = await response.json() as {

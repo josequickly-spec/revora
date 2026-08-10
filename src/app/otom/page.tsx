@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowRight,
   BarChart3,
@@ -143,6 +144,7 @@ function Metric({
 }
 
 export default function OtomStudioPage() {
+  const router = useRouter();
   const [view, setView] = useState<View>("strategy");
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
   const [presenting, setPresenting] = useState(false);
@@ -168,16 +170,53 @@ export default function OtomStudioPage() {
   const [notice, setNotice] = useState("");
   const [builderContext, setBuilderContext] = useState<Record<string, unknown>>({});
   const [previewStep, setPreviewStep] = useState(0);
+  const autoFlowRef = useRef(false);
+  const autoForwardedRef = useRef(false);
   const selectedLocale = () => window.localStorage.getItem("ecoscale-ui-language") === "en" ? "en" : "es";
+
+  const handoffToWebBuilder = useCallback((nextContext: Record<string, unknown>, nextData: { profile: BusinessProfile; otom: GeneratedOTOM }) => {
+    window.sessionStorage.setItem(
+      "revora-web-builder-context",
+      JSON.stringify({
+        ...nextContext,
+        businessId: nextContext.businessId,
+        businessName: nextContext.businessName || nextData.profile.businessName.value,
+        businessType: nextContext.businessType || nextData.profile.businessType.value,
+        targetAudience: nextContext.targetAudience || nextData.profile.targetAudience.value,
+        currentOffer: nextContext.currentOffer || nextData.profile.currentOffer.value,
+        currentPrice: nextContext.currentPrice || nextData.profile.currentPrice.value || nextData.otom.coreOffer.pricePoint,
+        visualIdentity: nextContext.visualIdentity || {},
+        webBuilderSeed: {
+          brandName: nextData.otom.landingPage.brandName,
+          eyebrow: nextData.otom.landingPage.eyebrow,
+          headline: nextData.otom.landingPage.headline,
+          body: nextData.otom.landingPage.subheadline,
+          primaryCta: nextData.otom.landingPage.primaryCta,
+          secondaryCta: nextData.otom.landingPage.secondaryCta,
+          trustItems: nextData.otom.landingPage.trustItems,
+        },
+        otomSummary: JSON.stringify({
+          hook: nextData.otom.hook,
+          coreOffer: nextData.otom.coreOffer,
+          upsell: nextData.otom.upsell,
+          downsell: nextData.otom.downsell,
+        }),
+      }),
+    );
+    router.push("/web-builder?flow=1");
+  }, [router]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
       try {
+        const params = new URLSearchParams(window.location.search);
+        autoFlowRef.current = params.get("flow") === "1" || params.get("autoFlow") === "1";
         const transferred = window.sessionStorage.getItem(
           "revora-otom-context",
         );
         if (transferred) {
           const context = JSON.parse(transferred) as {
+            businessId?: number;
             businessName: string;
             businessType: string;
             targetAudience: string;
@@ -260,6 +299,10 @@ export default function OtomStudioPage() {
               setNotice(
                 "OTOM generated automatically from the FunnelSpy audit.",
               );
+              if (autoFlowRef.current && !autoForwardedRef.current) {
+                autoForwardedRef.current = true;
+                handoffToWebBuilder(context, data);
+              }
             })
             .catch((error: unknown) =>
               setNotice(
@@ -304,7 +347,7 @@ export default function OtomStudioPage() {
       }
     }, 0);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [handoffToWebBuilder]);
 
   function saveProject(status = projectStatus) {
     window.localStorage.setItem(
@@ -379,6 +422,10 @@ export default function OtomStudioPage() {
       setNotice(
         "OTOM generated and saved. Review every section before approval.",
       );
+      if (autoFlowRef.current && !autoForwardedRef.current) {
+        autoForwardedRef.current = true;
+        handoffToWebBuilder(builderContext, { profile: data.profile, otom: data.otom });
+      }
     } catch (error) {
       setNotice(
         error instanceof Error ? error.message : "OTOM generation failed.",
@@ -469,21 +516,21 @@ export default function OtomStudioPage() {
   const lift = projection.target.total - projection.actual.total;
   const activePageSpec: PageSpec = pageSpec || {
     brandName: business,
-    navigation: ["Oferta", "Beneficios", "Contacto"],
-    eyebrow: "Nueva experiencia",
-    headline: generated?.hook.name || `Una forma más clara de elegir ${business}.`,
+    navigation: ["Offer", "Benefits", "Contact"],
+    eyebrow: "New experience",
+    headline: generated?.hook.name || `A clearer way to choose ${business}.`,
     subheadline:
       generated?.hook.description ||
-      "Una propuesta directa, útil y fácil de entender.",
-    primaryCta: "Ver la oferta",
-    secondaryCta: "Conocer más",
-    trustItems: ["Proceso claro", "Siguiente paso sencillo"],
-    heroVisualConcept: `Composición editorial inspirada en ${business}`,
-    leadCaptureHeadline: "Recibe la información esencial",
-    leadCaptureBody: "Un paso sencillo para comenzar.",
-    leadCaptureCta: "Continuar",
-    thankYouHeadline: "Todo listo para el siguiente paso.",
-    thankYouBody: "Revisa tu confirmación y continúa cuando estés preparado.",
+      "A direct, useful, and easy-to-understand proposal.",
+    primaryCta: "See the offer",
+    secondaryCta: "Learn more",
+    trustItems: ["Clear process", "Simple next step"],
+    heroVisualConcept: `Editorial composition inspired by ${business}`,
+    leadCaptureHeadline: "Get the essential information",
+    leadCaptureBody: "One simple step to get started.",
+    leadCaptureCta: "Continue",
+    thankYouHeadline: "All set for the next step.",
+    thankYouBody: "Check your confirmation and continue whenever you're ready.",
     preserveOriginalDesign: false,
     logoUrl: "",
     heroImageUrl: "",
@@ -581,10 +628,10 @@ export default function OtomStudioPage() {
       cta: `Add for ${money.format(upsellPrice)}`,
     },
     {
-      eyebrow: "Confirmado",
+      eyebrow: "Confirmed",
       title: activePageSpec.thankYouHeadline,
       body: activePageSpec.thankYouBody,
-      cta: "Continuar",
+      cta: "Continue",
     },
   ][previewStep];
 
@@ -1112,22 +1159,22 @@ export default function OtomStudioPage() {
                     <div className="absolute bottom-8 left-8 right-8 rounded-2xl border border-white/20 bg-white/10 p-5 backdrop-blur">
                       <span className="text-[10px] font-black uppercase tracking-wider text-orange-200">
                         {previewStep === 0
-                          ? "Concepto visual"
-                          : "Siguiente paso"}
+                          ? "Visual concept"
+                          : "Next step"}
                       </span>
                       <strong className="mt-2 block text-2xl">
-                        {generated?.upsell.name || "Más valor, sin fricción."}
+                        {generated?.upsell.name || "More value, no friction."}
                       </strong>
                       <p className="mt-2 text-xs leading-5 text-white/60">
                         {previewStep === 0
                           ? activePageSpec.heroVisualConcept
                           : generated?.upsell.description ||
-                            "Una mejora relevante presentada en el momento correcto."}
+                            "A relevant upgrade presented at the right moment."}
                       </p>
                       <div className="mt-4 flex items-center justify-between">
                         <strong>+{money.format(upsellPrice)}</strong>
                         <span className="rounded-full bg-white px-4 py-2 text-[10px] font-black text-black">
-                          Añadir mejora
+                          Add upgrade
                         </span>
                       </div>
                     </div>
@@ -1137,25 +1184,25 @@ export default function OtomStudioPage() {
               <div className="mx-auto mt-5 grid max-w-6xl gap-3 md:grid-cols-2">
                 <article className="rounded-2xl border border-white/[.07] bg-black/20 p-5">
                   <span className="text-[10px] font-black uppercase tracking-[.16em] text-slate-500">
-                    Contexto recibido
+                    Context received
                   </span>
                   <strong className="mt-3 block text-sm text-white">
                     {profile?.currentOffer.value || currentOffer}
                   </strong>
                   <p className="mt-2 text-xs leading-5 text-slate-500">
                     {profile?.currentOffer.evidence ||
-                      "Información editable proporcionada para este proyecto."}
+                      "Editable information provided for this project."}
                   </p>
                 </article>
                 <article className="rounded-2xl border border-lime-400/15 bg-lime-400/[.05] p-5">
                   <span className="text-[10px] font-black uppercase tracking-[.16em] text-lime-300">
-                    Nueva experiencia propuesta
+                    New proposed experience
                   </span>
                   <strong className="mt-3 block text-sm text-white">
                     {activePageSpec.headline}
                   </strong>
                   <p className="mt-2 text-xs leading-5 text-slate-400">
-                    Hook → captura → {generated?.coreOffer.name || "oferta"} → {generated?.upsell.name || "mejora"} → seguimiento.
+                    Hook → capture → {generated?.coreOffer.name || "offer"} → {generated?.upsell.name || "upgrade"} → follow-up.
                   </p>
                 </article>
               </div>

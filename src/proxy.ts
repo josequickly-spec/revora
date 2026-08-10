@@ -73,16 +73,23 @@ function hasSameOrigin(request: NextRequest, origin: string | null) {
   return origin === `${protocol}://${host}`;
 }
 
+function requestOrigin(request: NextRequest) {
+  const host = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim() || request.headers.get("host");
+  const protocol = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() || request.nextUrl.protocol.replace(":", "");
+  return host ? `${protocol}://${host}` : request.nextUrl.origin;
+}
+
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
+  const isDev = process.env.NODE_ENV === "development";
   const policy = [
     "default-src 'self'",
     "base-uri 'self'",
     "frame-ancestors 'none'",
     "form-action 'self'",
     "object-src 'none'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://challenges.cloudflare.com`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' ${isDev ? "'unsafe-eval'" : ""} https://challenges.cloudflare.com`.trim(),
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https:",
     "font-src 'self' data:",
@@ -94,6 +101,11 @@ export async function proxy(request: NextRequest) {
       status,
       headers: { "Content-Security-Policy": policy, ...headers },
     });
+  if (pathname === "/login" && isDev && process.env.LOCAL_AUTH_BYPASS === "true") {
+    return NextResponse.redirect(new URL("/crm", requestOrigin(request)), {
+      headers: { "Content-Security-Policy": policy },
+    });
+  }
   if (pathname.startsWith("/api/")) {
     const contentLength = Number(request.headers.get("content-length") || 0);
     if (contentLength > 2_000_000) return reject({ error: "Request body is too large.", code: "payload_too_large" }, 413);
@@ -157,7 +169,12 @@ export async function proxy(request: NextRequest) {
     try {
       await requirePermission(request, "crm.read");
     } catch {
-      const login = new URL("/login", request.url);
+      if (request.cookies.has("revora_refresh")) {
+        const refresh = new URL("/api/auth/refresh", requestOrigin(request));
+        refresh.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
+        return NextResponse.redirect(refresh, { headers: { "Content-Security-Policy": policy } });
+      }
+      const login = new URL("/login", requestOrigin(request));
       login.searchParams.set("next", pathname);
       return NextResponse.redirect(login, { headers: { "Content-Security-Policy": policy } });
     }

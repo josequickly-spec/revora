@@ -7,6 +7,7 @@ services:
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
     secrets: [postgres_password]
     volumes: [postgres_data:/var/lib/postgresql/data]
+    ports: ["5432:5432"]
     healthcheck:
       test: ["CMD-SHELL","pg_isready -U revora -d revora"]
       interval: 5s
@@ -16,6 +17,7 @@ services:
     image: redis:7-alpine
     command: ["redis-server","--appendonly","yes"]
     volumes: [redis_data:/data]
+    ports: ["6379:6379"]
     healthcheck:
       test: ["CMD","redis-cli","ping"]
       interval: 5s

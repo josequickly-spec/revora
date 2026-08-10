@@ -253,7 +253,34 @@ function bearer(request: Request) {
   return cookie ? decodeURIComponent(cookie.slice("revora_access=".length)) : null;
 }
 
+async function localDevelopmentContext(request: Request): Promise<AuthContext | null> {
+  if (process.env.NODE_ENV === "production" || process.env.LOCAL_AUTH_BYPASS !== "true") return null;
+  const hostname = new URL(request.url).hostname;
+  if (!["localhost", "127.0.0.1"].includes(hostname)) return null;
+  const email = process.env.LOCAL_AUTH_EMAIL?.trim().toLowerCase();
+  if (!email) return null;
+  const result = await pool.query(
+    `SELECT u.id AS user_id,m.organization_id,m.id AS membership_id,r.code AS role
+     FROM enterprise_users u
+     JOIN enterprise_memberships m ON m.user_id=u.id AND m.status='active'
+     JOIN enterprise_roles r ON r.id=m.role_id
+     WHERE u.normalized_email=$1 AND u.status='active'
+     ORDER BY m.joined_at
+     LIMIT 1`,
+    [email],
+  );
+  if (!result.rowCount) throw new EnterpriseError("Configured local account is unavailable.",503,"local_account_unavailable");
+  return {
+    userId: result.rows[0].user_id,
+    organizationId: result.rows[0].organization_id,
+    membershipId: result.rows[0].membership_id,
+    role: result.rows[0].role,
+  };
+}
+
 export async function authenticateRequest(request: Request): Promise<AuthContext> {
+  const localContext = await localDevelopmentContext(request);
+  if (localContext) return localContext;
   const token = bearer(request);
   if (!token) throw new EnterpriseError("Authentication required.",401,"authentication_required");
   if (token.startsWith("rvk_")) {

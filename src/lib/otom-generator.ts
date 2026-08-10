@@ -147,35 +147,35 @@ export async function generateOTOM(input: BusinessProfileInput): Promise<{
   provider: string;
   model: string;
 }> {
-  const outputLanguage = input.locale === "en" ? "natural US English" : "español latinoamericano natural";
+  const outputLanguage = "natural US English";
   const generation = await generateStructured({
     task: "otom",
     schemaName: "otom_strategy",
     schema: otomAIOutputSchema,
     timeoutMs: 150_000,
     system: `You are a senior monetization strategist. Return a traceable business profile and a specific, editable OTOM strategy written entirely in ${outputLanguage}.`,
-    user: `Normaliza primero el perfil y despues crea el OTOM completo.
+    user: `First normalize the profile, then create the complete OTOM.
 
-CONTEXTO DISPONIBLE:
+AVAILABLE CONTEXT:
 ${JSON.stringify(input, null, 2)}
 
-REGLAS:
-- Escribe todos los campos visibles en ${outputLanguage}.
-- Usa status "verified" solo cuando el valor aparece directamente en el contexto o la evidencia.
-- Usa status "inferred" cuando completes un dato razonablemente.
-- Usa status "requires_confirmation" para precios, identidad u otros datos que el cliente deba confirmar.
-- Explica brevemente la fuente o razonamiento en evidence.
-- currentPrice 0 significa desconocido: recomienda precios, pero marca el precio actual como requires_confirmation.
-- No inventes trafico, ventas, clientes, testimonios, garantias ni escasez.
-- Crea hook, oferta principal, upsell, downsell, cinco emails, estrategia de precios, triggers y recorrido del cliente.
-- Crea landingPage como una reconstruccion evolucionada del sitio original, no como una plantilla generica.
-- Si visualIdentity contiene logoUrl, heroImageUrl, colores, fuentes, navegacion o layout, reutilizalos literalmente y conserva el lenguaje visual, jerarquia, densidad y modelo de navegacion original.
-- preserveOriginalDesign debe ser true cuando sourceUrl y visualIdentity aporten evidencia util.
-- No inventes URLs de logo o imagen. Usa cadena vacia si no fueron capturadas.
-- Integra los nuevos CTA, oferta y pasos OTOM dentro del modelo visual original; los cambios deben parecer una evolucion natural de la misma marca.
-- trustItems solo puede contener garantias, facilidades o atributos sustentados por el contexto. Si no hay evidencia, usa mensajes de proceso neutrales como "Confirmacion clara" o "Siguiente paso sencillo".
-- heroVisualConcept describe una imagen o composicion apropiada; no afirma que sea una foto real del negocio.
-- Los emails deben vender con honestidad y nunca usar prueba social inexistente.`,
+RULES:
+- Write all visible fields in ${outputLanguage}.
+- Use status "verified" only when the value appears directly in the context or evidence.
+- Use status "inferred" when you reasonably fill in a value.
+- Use status "requires_confirmation" for prices, identity, or other data the client must confirm.
+- Briefly explain the source or reasoning in evidence.
+- currentPrice 0 means unknown: recommend prices, but mark the current price as requires_confirmation.
+- Do not invent traffic, sales, customers, testimonials, guarantees, or scarcity.
+- Create the hook, core offer, upsell, downsell, five emails, pricing strategy, triggers, and customer journey.
+- Create landingPage as an evolved reconstruction of the original site, not a generic template.
+- If visualIdentity contains logoUrl, heroImageUrl, colors, fonts, navigation, or layout, reuse them literally and preserve the original visual language, hierarchy, density, and navigation model.
+- preserveOriginalDesign must be true when sourceUrl and visualIdentity provide useful evidence.
+- Do not invent logo or image URLs. Use an empty string if none were captured.
+- Integrate the new CTA, offer, and OTOM steps within the original visual model; changes should look like a natural evolution of the same brand.
+- trustItems may only contain guarantees, facilities, or attributes supported by the context. If there is no evidence, use neutral process messages like "Clear confirmation" or "Simple next step".
+- heroVisualConcept describes an appropriate image or composition; it does not claim to be a real photo of the business.
+- The emails must sell honestly and never use nonexistent social proof.`,
   });
   const result = generation.output;
   const trafficAssumed = 1_000;

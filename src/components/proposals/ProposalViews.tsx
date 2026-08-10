@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertTriangle, Archive, CheckCircle2, Copy, FileText, LoaderCircle, Plus, Save, Send } from "lucide-react";
 import type { ProposalContent, ProposalPricingInput, ProposalRecord, ProposalTerms } from "@/lib/proposal-builder/contracts";
 import { formatMoney } from "@/lib/proposal-builder/pricing";
@@ -30,10 +30,10 @@ export function ProposalListView() {
 }
 
 type Business = { id: number; name: string; domain: string };
-type Audit = { id: string; score: number; createdAt: string };
+type Audit = { id: string; score: number; createdAt: string; businessId: number | null };
 type Consultant = { id: string; status: string; objective: string };
 
-export function NewProposalView({ initialBusinessId, initialAuditId, initialConsultantReportId }: { initialBusinessId?: number; initialAuditId?: string; initialConsultantReportId?: string }) {
+export function NewProposalView({ initialBusinessId, initialAuditId, initialConsultantReportId, autoFlow = false }: { initialBusinessId?: number; initialAuditId?: string; initialConsultantReportId?: string; autoFlow?: boolean }) {
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [audits, setAudits] = useState<Audit[]>([]);
   const [consultants, setConsultants] = useState<Consultant[]>([]);
@@ -45,6 +45,7 @@ export function NewProposalView({ initialBusinessId, initialAuditId, initialCons
   const [locale, setLocale] = useState("en");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const autoCreateStartedRef = useRef(false);
   useEffect(() => { fetch("/api/businesses").then(response => response.json()).then(data => setBusinesses(data.businesses || [])); }, []);
   useEffect(() => {
     if (!businessId) return;
@@ -56,13 +57,41 @@ export function NewProposalView({ initialBusinessId, initialAuditId, initialCons
       setAuditId(current => current || auditData.audits?.[0]?.id || "");
     });
   }, [businessId]);
-  async function createDraft() {
-    setLoading(true); setError("");
+  const createDraft = useCallback(async () => {
+    setLoading(true);
+    setError("");
     try {
-      const response = await fetch("/api/proposals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ businessId, auditId, consultantReportId: consultantReportId || undefined, proposalType, creationMode, locale, currency: "USD" }) });
-      const data = await response.json(); if (!response.ok) throw new Error(data.error); window.location.assign(`/proposals/${data.proposal.id}`);
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to create draft."); setLoading(false); }
-  }
+      const response = await fetch("/api/proposals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          businessId,
+          auditId,
+          consultantReportId: consultantReportId || undefined,
+          proposalType,
+          creationMode,
+          locale,
+          currency: "USD",
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+      window.location.assign(`/proposals/${data.proposal.id}`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to create draft.");
+      setLoading(false);
+    }
+  }, [auditId, businessId, consultantReportId, creationMode, locale, proposalType]);
+
+  useEffect(() => {
+    if (!autoFlow || autoCreateStartedRef.current || loading) return;
+    if (!businessId || !auditId) return;
+    autoCreateStartedRef.current = true;
+    const timer = window.setTimeout(() => {
+      void createDraft();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [autoFlow, auditId, businessId, createDraft, loading]);
   return <div className="space-y-5">
     <Card className="border-cyan-300/20"><h2 className="font-black text-white">Explicit draft creation</h2><p className="mt-2 text-sm text-slate-400">This action creates an editable draft only. It does not call AI, publish, send outreach or change CRM state.</p></Card>
     <Card><div className="grid gap-4 md:grid-cols-2">
@@ -71,7 +100,7 @@ export function NewProposalView({ initialBusinessId, initialAuditId, initialCons
       <label className="text-sm text-slate-300">Optional completed AI Consultant report<select value={consultantReportId} onChange={event => setConsultantReportId(event.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-[#0c1220] p-3"><option value="">Do not use AI advisory text</option>{consultants.filter(item => !auditId || true).map(item => <option key={item.id} value={item.id}>{item.objective.replaceAll("_", " ")}</option>)}</select></label>
       <label className="text-sm text-slate-300">Proposal type<select value={proposalType} onChange={event => setProposalType(event.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-[#0c1220] p-3">{["funnel_optimization","website_redesign","lead_generation","local_seo","analytics_tracking","conversion_optimization","crm_setup","outreach_setup","custom"].map(item => <option key={item}>{item.replaceAll("_", " ")}</option>)}</select></label>
       <label className="text-sm text-slate-300">Creation mode<select value={creationMode} onChange={event => setCreationMode(event.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-[#0c1220] p-3"><option value="blank">Blank</option><option value="evidence_assisted">Evidence-assisted</option><option value="template">Template</option></select></label>
-      <label className="text-sm text-slate-300">Language<select value={locale} onChange={event => setLocale(event.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-[#0c1220] p-3"><option value="en">English</option><option value="es">Español</option></select></label>
+      <label className="text-sm text-slate-300">Language<select value={locale} onChange={event => setLocale(event.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-[#0c1220] p-3"><option value="en">English</option></select></label>
     </div></Card>
     {!businessId || !auditId ? <Card><p className="text-amber-200">A valid associated persisted audit is required. No audit runs automatically.</p>{businessId > 0 && <Link href={`/funnelspy?businessId=${businessId}`} className="mt-3 inline-flex text-cyan-300">Run Funnel Audit</Link>}</Card> : null}
     {error && <Card className="border-rose-400/20 text-rose-200"><AlertTriangle className="mr-2 inline size-4" />{error}</Card>}
@@ -123,7 +152,7 @@ export function ProposalEditorView({ proposalId }: { proposalId: string }) {
     <Card><label className="text-sm text-slate-300">Internal notes — never public<textarea value={notes} onChange={event => setNotes(event.target.value)} rows={4} className="mt-2 w-full rounded-xl border border-white/10 bg-black/20 p-3" /></label></Card>
     <Card><div className="grid gap-4 md:grid-cols-2"><label className="text-sm text-slate-300">Payment terms<textarea value={terms.paymentTerms} onChange={event => setTerms({ ...terms, paymentTerms: event.target.value })} rows={3} className="mt-2 w-full rounded-xl border border-white/10 bg-black/20 p-3" /></label><label className="text-sm text-slate-300">Cancellation terms<textarea value={terms.cancellationTerms} onChange={event => setTerms({ ...terms, cancellationTerms: event.target.value })} rows={3} className="mt-2 w-full rounded-xl border border-white/10 bg-black/20 p-3" /></label></div></Card>
     <div className="flex flex-wrap gap-2"><button onClick={save} className="rounded-xl bg-cyan-300 px-4 py-2 text-sm font-black text-slate-950"><Save className="mr-2 inline size-4" />Save new version</button><button onClick={() => action("/ready")} className="rounded-xl border border-emerald-300/20 px-4 py-2 text-sm text-emerald-200"><CheckCircle2 className="mr-2 inline size-4" />Mark ready</button><button onClick={() => action("/publish", "POST", {})} className="rounded-xl border border-violet-300/20 px-4 py-2 text-sm text-violet-200"><Send className="mr-2 inline size-4" />Publish explicitly</button><button onClick={() => action("/duplicate")} className="rounded-xl border border-white/10 px-4 py-2 text-sm"><Copy className="mr-2 inline size-4" />Duplicate</button><button onClick={() => action("/archive")} className="rounded-xl border border-rose-300/20 px-4 py-2 text-sm text-rose-200"><Archive className="mr-2 inline size-4" />Archive</button><button onClick={() => downloadExport("json")} className="rounded-xl border border-white/10 px-4 py-2 text-sm"><FileText className="mr-2 inline size-4" />Export JSON</button><button onClick={() => downloadExport("html")} className="rounded-xl border border-white/10 px-4 py-2 text-sm"><FileText className="mr-2 inline size-4" />Export HTML</button></div>
-    <Card>{["published", "viewed"].includes(proposal.status) ? <><h2 className="font-black text-white">Outreach handoff</h2><p className="mt-2 text-sm text-slate-400">Creates a campaign draft with this published proposal preselected. It does not approve, schedule or send.</p><Link href={`/outreach/campaigns/new?businessId=${proposal.businessId}&proposalId=${proposal.id}`} className="mt-3 inline-flex rounded-xl border border-cyan-300/20 px-4 py-2 text-sm font-bold text-cyan-200">Create Outreach Campaign</Link></> : <p className="text-sm text-slate-500">Publish explicitly before creating an outreach campaign. Draft proposal links are never exposed.</p>}</Card>
+    <Card>{["published", "viewed"].includes(proposal.status) ? <><h2 className="font-black text-white">Outreach handoff</h2><p className="mt-2 text-sm text-slate-400">Creates a campaign draft with this published proposal preselected. It does not approve, schedule or send.</p><Link href={`/outreach/campaigns/new?businessId=${proposal.businessId}&proposalId=${proposal.id}&flow=1`} className="mt-3 inline-flex rounded-xl border border-cyan-300/20 px-4 py-2 text-sm font-bold text-cyan-200">Create Outreach Campaign</Link></> : <p className="text-sm text-slate-500">Publish explicitly before creating an outreach campaign. Draft proposal links are never exposed.</p>}</Card>
     <Card><h2 className="font-black text-white">Evidence snapshot</h2><div className="mt-3 space-y-2">{proposal.evidenceSnapshot.map(item => <div key={item.id} className="rounded-xl bg-black/20 p-3 text-sm"><strong className={item.advisory ? "text-violet-200" : "text-cyan-200"}>{item.advisory ? "AI advisory" : "Detected evidence"} · {item.label}</strong><p className="mt-1 text-slate-400">{item.fact}</p></div>)}</div></Card>
   </div>;
 }

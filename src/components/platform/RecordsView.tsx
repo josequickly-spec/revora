@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowRight, FileText, Mail, Send } from "lucide-react";
 
@@ -28,8 +27,7 @@ export default function RecordsView({ type }: { type: RecordType }) {
   if (!records.length) {
     return (
       <Notice>
-        No {type} have been saved. Existing generation remains available in the legacy workspace.
-        <Link href="/legacy" className="ml-2 font-bold text-cyan-300 hover:text-cyan-200">Open legacy workspace</Link>
+        No {type} have been saved yet. Create the first record from the action above to begin the live workflow.
       </Notice>
     );
   }

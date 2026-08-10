@@ -29,7 +29,7 @@ export const businessProfileSchema = z.object({
 });
 
 export const businessProfileInputSchema = z.object({
-  locale: z.enum(["es", "en"]).optional().default("es"),
+  locale: z.enum(["es", "en"]).optional().default("en"),
   businessName: z.string().trim().max(200).optional().default(""),
   businessType: z.string().trim().max(200).optional().default(""),
   targetAudience: z.string().trim().max(2_000).optional().default(""),

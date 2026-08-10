@@ -41,7 +41,7 @@ assert.match(discovery, /parseCreateFunnel\(body\)/);
 assert.match(autoDiscovery, /createFunnel: true/);
 assert.match(localFinder, /createFunnel: true/);
 assert.doesNotMatch(discovery, /const generatedFunnel = await generateLocalizedFunnel/);
-assert.match(funnelsRoute, /`BORRAR EMBUDO \$\{funnelId\}`/);
+assert.match(funnelsRoute, /`DELETE FUNNEL \$\{funnelId\}`/);
 assert.match(funnelsRoute, /WHERE funnel_id=\$1/);
 
 console.log("Phase 2 characterization: 20 assertions passed; no network or provider credentials used.");

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight, BarChart3, Bot, Building2, CheckCircle2, FileText,
-  Mail, Network, Radar, Search, Send, Sparkles, Users,
+  Mail, Network, Radar, Search, Send, Sparkles, Users, Zap,
 } from "lucide-react";
 
 type Business = { id: number; name: string; domain: string; status: string; createdAt?: string };
@@ -106,6 +106,7 @@ export default function OverviewDashboard() {
             <Priority href="/funnelspy" title={unauditedBusinesses ? `${unauditedBusinesses} business${unauditedBusinesses === 1 ? "" : "es"} may need an audit` : "Run a fresh FunnelSpy audit"} detail="Audits are explicit. A profile is never scanned automatically." action="Open FunnelSpy" />
             <Priority href="/opportunities" title="Review evidence-backed opportunities" detail="Prioritize verified findings before generating a strategy or proposal." action="Review opportunities" />
             <Priority href="/outreach" title="Approve outreach before delivery" detail="Drafts remain controlled until a sender and campaign are reviewed." action="Open outreach" />
+            <Priority href="/legacy" title="Access Legacy Workspace" detail="Original EcoScale Partner workspace with revenue operations tools and 1-click blueprint." action="Open legacy" />
           </div>
         </section>
         <section className="rounded-[2rem] border border-white/[.07] bg-gradient-to-br from-violet-400/[.09] via-white/[.025] to-cyan-300/[.06] p-5 sm:p-6">
@@ -121,7 +122,7 @@ export default function OverviewDashboard() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-3">
-        <RecentList title="Recent businesses" empty="No businesses have been saved." href="/businesses" items={data.businesses.slice(0, 5).map((business) => ({ id: String(business.id), title: business.name, detail: business.domain, href: `/businesses/${business.id}` }))} />
+        <RecentList title="Recent businesses" empty="No businesses have been saved." href="/businesses" items={data.businesses.slice(0, 5).map((business) => ({ id: String(business.id), title: business.name, detail: business.domain, href: `/businesses/${business.id}?flow=1` }))} />
         <RecentList title="Recent audits" empty="No FunnelSpy audits have been saved." href="/audits" items={data.audits.slice(0, 5).map((audit) => ({ id: audit.id, title: audit.domain, detail: `${audit.score} · ${audit.scoreLabel}`, href: `/audits/${audit.id}` }))} />
         <RecentList title="Recent campaigns" empty="No campaigns have been saved." href="/outreach" items={data.campaigns.slice(0, 5).map((campaign) => ({ id: campaign.id, title: campaign.business_name, detail: campaign.status, href: `/campaign/${campaign.id}` }))} />
       </div>

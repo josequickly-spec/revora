@@ -28,7 +28,7 @@ const requestSchema = z.object({
   }).passthrough(),
   report: funnelAIReportSchema,
   auditId: z.string().uuid().optional(),
-  languageMode: z.enum(["es", "en", "bilingual"]).default("bilingual"),
+  languageMode: z.enum(["es", "en", "bilingual"]).default("en"),
 });
 
 export const runtime = "nodejs";
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
   try {
     const client = request.headers.get("x-forwarded-for")?.split(",")[0] || "local";
     const limit = checkRateLimit(`create-funnel:${client}`, 6);
-    if (!limit.allowed) return NextResponse.json({ error: "Límite temporal de generación alcanzado." }, { status: 429 });
+    if (!limit.allowed) return NextResponse.json({ error: "Temporary generation limit reached." }, { status: 429 });
 
     const input = requestSchema.parse(await request.json());
     let { analysis } = input;
@@ -83,7 +83,7 @@ export async function POST(request: Request) {
         }
       }
     }
-    const languageMode = input.languageMode as FunnelLanguageMode;
+    const languageMode = "en" as FunnelLanguageMode;
     const businessName = businessNameFromAnalysis(analysis);
     const industryType = inferIndustry(report, analysis.technologies);
     const industry = getIndustry(industryType);
@@ -94,7 +94,7 @@ export async function POST(request: Request) {
     const businessResult = await pool.query(
       `INSERT INTO businesses
        (name, domain, country, business_type, niche, platform, status, hero_offer, hero_price, pain_point, technology_data)
-       VALUES ($1, $2, 'Unknown', $3, $4, $5, 'analyzed', $6, 'Consultar', $7, $8)
+       VALUES ($1, $2, 'Unknown', $3, $4, $5, 'analyzed', $6, 'Ask for details', $7, $8)
        ON CONFLICT (domain) DO UPDATE SET
         name = EXCLUDED.name,
         business_type = EXCLUDED.business_type,
@@ -164,14 +164,13 @@ export async function POST(request: Request) {
       success: true,
       funnel: result.rows[0],
       previewUrls: {
-        es: generated.availableLanguages.includes("es") ? `/es/funnel/${slug}` : null,
-        en: generated.availableLanguages.includes("en") ? `/en/funnel/${slug}` : null,
+        en: `/en/funnel/${slug}`,
       },
     }, { status: 201 });
   } catch (error) {
     console.error("FunnelSpy funnel creation failed", error);
     return NextResponse.json({
-      error: error instanceof Error ? error.message : "No fue posible crear el funnel.",
+      error: error instanceof Error ? error.message : "Could not create the funnel.",
     }, { status: 500 });
   }
 }

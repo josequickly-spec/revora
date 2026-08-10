@@ -68,8 +68,9 @@ const storeSource = await readFile(new URL("../src/lib/funnelspy-store.ts", impo
 assert.match(analyzeRoute, /The requested URL does not match the selected business/);
 assert.match(analyzeRoute, /saveAudit\(analysis, null, \{ businessId: input\.businessId \}\)/);
 assert.match(storeSource, /INSERT INTO funnelspy_audits \(id, domain, analysis, report, share_token, created_at, business_id\)/);
-assert.match(storeSource, /non-durable in-memory storage/);
+assert.match(storeSource, /storageMode: "postgres"/);
+assert.match(storeSource, /return null/);
 const monitorSource = await readFile(new URL("../src/app/api/funnelspy/monitor/route.ts", import.meta.url), "utf8");
 assert.match(monitorSource, /saveAudit\(analysis, null, \{ businessId: monitor\.business_id \}\)/);
 
-console.log("Phase 3 characterization: 36 assertions passed; no crawl, AI or provider calls used.");
+console.log("Phase 3 characterization: 37 assertions passed; no crawl, AI or provider calls used.");

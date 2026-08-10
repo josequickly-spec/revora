@@ -80,7 +80,7 @@ export const webBuilderSpecSchema = z.object({
     targetAverageValue: z.number().min(0),
   }),
   evidenceNotes: z.array(z.string()).min(2).max(8),
-  demoDisclaimer: z.string(),
+  previewDisclaimer: z.string(),
 });
 
 export type WebBuilderRequest = z.infer<typeof webBuilderRequestSchema>;
@@ -122,7 +122,7 @@ function preservedIdentity(spec: WebBuilderSpec, input: BusinessProfileInput): W
 }
 
 export async function generateWebBuilderSpec(input: WebBuilderRequest) {
-  const outputLanguage = input.locale === "en" ? "natural US English" : "natural Latin American Spanish";
+  const outputLanguage = "natural US English";
   const generation = await generateStructured({
     task: "strategy",
     schemaName: "ai_web_builder_spec",
@@ -136,7 +136,7 @@ ${JSON.stringify(input, null, 2)}
 
 RULES:
 - Write every visible field in ${outputLanguage}.
-- This is a client preview, not a live store. demoDisclaimer must say so clearly.
+- This is a client preview, not a live store. previewDisclaimer must say so clearly.
 - Preserve the supplied logo, colors, fonts, navigation and hero image. Never invent asset URLs.
 - Product names, bundles and prices may be proposed, but evidenceNotes must mark them as concepts requiring client confirmation.
 - Never invent customers, testimonials, certifications, inventory, guarantees, urgency or revenue history.

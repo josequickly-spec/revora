@@ -38,6 +38,10 @@ try {
     ALTER TABLE businesses ADD COLUMN IF NOT EXISTS postal_code VARCHAR(40);
     ALTER TABLE businesses ADD COLUMN IF NOT EXISTS address TEXT;
     ALTER TABLE businesses ADD COLUMN IF NOT EXISTS technology_data JSONB;
+    ALTER TABLE businesses ADD COLUMN IF NOT EXISTS opportunity_score INTEGER;
+    ALTER TABLE businesses ADD COLUMN IF NOT EXISTS opportunity_grade VARCHAR(4);
+    ALTER TABLE businesses ADD COLUMN IF NOT EXISTS outreach_approved_at TIMESTAMPTZ;
+    ALTER TABLE businesses ADD COLUMN IF NOT EXISTS pipeline_stage VARCHAR(50) NOT NULL DEFAULT 'new';
 
     CREATE TABLE IF NOT EXISTS contacts (
       id BIGSERIAL PRIMARY KEY,
@@ -91,11 +95,19 @@ try {
       email_body TEXT NOT NULL,
       email_sequence JSONB,
       video_script JSONB,
+      selected_insights JSONB NOT NULL DEFAULT '[]'::jsonb,
+      subject_options JSONB NOT NULL DEFAULT '[]'::jsonb,
+      generation_warnings JSONB NOT NULL DEFAULT '[]'::jsonb,
+      confidence INTEGER,
       status VARCHAR(50) NOT NULL DEFAULT 'draft',
       provider_id TEXT,
       sent_at TIMESTAMP,
       created_at TIMESTAMP DEFAULT NOW()
     );
+    ALTER TABLE outreach_messages ADD COLUMN IF NOT EXISTS selected_insights JSONB NOT NULL DEFAULT '[]'::jsonb;
+    ALTER TABLE outreach_messages ADD COLUMN IF NOT EXISTS subject_options JSONB NOT NULL DEFAULT '[]'::jsonb;
+    ALTER TABLE outreach_messages ADD COLUMN IF NOT EXISTS generation_warnings JSONB NOT NULL DEFAULT '[]'::jsonb;
+    ALTER TABLE outreach_messages ADD COLUMN IF NOT EXISTS confidence INTEGER;
 
     CREATE TABLE IF NOT EXISTS proposals (
       id BIGSERIAL PRIMARY KEY,

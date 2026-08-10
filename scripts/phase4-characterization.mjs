@@ -138,6 +138,7 @@ const funnelScoreSource = await readFile(new URL("../src/lib/funnel-score.ts", i
 const opportunitySource = await readFile(new URL("../src/lib/opportunity-engine/derive.ts", import.meta.url), "utf8");
 const contextSource = await readFile(new URL("../src/lib/ai-consultant/context.ts", import.meta.url), "utf8");
 const providerSource = await readFile(new URL("../src/lib/ai-consultant/provider.ts", import.meta.url), "utf8");
+const providerRouterSource = await readFile(new URL("../src/lib/ai-provider-router.ts", import.meta.url), "utf8");
 const storeSource = await readFile(new URL("../src/lib/ai-consultant/store.ts", import.meta.url), "utf8");
 const generateSource = await readFile(new URL("../src/lib/ai-consultant/generate.ts", import.meta.url), "utf8");
 assert.match(generateRoute, /export async function POST/);
@@ -145,15 +146,16 @@ assert.doesNotMatch(consultantPage, new RegExp("useEffect\\([\\s\\S]{0,300}ai-co
 assert.match(consultantPage, /Generate AI Strategy/);
 assert.match(consultantPage, /Create Proposal Draft/);
 assert.doesNotMatch(generateRoute, /createFunnel|proposal|outreach|analyzeFunnel/);
-assert.match(legacyAiRoute, /responses\.parse/);
+assert.match(legacyAiRoute, /generateStructured/);
 assert.match(funnelScoreSource, /export function calculateFunnelScore/);
 assert.doesNotMatch(opportunitySource, /OpenAI|ai-consultant|fetch\(/);
 assert.match(contextSource, /business_not_found/);
 assert.match(contextSource, /audit_not_found/);
-assert.match(providerSource, /missing_api_key/);
-assert.match(providerSource, /maxRetries: 0/);
+assert.match(providerSource, /generateStructured/);
+assert.match(providerRouterSource, /missing_api_key/);
+assert.match(providerRouterSource, /maxRetries: 0/);
 assert.match(storeSource, /status='failed'/);
 assert.match(storeSource, /status='completed'/);
 assert.match(generateSource, /if \(!request\.regenerate\)/);
 
-console.log("Phase 4 characterization: 68 assertions passed; fake/local validation only, no network, database, or provider credentials used.");
+console.log("Phase 4 characterization: 69 assertions passed; fake/local validation only, no network, database, or provider credentials used.");

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import GlobalNavigationControls from "@/components/app-shell/GlobalNavigationControls";
-import AppLanguage from "@/components/app-shell/AppLanguage";
 import { brand } from "@/lib/brand";
 import "./globals.css";
 
@@ -22,7 +21,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en">
       <body className="bg-slate-950 text-slate-100 antialiased">
         {children}
-        <AppLanguage />
         <GlobalNavigationControls />
       </body>
     </html>

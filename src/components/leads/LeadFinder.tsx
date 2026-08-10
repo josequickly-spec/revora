@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { BadgeCheck, ExternalLink, LoaderCircle, MapPin, Search, Store } from "lucide-react";
+import { BadgeCheck, ExternalLink, LoaderCircle, MapPin, Search, Store, Sparkles } from "lucide-react";
 import type { LeadCandidate, LeadSearchResponse } from "@/lib/lead-finder/contracts";
 import TurnstileWidget from "@/components/security/TurnstileWidget";
+import BusinessDiscoveryScraper from "@/components/scraping/BusinessDiscoveryScraper";
 
-const labels = { city: "City", postalCode: "ZIP / postal code", address: "Address", query: "Free search" } as const;
+const labels = { city: "City", postalCode: "ZIP / postal code", address: "Address", query: "Free search", businessName: "Business name", domain: "Domain", ceoName: "CEO name" } as const;
 
 type ShopifyCandidate = LeadCandidate & {
   technologyVerification?: {
@@ -40,6 +41,7 @@ export default function LeadFinder() {
   const [state, setState] = useState<"idle" | "searching" | "enriching">("idle");
   const [error, setError] = useState("");
   const [turnstileToken, setTurnstileToken] = useState("");
+  const [useAdvancedScraping, setUseAdvancedScraping] = useState(false);
 
   async function search(event: React.FormEvent) {
     event.preventDefault();
@@ -72,7 +74,7 @@ export default function LeadFinder() {
       });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data.error || "Business enrichment failed.");
-      router.push(`/businesses/${data.businessId || data.business.id}`);
+      router.push(`/businesses/${data.businessId || data.business.id}?flow=1`);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Business enrichment failed.");
       setState("idle");

@@ -24,14 +24,18 @@ export default function TurnstileWidget({ onTokenChange }: { onTokenChange: (tok
   useEffect(() => {
     // Skip on localhost/dev
     if (isDev || window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
-      setLoading(false);
-      onTokenChange(""); // Empty token in dev
+      queueMicrotask(() => {
+        setLoading(false);
+        onTokenChange(""); // Empty token in dev
+      });
       return;
     }
 
     if (!siteKey || !container.current) {
-      setLoading(false);
-      setError("Turnstile not configured");
+      queueMicrotask(() => {
+        setLoading(false);
+        setError("Turnstile not configured");
+      });
       return;
     }
 

@@ -11,7 +11,8 @@ export default function GlobalNavigationControls() {
   const router = useRouter();
   const pathname = usePathname();
 
-  if (pathname === "/legacy" || pathname.startsWith("/legacy/")) return null;
+  const platformRoots = ["/accounts", "/analytics", "/audits", "/billing", "/businesses", "/consultant", "/crm", "/executive", "/leads", "/opportunities", "/outreach", "/proposals", "/scraping", "/security", "/settings", "/tasks", "/workflows"];
+  if (pathname === "/" || pathname === "/legacy" || pathname.startsWith("/legacy/") || platformRoots.some((root) => pathname === root || pathname.startsWith(`${root}/`))) return null;
 
   function goBack() {
     if (window.history.length > 1) router.back();
@@ -20,27 +21,27 @@ export default function GlobalNavigationControls() {
 
   return (
     <nav
-      aria-label="Navegación global"
+      aria-label="Global navigation"
       className="fixed bottom-3 left-1/2 z-[80] flex max-w-[calc(100vw-1.5rem)] -translate-x-1/2 items-center gap-1 rounded-2xl border border-white/10 bg-slate-950/95 p-1.5 shadow-2xl shadow-black/50 backdrop-blur-xl sm:bottom-4 sm:left-auto sm:right-4 sm:translate-x-0 print:hidden"
     >
       <button
         type="button"
         onClick={goBack}
-        aria-label="Volver a la página anterior"
-        title="Volver"
+        aria-label="Go back to the previous page"
+        title="Back"
         className={controlClass}
       >
         <ArrowLeft className="size-4" aria-hidden="true" />
-        <span>Volver</span>
+        <span>Back</span>
       </button>
       <Link
         href="/"
-        aria-label="Menú principal"
-        title="Menú principal"
+        aria-label="Main menu"
+        title="Main menu"
       className={`${controlClass} bg-cyan-300 text-slate-950 hover:bg-cyan-200 hover:text-slate-950`}
       >
         <Home className="size-4" aria-hidden="true" />
-        <span>Menú principal</span>
+        <span>Main menu</span>
       </Link>
     </nav>
   );

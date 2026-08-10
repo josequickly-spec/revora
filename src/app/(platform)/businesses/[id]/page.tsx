@@ -7,8 +7,15 @@ export const metadata: Metadata = {
   description: "Business intelligence, contacts and generated funnel assets.",
 };
 
-export default async function BusinessDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function BusinessDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ flow?: string }>;
+}) {
   const { id } = await params;
+  const query = await searchParams;
   const numericId = Number(id);
   return (
     <>
@@ -18,10 +25,11 @@ export default async function BusinessDetailPage({ params }: { params: Promise<{
         description="A consolidated view over the existing business, contact and funnel records."
         actions={[
           { label: "All businesses", href: "/businesses", tone: "secondary" },
+          { label: "Start flow", href: `/businesses/${numericId}?flow=1` },
           { label: "Generate AI Strategy", href: `/businesses/${numericId}/consultant` },
         ]}
       />
-      <BusinessesView selectedId={numericId} />
+      <BusinessesView selectedId={numericId} autoFlow={query.flow === "1"} />
     </>
   );
 }

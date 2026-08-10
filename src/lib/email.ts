@@ -8,7 +8,7 @@ export async function sendOutreachEmail(
 ) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
-    throw new Error("RESEND_API_KEY no está configurada; no se envió ningún correo.");
+    throw new Error("RESEND_API_KEY is not configured; no email was sent.");
   }
 
   try {
@@ -23,7 +23,7 @@ export async function sendOutreachEmail(
             ${body.replace(/\n/g, "<br>")}
             <hr style="margin-top: 30px; border: none; border-top: 1px solid #ddd;">
             <p style="font-size: 12px; color: #999; text-align: center;">
-              Enviado por <strong>EcoScale Partner</strong> — Commerce Intelligence Platform
+              Sent by <strong>EcoScale Partner</strong> — Commerce Intelligence Platform
             </p>
           </div>
         </div>
@@ -31,7 +31,7 @@ export async function sendOutreachEmail(
     });
     return result;
   } catch (error) {
-    console.error("❌ Error enviando email:", error);
+    console.error("❌ Error sending email:", error);
     throw error;
   }
 }

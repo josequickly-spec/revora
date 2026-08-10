@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  title: "FunnelSpy AI — Inteligencia competitiva de embudos",
-  description: "Analiza páginas, CTAs, formularios, tecnologías, rendimiento y estrategia de conversión usando evidencia pública e inteligencia artificial.",
+  title: "FunnelSpy AI — Competitive Funnel Intelligence",
+  description: "Analyze pages, CTAs, forms, technologies, performance, and conversion strategy using public evidence and artificial intelligence.",
 };
 
 export default function FunnelSpyLayout({ children }: { children: ReactNode }) {

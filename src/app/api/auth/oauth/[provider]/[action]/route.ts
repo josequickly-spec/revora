@@ -48,7 +48,8 @@ export async function GET(request:NextRequest,{params}:{params:Promise<{provider
       const response=NextResponse.redirect(new URL("/",request.nextUrl.origin));
       const secure=shouldUseSecureCookies(request);
       response.cookies.set("revora_access",session.accessToken,{httpOnly:true,secure,sameSite:"lax",path:"/",maxAge:900});
-      response.cookies.set("revora_refresh",session.refreshToken,{httpOnly:true,secure,sameSite:"lax",path:"/api/auth",maxAge:2_592_000});
+      response.cookies.set("revora_refresh",session.refreshToken,{httpOnly:true,secure,sameSite:"lax",path:"/",maxAge:2_592_000});
+      response.headers.append("Set-Cookie",`revora_refresh=; Path=/api/auth; Max-Age=0; HttpOnly; SameSite=Lax${secure?"; Secure":""}`);
       response.cookies.delete("revora_oauth_state");
       return response;
     }

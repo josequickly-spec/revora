@@ -11,7 +11,7 @@ export function AutoDiscovery() {
   const [businessCategory, setBusinessCategory] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [languageMode, setLanguageMode] = useState<"es" | "en" | "bilingual">("bilingual");
+  const [languageMode, setLanguageMode] = useState<"es" | "en" | "bilingual">("en");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState("");
@@ -19,7 +19,7 @@ export function AutoDiscovery() {
   const handleDiscover = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!businessName || (!domain && !city && !zipcode)) {
-      setError("Indica el negocio y un dominio, ciudad o código postal");
+      setError("Enter the business and a domain, city, or ZIP code");
       return;
     }
 
@@ -57,10 +57,10 @@ export function AutoDiscovery() {
         setFirstName("");
         setLastName("");
       } else {
-        setError(data.error || "Error en discovery");
+        setError(data.error || "Discovery error");
       }
     } catch (err) {
-      setError("Error conectando a Hunter.io");
+      setError("Error connecting to Hunter.io");
       console.error(err);
     } finally {
       setLoading(false);
@@ -70,36 +70,36 @@ export function AutoDiscovery() {
   return (
     <div className="space-y-6">
       <div className="bg-gradient-to-r from-purple-950 via-slate-900 to-blue-950 border border-purple-800/40 rounded-2xl p-6 shadow-xl">
-        <h2 className="text-2xl font-black text-white mb-1">🤖 Discovery Automático (Hunter.io)</h2>
+        <h2 className="text-2xl font-black text-white mb-1">🤖 Auto Discovery (Hunter.io)</h2>
         <p className="text-sm text-slate-300">
-          Busca automáticamente negocios por dominio y descubre el email del CEO/Fundador usando Hunter.io
+          Automatically search for businesses by domain and discover the CEO/Founder&apos;s email using Hunter.io
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Formulario */}
+        {/* Form */}
         <div className="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-2xl">
           <form onSubmit={handleDiscover} className="space-y-4">
             <div>
-              <label className="text-xs text-slate-400 font-semibold block mb-1">Idioma del embudo</label>
+              <label className="text-xs text-slate-400 font-semibold block mb-1">Funnel language</label>
               <select
                 value={languageMode}
                 onChange={(e) => setLanguageMode(e.target.value as "es" | "en" | "bilingual")}
                 className="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm"
               >
-                <option value="bilingual">Bilingüe — Español + English</option>
-                <option value="es">Solo español</option>
                 <option value="en">English only</option>
+                <option value="bilingual">Bilingual — Spanish + English</option>
+                <option value="es">Spanish only</option>
               </select>
             </div>
 
             <div>
               <label className="text-xs text-slate-400 font-semibold block mb-1">
-                Dominio del Negocio (opcional)
+                Business Domain (optional)
               </label>
               <input
                 type="text"
-                placeholder="ejemplo.com (sin https://)"
+                placeholder="example.com (no https://)"
                 value={domain}
                 onChange={(e) => setDomain(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2 focus:outline-none focus:border-purple-500 text-sm"
@@ -108,21 +108,21 @@ export function AutoDiscovery() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs text-slate-400 font-semibold block mb-1">Ciudad</label>
+                <label className="text-xs text-slate-400 font-semibold block mb-1">City</label>
                 <input
                   type="text"
-                  placeholder="ej. Miami"
+                  placeholder="e.g. Miami"
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2 focus:outline-none focus:border-purple-500 text-sm"
                 />
               </div>
               <div>
-                <label className="text-xs text-slate-400 font-semibold block mb-1">Código postal</label>
+                <label className="text-xs text-slate-400 font-semibold block mb-1">ZIP code</label>
                 <input
                   type="text"
                   inputMode="numeric"
-                  placeholder="ej. 33101"
+                  placeholder="e.g. 33101"
                   value={zipcode}
                   onChange={(e) => setZipcode(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2 focus:outline-none focus:border-purple-500 text-sm"
@@ -132,11 +132,11 @@ export function AutoDiscovery() {
 
             <div>
               <label className="text-xs text-slate-400 font-semibold block mb-1">
-                Nombre del Negocio *
+                Business Name *
               </label>
               <input
                 type="text"
-                placeholder="ej. Peluquería Luxe"
+                placeholder="e.g. Luxe Salon"
                 value={businessName}
                 onChange={(e) => setBusinessName(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2 focus:outline-none focus:border-purple-500 text-sm"
@@ -144,75 +144,75 @@ export function AutoDiscovery() {
             </div>
 
             <div>
-              <label className="text-xs text-slate-400 font-semibold block mb-1">Tipo de Negocio</label>
+              <label className="text-xs text-slate-400 font-semibold block mb-1">Business Type</label>
               <select
                 value={industryType}
                 onChange={(e) => setIndustryType(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm"
               >
-                <option value="general">Otro / Cualquier negocio</option>
+                <option value="general">Other / Any business</option>
                 <option value="ecommerce">E-Commerce</option>
-                <option value="restaurant">Restaurante</option>
-                <option value="gym">Gimnasio</option>
-                <option value="professional">Servicios Profesionales</option>
-                <option value="healthcare">Salud/Clínica</option>
+                <option value="restaurant">Restaurant</option>
+                <option value="gym">Gym</option>
+                <option value="professional">Professional Services</option>
+                <option value="healthcare">Healthcare/Clinic</option>
                 <option value="saas">SaaS</option>
-                <option value="realestate">Inmobiliaria</option>
+                <option value="realestate">Real Estate</option>
                 <option value="coaching">Coaching</option>
-                <option value="agency">Agencia</option>
+                <option value="agency">Agency</option>
               </select>
             </div>
 
             {industryType === "general" && (
               <div>
                 <label className="text-xs text-slate-400 font-semibold block mb-1">
-                  Categoría específica *
+                  Specific category *
                 </label>
                 <input
                   required
                   type="text"
                   list="general-business-categories"
-                  placeholder="ej. Concesionario, Peluquería, Construcción..."
+                  placeholder="e.g. Dealership, Salon, Construction..."
                   value={businessCategory}
                   onChange={(e) => setBusinessCategory(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2 focus:outline-none focus:border-purple-500 text-sm"
                 />
                 <datalist id="general-business-categories">
-                  <option value="Automoción / Concesionario" />
-                  <option value="Belleza / Peluquería / Spa" />
-                  <option value="Construcción / Contratista" />
-                  <option value="Limpieza" />
-                  <option value="Servicios para el hogar" />
-                  <option value="Comercio minorista" />
-                  <option value="Turismo / Hotel" />
-                  <option value="Fabricación" />
-                  <option value="Reparaciones / Taller" />
-                  <option value="Finanzas / Seguros" />
-                  <option value="Educación / Academia" />
-                  <option value="Logística / Transporte" />
+                  <option value="Automotive / Dealership" />
+                  <option value="Beauty / Salon / Spa" />
+                  <option value="Construction / Contractor" />
+                  <option value="Cleaning" />
+                  <option value="Home Services" />
+                  <option value="Retail" />
+                  <option value="Tourism / Hotel" />
+                  <option value="Manufacturing" />
+                  <option value="Repairs / Auto Shop" />
+                  <option value="Finance / Insurance" />
+                  <option value="Education / Academy" />
+                  <option value="Logistics / Transportation" />
                 </datalist>
                 <p className="text-[11px] text-slate-500 mt-1">
-                  Puedes elegir una sugerencia o escribir cualquier otra actividad.
+                  You can pick a suggestion or type any other activity.
                 </p>
               </div>
             )}
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs text-slate-400 font-semibold block mb-1">Nombre (Opcional)</label>
+                <label className="text-xs text-slate-400 font-semibold block mb-1">First Name (Optional)</label>
                 <input
                   type="text"
-                  placeholder="Juan"
+                  placeholder="John"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2 focus:outline-none focus:border-purple-500 text-sm"
                 />
               </div>
               <div>
-                <label className="text-xs text-slate-400 font-semibold block mb-1">Apellido (Opcional)</label>
+                <label className="text-xs text-slate-400 font-semibold block mb-1">Last Name (Optional)</label>
                 <input
                   type="text"
-                  placeholder="Pérez"
+                  placeholder="Smith"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2 focus:outline-none focus:border-purple-500 text-sm"
@@ -235,51 +235,51 @@ export function AutoDiscovery() {
               {loading ? (
                 <>
                   <Loader className="w-4 h-4 animate-spin" />
-                  Descubriendo...
+                  Discovering...
                 </>
               ) : (
                 <>
                   <Zap className="w-4 h-4" />
-                  Descubrir Negocio
+                  Discover Business
                 </>
               )}
             </button>
           </form>
         </div>
 
-        {/* Resultado */}
+        {/* Result */}
         <div className="lg:col-span-7 space-y-4">
           {result ? (
             <>
               <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4">
                 <div className="flex items-center gap-2 pb-3 border-b border-slate-800">
                   <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                  <h3 className="font-bold text-white text-lg">Negocio Descubierto</h3>
+                  <h3 className="font-bold text-white text-lg">Business Discovered</h3>
                 </div>
 
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Negocio:</span>
+                    <span className="text-slate-400">Business:</span>
                     <span className="font-semibold text-white">{result.business?.name}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Dominio:</span>
+                    <span className="text-slate-400">Domain:</span>
                     <span className="font-mono text-blue-400">{result.business?.domain}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Industria:</span>
+                    <span className="text-slate-400">Industry:</span>
                     <span className="text-slate-200">{result.business?.businessType}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Ubicación:</span>
+                    <span className="text-slate-400">Location:</span>
                     <span className="text-slate-200">
-                      {[result.business?.city, result.business?.postalCode].filter(Boolean).join(" ") || "No disponible"}
+                      {[result.business?.city, result.business?.postalCode].filter(Boolean).join(" ") || "Not available"}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Embudo:</span>
+                    <span className="text-slate-400">Funnel:</span>
                     <span className="text-emerald-400 font-semibold">
-                      {(result.availableLanguages || ["es"]).map((lang: string) => `/${lang}/funnel/${result.funnel?.slug}`).join(" · ")}
+                      {(result.availableLanguages || ["en"]).map((lang: string) => `/${lang}/funnel/${result.funnel?.slug}`).join(" · ")}
                     </span>
                   </div>
                 </div>
@@ -287,18 +287,18 @@ export function AutoDiscovery() {
 
               <div className="bg-cyan-950/50 border border-cyan-800/70 rounded-2xl p-5 shadow-xl">
                 <div className="flex items-center justify-between gap-3">
-                  <h3 className="font-bold text-white">Tecnología · BuiltWith</h3>
+                  <h3 className="font-bold text-white">Technology · BuiltWith</h3>
                   <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${
                     result.builtWith?.connected ? "bg-emerald-900 text-emerald-200" : "bg-slate-800 text-slate-300"
                   }`}>
-                    {result.builtWith?.connected ? "CONECTADO" : result.builtWith?.configured ? "SIN RESULTADOS" : "FALTA API KEY"}
+                    {result.builtWith?.connected ? "CONNECTED" : result.builtWith?.configured ? "NO RESULTS" : "MISSING API KEY"}
                   </span>
                 </div>
                 {result.builtWith?.connected ? (
                   <div className="mt-3 space-y-3">
                     <p className="text-sm text-cyan-100">
-                      {result.builtWith.technologyCount} tecnologías detectadas
-                      {result.builtWith.primaryPlatform ? ` · Plataforma: ${result.builtWith.primaryPlatform}` : ""}
+                      {result.builtWith.technologyCount} technologies detected
+                      {result.builtWith.primaryPlatform ? ` · Platform: ${result.builtWith.primaryPlatform}` : ""}
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {(result.builtWith.technologies || []).slice(0, 10).map((technology: {name:string}) => (
@@ -310,7 +310,7 @@ export function AutoDiscovery() {
                   </div>
                 ) : (
                   <p className="text-xs text-slate-400 mt-2">
-                    Añade BUILTWITH_API_KEY en las variables de entorno para activar el análisis tecnológico profundo.
+                    Add BUILTWITH_API_KEY to the environment variables to enable deep technology analysis.
                   </p>
                 )}
               </div>
@@ -319,12 +319,12 @@ export function AutoDiscovery() {
                 <div className="bg-emerald-950/60 border border-emerald-700/80 rounded-2xl p-6 shadow-2xl space-y-3">
                   <div className="flex items-center gap-2 pb-3 border-b border-emerald-700/60">
                     <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                    <h3 className="font-bold text-white">Email Descubierto (Hunter.io)</h3>
+                    <h3 className="font-bold text-white">Email Discovered (Hunter.io)</h3>
                   </div>
 
                   <div className="space-y-3 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-emerald-300">Contacto:</span>
+                      <span className="text-emerald-300">Contact:</span>
                       <span className="font-semibold text-white">{result.contact?.name}</span>
                     </div>
                     <div className="flex justify-between">
@@ -332,13 +332,13 @@ export function AutoDiscovery() {
                       <span className="font-mono text-emerald-400 font-semibold">{result.contact?.email}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-emerald-300">Confianza:</span>
+                      <span className="text-emerald-300">Confidence:</span>
                       <span className="bg-emerald-900 px-2 py-0.5 rounded text-xs font-bold text-emerald-200">
                         {Math.round(result.contact?.confidenceScore || 0)}%
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-emerald-300">Rol:</span>
+                      <span className="text-emerald-300">Role:</span>
                       <span className="text-slate-200">{result.contact?.role}</span>
                     </div>
                   </div>
@@ -348,11 +348,11 @@ export function AutoDiscovery() {
               <div className="bg-blue-950/60 border border-blue-700/80 rounded-2xl p-4 text-xs text-blue-200 flex items-start gap-2">
                 <Zap className="w-4 h-4 shrink-0 mt-0.5 text-blue-400" />
                 <div>
-                  <strong>Listo para los siguientes pasos:</strong>
+                  <strong>Ready for next steps:</strong>
                   <ul className="mt-1 space-y-1 ml-4 list-disc">
-                    <li>Embudo generado ✓</li>
-                    <li>Email del CEO encontrado {result.emailFound ? "✓" : "⏳"}</li>
-                    <li>Listo para enviar pitch y Loom video</li>
+                    <li>Funnel generated ✓</li>
+                    <li>CEO email found {result.emailFound ? "✓" : "⏳"}</li>
+                    <li>Ready to send pitch and Loom video</li>
                   </ul>
                 </div>
               </div>
@@ -360,9 +360,9 @@ export function AutoDiscovery() {
           ) : (
             <div className="bg-slate-900/60 border-2 border-dashed border-slate-700 rounded-2xl p-8 flex flex-col items-center justify-center text-center min-h-[300px]">
               <Search className="w-12 h-12 text-slate-600 mb-3" />
-              <p className="text-slate-400 text-sm">Llena el formulario y haz clic &quot;Descubrir Negocio&quot;</p>
+              <p className="text-slate-400 text-sm">Fill out the form and click &quot;Discover Business&quot;</p>
               <p className="text-slate-500 text-xs mt-2">
-                Buscaremos automáticamente en Hunter.io el email del CEO/Fundador
+                We&apos;ll automatically search Hunter.io for the CEO/Founder&apos;s email
               </p>
             </div>
           )}

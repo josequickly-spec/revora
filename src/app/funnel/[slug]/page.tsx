@@ -1,10 +1,24 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ShieldCheck, Sparkles, CheckCircle2, Flame, ArrowRight, Gift, Lock, Heart, ChevronRight } from "lucide-react";
 
-const INDUSTRY_ICONS: Record<string,string> = { general:"🏢", ecommerce:"🛒", restaurant:"🍽️", gym:"💪", professional:"👨‍💼", healthcare:"🏥", saas:"💻", realestate:"🏠", coaching:"🎓", agency:"🚀" };
+const externalImageLoader = ({ src }: { src: string }) => src;
+
+const INDUSTRY_ICONS: Record<string,string> = {
+  general: "🏢",
+  ecommerce: "🛒",
+  restaurant: "🍽️",
+  gym: "💪",
+  professional: "👨‍💼",
+  healthcare: "🏥",
+  saas: "💻",
+  realestate: "🏠",
+  coaching: "🎓",
+  agency: "🚀",
+};
 
 function isLightColor(value: string) {
   const match = /^#([0-9a-f]{6})$/i.exec(value);
@@ -21,7 +35,7 @@ export default function PublicFunnelPage() {
   const router = useRouter();
   const slug = params?.slug as string;
   const routeLanguage = params?.lang === "en" ? "en" : params?.lang === "es" ? "es" : null;
-  const lang: "es" | "en" = routeLanguage || "es";
+  const lang: "en" = "en";
   const [loading, setLoading] = useState(true);
   const [funnel, setFunnel] = useState<any>(null);
   const [biz, setBiz] = useState<any>(null);
@@ -38,8 +52,7 @@ export default function PublicFunnelPage() {
   useEffect(() => {
     document.documentElement.lang = lang;
     if (!routeLanguage) {
-      const detected = navigator.language.toLowerCase().startsWith("en") ? "en" : "es";
-      router.replace(`/${detected}/funnel/${encodeURIComponent(slug || "")}`);
+      router.replace(`/en/funnel/${encodeURIComponent(slug || "")}`);
       return;
     }
     (async () => {
@@ -47,8 +60,8 @@ export default function PublicFunnelPage() {
         const r = await fetch(`/api/funnels?slug=${encodeURIComponent(slug || "")}`);
         const j = await r.json();
         if (j.success) { setFunnel(j.funnel); setBiz(j.business); }
-        else setLoadError(j.error || "No se encontró este embudo");
-      } catch (e) { console.error(e); setLoadError("No se pudo cargar el embudo"); }
+        else setLoadError(j.error || "This funnel was not found");
+      } catch (e) { console.error(e); setLoadError("Could not load the funnel"); }
       finally { setLoading(false); }
     })();
   }, [lang, routeLanguage, router, slug]);
@@ -64,21 +77,21 @@ export default function PublicFunnelPage() {
     });
     const data = await response.json();
     if (!response.ok) {
-      setSubmitError(data.error || "No se pudo registrar tu solicitud");
+      setSubmitError(data.error || "Could not register your request");
       return;
     }
     setEmailDelivered(data.emailDelivered === true);
     setCompleted(true);
   };
 
-  const name = biz?.name || "Negocio";
+  const name = biz?.name || "Business";
   const storedContent = funnel?.contentJson;
-  const content = storedContent?.translations?.[lang] || storedContent;
+  const content = storedContent?.translations?.en || storedContent;
   const pageSpec = content?.landingPage;
   const otom = content?.otom;
-  const offer = content?.offer || biz?.heroOffer || (lang === "en" ? "Special offer" : "Oferta especial");
-  const rawPrice = biz?.heroPrice || "Gratis";
-  const price = lang === "en" && /^(consultar|gratis)$/i.test(rawPrice)
+  const offer = content?.offer || biz?.heroOffer || "Special offer";
+  const rawPrice = biz?.heroPrice || "Free";
+  const price = /^(consultar|gratis)$/i.test(rawPrice)
     ? (/gratis/i.test(rawPrice) ? "Free" : "Ask for details")
     : rawPrice;
   const color = content?.colorScheme?.primary || funnel?.customPrimaryColor || biz?.brandColor || "#6366F1";
@@ -91,7 +104,7 @@ export default function PublicFunnelPage() {
   const currency = biz?.country === "Colombia" ? "COP" : "USD";
   const type = biz?.businessType || "general";
   const icon = INDUSTRY_ICONS[type] || "🏢";
-  const availableLanguages: string[] = storedContent?.availableLanguages || ["es"];
+  const availableLanguages: string[] = storedContent?.availableLanguages || ["en"];
   const ui = lang === "en" ? {
     loading: "Loading funnel...", unavailable: "Funnel unavailable", missing: "No data was found for this link.",
     back: "Back to the app", verified: "Verified business", name: "Name", phone: "Phone (optional)",
@@ -104,16 +117,16 @@ export default function PublicFunnelPage() {
     price: "Offer price", availability: "Availability", consult: "Ask about availability", bonus: "YES, INCLUDE THIS BONUS",
     secure: "Secure", protected: "Data protected",
   } : {
-    loading: "Cargando embudo...", unavailable: "Embudo no disponible", missing: "No se encontraron datos para este enlace.",
-    back: "Volver a la aplicación", verified: "Negocio verificado", name: "Nombre", phone: "Teléfono (opcional)",
-    consent: `Acepto que ${name} me contacte sobre esta solicitud.`, received: "¡Solicitud recibida!",
-    receivedBody: "Tu solicitud quedó registrada. El negocio ya puede contactarte.", emailBody: "Revisa tu correo para conocer el siguiente paso.", challenge: "El reto", solution: "La solución",
-    how: "Cómo funciona", steps: "Un proceso claro, paso a paso", next: "Un siguiente paso transparente",
+    loading: "Loading funnel...", unavailable: "Funnel unavailable", missing: "No data was found for this link.",
+    back: "Back to the app", verified: "Verified business", name: "Name", phone: "Phone (optional)",
+    consent: `I agree that ${name} may contact me about this request.`, received: "Request received!",
+    receivedBody: "Your request was saved. The business can now contact you.", emailBody: "Check your email for the next step.", challenge: "The challenge", solution: "The solution",
+    how: "How it works", steps: "A clear step-by-step process", next: "A transparent next step",
     faq: "Preguntas frecuentes",
-    published: "Oferta publicada por el negocio", built: "Embudo por EcoScale Partner", designed: "Diseñado para",
-    views: "Visitas registradas", special: "OFERTA ESPECIAL", available: "Disponible", disclaimer: `Esta página no publica reseñas, puntuaciones ni disponibilidad inventadas. Confirma los detalles directamente con ${name}.`,
-    price: "Precio oferta", availability: "Disponibilidad", consult: "Consulta disponibilidad", bonus: "SÍ, AÑADIR ESTE BONUS",
-    secure: "Seguro", protected: "Datos protegidos",
+    published: "Offer published by the business", built: "Funnel by EcoScale Partner", designed: "Designed for",
+    views: "Recorded visits", special: "SPECIAL OFFER", available: "Available", disclaimer: `This page does not publish invented reviews, ratings or availability. Confirm details directly with ${name}.`,
+    price: "Offer price", availability: "Availability", consult: "Ask about availability", bonus: "YES, INCLUDE THIS BONUS",
+    secure: "Secure", protected: "Data protected",
   };
 
   if (loading) return (
@@ -127,8 +140,8 @@ export default function PublicFunnelPage() {
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white p-6 text-center">
       <h1 className="text-2xl font-black">{ui.unavailable}</h1>
       <p className="text-slate-400 mt-2">{loadError || ui.missing}</p>
-      <Link href="/funnelspy" className="mt-5 bg-emerald-600 px-5 py-3 rounded-xl font-bold">
-        {lang === "en" ? "Back to FunnelSpy" : "Volver a FunnelSpy"}
+    <Link href="/funnelspy" className="mt-5 bg-emerald-600 px-5 py-3 rounded-xl font-bold">
+        Back to FunnelSpy
       </Link>
     </div>
   );
@@ -156,13 +169,12 @@ export default function PublicFunnelPage() {
           <span className="hidden sm:inline text-slate-400">{ui.designed} <strong className="text-white">{name}</strong></span>
         </div>
         <div className="flex items-center gap-3">
-          {availableLanguages.includes("es") && <Link href={`/es/funnel/${slug}`} className={lang === "es" ? "text-white font-bold" : "text-slate-400"}>ES</Link>}
-          {availableLanguages.includes("en") && <Link href={`/en/funnel/${slug}`} className={lang === "en" ? "text-white font-bold" : "text-slate-400"}>EN</Link>}
+          <span className="text-white font-bold">EN</span>
           <Link href="/funnelspy" className="text-emerald-400 hover:text-emerald-300 font-medium flex items-center gap-1 transition">
-            {lang === "en" ? "Back to FunnelSpy" : "Volver a FunnelSpy"} <ChevronRight className="w-3.5 h-3.5" />
+            Back to FunnelSpy <ChevronRight className="w-3.5 h-3.5" />
           </Link>
           <Link href="/" className="text-slate-400 hover:text-white font-medium transition">
-            {lang === "en" ? "Open EcoScale Partner" : "Abrir EcoScale Partner"}
+            Open EcoScale Partner
           </Link>
         </div>
       </div>
@@ -171,7 +183,7 @@ export default function PublicFunnelPage() {
       <header className="border-b backdrop-blur sticky top-0 z-30" style={{...panelStyle,opacity:.97}}>
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {pageSpec?.logoUrl ? <img src={pageSpec.logoUrl} alt={`${name} logo`} className="h-10 w-auto max-w-36 object-contain"/> : <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-white text-lg shadow-md" style={{ backgroundColor: color }}>{name.charAt(0)}</div>}
+            {pageSpec?.logoUrl ? <Image loader={externalImageLoader} unoptimized src={pageSpec.logoUrl} alt={`${name} logo`} width={144} height={40} className="h-10 w-auto max-w-36 object-contain"/> : <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-white text-lg shadow-md" style={{ backgroundColor: color }}>{name.charAt(0)}</div>}
             <div>
               <h1 className="font-bold text-lg tracking-tight" style={{color:textColor}}>{name}</h1>
               <p className="text-[11px] flex items-center gap-1" style={{color:mutedColor}}><CheckCircle2 className="w-3 h-3" style={{color}} /> {icon} {ui.verified} • {biz?.niche}</p>
@@ -200,7 +212,7 @@ export default function PublicFunnelPage() {
                 <Sparkles className="w-3.5 h-3.5" /> {ui.available} — {biz?.country}
               </div>
               <div className="relative h-80 sm:h-96 w-full flex items-center justify-center p-8" style={{backgroundColor}}>
-                {pageSpec?.heroImageUrl ? <><img src={pageSpec.heroImageUrl} alt="" className="absolute inset-0 size-full object-cover"/><div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent"/><div className="absolute inset-x-0 bottom-0 z-10 p-6"><p className="max-w-xl text-2xl font-black text-white">{content?.headline || offer}</p><p className="mt-2 max-w-xl text-sm text-white/80">{content?.subheadline}</p></div></> : <div className="relative z-10 w-56 h-56 sm:w-64 sm:h-64 rounded-3xl p-6 flex flex-col justify-between shadow-2xl border border-white/20 transform group-hover:scale-105 transition duration-500" style={{ background: `linear-gradient(135deg, ${color}dd 0%, ${surfaceColor} 100%)` }}>
+                {pageSpec?.heroImageUrl ? <><Image loader={externalImageLoader} unoptimized src={pageSpec.heroImageUrl} alt="" fill className="absolute inset-0 object-cover"/><div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent"/><div className="absolute inset-x-0 bottom-0 z-10 p-6"><p className="max-w-xl text-2xl font-black text-white">{content?.headline || offer}</p><p className="mt-2 max-w-xl text-sm text-white/80">{content?.subheadline}</p></div></> : <div className="relative z-10 w-56 h-56 sm:w-64 sm:h-64 rounded-3xl p-6 flex flex-col justify-between shadow-2xl border border-white/20 transform group-hover:scale-105 transition duration-500" style={{ background: `linear-gradient(135deg, ${color}dd 0%, ${surfaceColor} 100%)` }}>
                   <div className="flex justify-between items-center text-white/90">
                     <span className="text-xs font-bold tracking-wider uppercase">{name}</span>
                     <Heart className="w-5 h-5 text-rose-300 fill-rose-300" />
@@ -211,7 +223,7 @@ export default function PublicFunnelPage() {
                     <p className="text-white/70 text-xs mt-1">{biz?.niche}</p>
                   </div>
                   <div className="bg-black/40 backdrop-blur rounded-lg p-2 text-center text-xs font-semibold text-emerald-300">
-                    {lang === "en" ? "Request information with no obligation" : "Solicita información sin compromiso"}
+                    Request information with no obligation
                   </div>
                 </div>}
               </div>
@@ -275,7 +287,7 @@ export default function PublicFunnelPage() {
                   </label>
                   {submitError && <p className="text-xs text-red-400">{submitError}</p>}
                   <button type="submit" className="w-full py-4 px-6 rounded-xl font-black text-white text-base tracking-wide shadow-xl flex items-center justify-center gap-3 transition hover:opacity-95" style={{ backgroundColor: color, boxShadow: `0 10px 25px -5px ${color}66` }}>
-                    <span>{content?.ctaText || funnel?.ctaText || (lang === "en" ? "REQUEST INFORMATION" : "SOLICITAR INFORMACIÓN")}</span>
+                    <span>{content?.ctaText || funnel?.ctaText || "REQUEST INFORMATION"}</span>
                     <ArrowRight className="w-5 h-5" />
                   </button>
                 </form>
@@ -303,7 +315,7 @@ export default function PublicFunnelPage() {
             </div>
             {(Array.isArray(content.fascinationBullets) || Array.isArray(content.benefits)) && (
               <div id="benefits">
-                <h3 className="text-2xl font-black text-center mb-2">{content.leadMagnet?.name || "Qué vas a descubrir"}</h3>
+                <h3 className="text-2xl font-black text-center mb-2">{content.leadMagnet?.name || "What you&apos;ll discover"}</h3>
                 <p className="text-slate-400 text-center mb-5">{content.leadMagnet?.format}</p>
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {(content.fascinationBullets || content.benefits).map((benefit: string) => (
@@ -331,22 +343,22 @@ export default function PublicFunnelPage() {
             )}
             {otom && (
               <div className="rounded-3xl border p-6 sm:p-8" style={panelStyle}>
-                <p className="text-center text-xs font-black uppercase tracking-[.2em]" style={{color}}>Oferta diseñada para avanzar</p>
-                <h3 className="mt-2 text-center text-2xl font-black">El siguiente paso, sin saltos ni sorpresas</h3>
+                <p className="text-center text-xs font-black uppercase tracking-[.2em]" style={{color}}>An offer designed to move you forward</p>
+                <h3 className="mt-2 text-center text-2xl font-black">The next step, no jumps or surprises</h3>
                 <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                   {[
-                    {label:"Entrada", item:otom.hook},
-                    {label:"Oferta principal", item:otom.coreOffer},
-                    {label:"Mejora opcional", item:otom.upsell},
-                    {label:"Alternativa", item:otom.downsell},
+                    {label: "Entry", item:otom.hook},
+                    {label: "Core offer", item:otom.coreOffer},
+                    {label: "Optional upgrade", item:otom.upsell},
+                    {label: "Alternative", item:otom.downsell},
                   ].map(({label,item}) => <article key={label} className="rounded-2xl border p-5" style={{backgroundColor,borderColor:`${color}25`}}>
                     <span className="text-[10px] font-black uppercase tracking-widest opacity-55">{label}</span>
                     <h4 className="mt-2 text-lg font-black">{item?.name}</h4>
                     <p className="mt-2 text-sm leading-6" style={{color:mutedColor}}>{item?.description}</p>
-                    {item?.pricePoint > 0 && <p className="mt-4 text-xl font-black" style={{color}}>{new Intl.NumberFormat(lang === "en" ? "en-US" : "es-CO", {style:"currency",currency}).format(item.pricePoint)}</p>}
+                    {item?.pricePoint > 0 && <p className="mt-4 text-xl font-black" style={{color}}>{new Intl.NumberFormat("en-US", {style:"currency",currency}).format(item.pricePoint)}</p>}
                   </article>)}
                 </div>
-                {Array.isArray(otom.customerJourney) && otom.customerJourney.length > 0 && <div className="mt-8"><h4 className="text-lg font-black">{lang === "en" ? "Connected customer journey" : "Recorrido conectado"}</h4><ol className="mt-4 grid gap-3 md:grid-cols-2">{otom.customerJourney.map((step: {step:number;action:string;trigger:string;expectedResult:string}) => <li key={`${step.step}-${step.action}`} className="rounded-xl border p-4" style={{backgroundColor,borderColor:`${color}25`}}><span className="text-xs font-black" style={{color}}>0{step.step}</span><strong className="ml-3">{step.action}</strong><p className="mt-2 text-sm" style={{color:mutedColor}}>{step.expectedResult}</p></li>)}</ol></div>}
+                {Array.isArray(otom.customerJourney) && otom.customerJourney.length > 0 && <div className="mt-8"><h4 className="text-lg font-black">Connected customer journey</h4><ol className="mt-4 grid gap-3 md:grid-cols-2">{otom.customerJourney.map((step: {step:number;action:string;trigger:string;expectedResult:string}) => <li key={`${step.step}-${step.action}`} className="rounded-xl border p-4" style={{backgroundColor,borderColor:`${color}25`}}><span className="text-xs font-black" style={{color}}>0{step.step}</span><strong className="ml-3">{step.action}</strong><p className="mt-2 text-sm" style={{color:mutedColor}}>{step.expectedResult}</p></li>)}</ol></div>}
               </div>
             )}
             <div className="border rounded-2xl p-6" style={panelStyle}>
@@ -381,3 +393,5 @@ export default function PublicFunnelPage() {
     </div>
   );
 }
+
+

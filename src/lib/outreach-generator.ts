@@ -28,12 +28,39 @@ export interface OutreachBusinessContext {
   problems?: string[];
   opportunity?: string;
   previewUrl?: string;
+  previewDescription?: string;
+  previewAvailable?: boolean;
   objective?: string;
   senderName?: string;
   senderCompany?: string;
+  selectedInsights?: Array<{
+    title: string;
+    observation: string;
+    evidence: string;
+  }>;
+  auditOpportunities?: string[];
+  auditEvidence?: string[];
+  priorityIssues?: string[];
+  hook?: string;
+  coreOffer?: string;
+  upsell?: string;
+  downsell?: string;
+  customerJourney?: string[];
+  valueProposition?: string;
 }
 
 export interface GeneratedOutreach {
+  firstEmail: {
+    subjectOptions: string[];
+    selectedSubject: string;
+    opening: string;
+    insights: Array<{ title: string; observation: string; evidence: string }>;
+    body: string;
+    cta: string;
+    fullEmail: string;
+    confidence: number;
+    warnings: string[];
+  };
   emailSequence: EmailSequence[];
   videoPitch: VideoPitch;
   personalizationUsed: string[];
@@ -47,6 +74,21 @@ export interface GeneratedOutreach {
 }
 
 const outreachSchema = z.object({
+  firstEmail: z.object({
+    subjectOptions: z.array(z.string().max(80)).length(3),
+    selectedSubject: z.string().max(80),
+    opening: z.string(),
+    insights: z.array(z.object({
+      title: z.string(),
+      observation: z.string(),
+      evidence: z.string(),
+    })).max(2),
+    body: z.string(),
+    cta: z.string(),
+    fullEmail: z.string(),
+    confidence: z.number().min(0).max(100),
+    warnings: z.array(z.string()),
+  }),
   emailSequence: z.array(z.object({
     subject: z.string(),
     body: z.string(),
@@ -65,7 +107,12 @@ const outreachSchema = z.object({
   }),
   personalizationUsed: z.array(z.string()).max(12),
   claimsToVerify: z.array(z.string()).max(12),
-  followUpTiming: z.object({ firstEmail: z.string(), videoEmail: z.string(), followUp1: z.string(), followUp2: z.string() }),
+  followUpTiming: z.object({
+    firstEmail: z.string(),
+    videoEmail: z.string(),
+    followUp1: z.string(),
+    followUp2: z.string(),
+  }),
 });
 
 export async function generateOutreachSequence(
@@ -76,52 +123,94 @@ export async function generateOutreachSequence(
   bonusOffer: string,
   context: OutreachBusinessContext = {},
 ): Promise<GeneratedOutreach> {
+  const selectedInsights = (context.selectedInsights || []).slice(0, 2);
+  const auditOpportunities = context.auditOpportunities || context.problems || [painPoint].filter(Boolean);
+  const auditEvidence = context.auditEvidence || [];
+  const priorityIssues = context.priorityIssues || [];
+  const previewAvailable = context.previewAvailable ?? Boolean(context.previewUrl);
+  const previewDescription = context.previewDescription || "Preview prepared from the selected evidence";
+  const hook = context.hook || offerHeadline;
+  const coreOffer = context.coreOffer || offerHeadline;
+  const upsell = context.upsell || bonusOffer;
+  const downsell = context.downsell || "Conservative implementation option";
+  const customerJourney = context.customerJourney || [];
+  const valueProposition = context.valueProposition || offerHeadline;
+
   const generation = await generateStructured({
     task: "strategy",
     schemaName: "professional_b2b_outreach",
     schema: outreachSchema,
     timeoutMs: 120_000,
-    system: "Actúa como estratega senior de ventas B2B, copywriter de cold email y consultor de optimización de conversión. Escribe en español neutro y usa solamente los hechos suministrados.",
-    user: `Crea una secuencia profesional de cinco emails y un guion Loom de 90 segundos.
+    system: "Act as a senior B2B outreach strategist specializing in CRO, funnels, ecommerce, services, and digital growth. Write everything in clear English. Use only supplied evidence. Never invent a problem, metric, result, or promise. Treat the selected insights as the single source of truth for the first email, Loom, and preview story.",
+    user: `Create a professional five-email sequence and a 90-second Loom script.
 
-DATOS DEL NEGOCIO
-- Nombre: ${businessName}
-- Web: ${context.website || "no confirmada"}
-- Decisor: ${contactName || "decisor no identificado"}
-- Cargo: ${context.contactRole || "no confirmado"}
-- Industria: ${context.industry || "no confirmada"}
-- Ubicación: ${context.location || "no confirmada"}
-- Oferta: ${offerHeadline || "no confirmada"}
-- Audiencia: ${context.audience || "no confirmada"}
-- Problemas detectados: ${JSON.stringify(context.problems?.length ? context.problems : [painPoint].filter(Boolean))}
-- Oportunidad principal: ${context.opportunity || bonusOffer || "mejorar el recorrido comercial"}
-- Preview creado: ${context.previewUrl || "todavía no disponible"}
-- Objetivo: ${context.objective || "conseguir que el decisor revise la propuesta y acepte una conversación de 15 minutos"}
-- Remitente: ${context.senderName || "Equipo de estrategia"}
-- Empresa remitente: ${context.senderCompany || "EcoScale Partner"}
+MASTER OBJECTIVE
+- Generate a first-touch outreach sequence that feels like a short consultative note, not a mass email.
+- The first email must be brief, credible, and based on exactly two verified insights.
+- Do not sell directly, do not promise results, and do not ask for a meeting in the first email.
 
-REGLAS DEL EMAIL
-- Cada email debe tener entre 80 y 140 palabras y un asunto diferente.
-- Email 1: apertura; no incluir enlace; preguntar si desea recibir la propuesta.
-- Email 2: compartir el preview y pedir que lo revise.
-- Email 3: explicar impacto en captación, conversión y seguimiento sin prometer resultados.
-- Email 4: diferenciar una estructura comercial adaptada de un rediseño genérico.
-- Email 5: cierre respetuoso y sin presión.
-- Demuestra que el negocio fue revisado y menciona uno o dos problemas concretos sin atacar la marca.
-- Presenta el preview como propuesta conceptual, nunca como auditoría definitiva.
-- No inventes cifras, clientes, testimonios, urgencia, ingresos ni resultados.
-- No uses jerga técnica, emojis, lenguaje agresivo ni más de una pregunta por email.
-- El CTA debe ser de baja fricción y la llamada debe plantearse como conversación de 15 minutos.
+BUSINESS DATA
+- Name: ${businessName}
+- Website: ${context.website || "not confirmed"}
+- Decision-maker: ${contactName || "decision-maker not identified"}
+- Role: ${context.contactRole || "not confirmed"}
+- Industry: ${context.industry || "not confirmed"}
+- Location: ${context.location || "not confirmed"}
+- Offer: ${offerHeadline || "not confirmed"}
+- Audience: ${context.audience || "not confirmed"}
+- Detected problems: ${JSON.stringify(auditOpportunities)}
+- Main opportunity: ${context.opportunity || bonusOffer || "improve the sales journey"}
+- Hook: ${hook}
+- Core offer: ${coreOffer}
+- Upsell: ${upsell}
+- Downsell: ${downsell}
+- Customer journey: ${JSON.stringify(customerJourney)}
+- Value proposition: ${valueProposition}
+- Preview created: ${previewAvailable ? "yes" : "no"}
+- Preview URL: ${context.previewUrl || "not yet available"}
+- Preview description: ${previewDescription}
+- Objective: ${context.objective || "get the decision-maker to review the proposal and accept a short conversation"}
+- Sender: ${context.senderName || "Strategy team"}
+- Sender company: ${context.senderCompany || "EcoScale Partner"}
 
-REGLAS DEL LOOM
-- Devuelve exactamente cuatro segmentos: 00:00–00:15 Gancho, 00:15–00:45 Demostración, 00:45–01:15 Oferta, 01:15–01:30 CTA.
-- El guion debe ser consultivo, específico y coherente con los emails.
-- Si falta el enlace del preview, indica que debe añadirse antes de enviar y agrega esa advertencia a claimsToVerify.
+AUDIT INSIGHTS
+- Opportunities: ${JSON.stringify(auditOpportunities)}
+- Evidence: ${JSON.stringify(auditEvidence)}
+- Priority issues: ${JSON.stringify(priorityIssues)}
+- Selected insight 1: ${selectedInsights[0] ? JSON.stringify(selectedInsights[0]) : "not provided"}
+- Selected insight 2: ${selectedInsights[1] ? JSON.stringify(selectedInsights[1]) : "not provided"}
 
-SALIDA
-- emailSequence debe contener exactamente cinco objetos, indexados 1–5, con purpose, subject, body, cta y delay.
-- personalizationUsed enumera únicamente los datos realmente usados.
-- claimsToVerify enumera cualquier dato que deba confirmarse antes de aprobar el envío.`,
+EMAIL RULES
+- Return firstEmail as the canonical evidence brief for the first touch.
+- firstEmail.subjectOptions must contain exactly three human subject lines of no more than seven words each.
+- firstEmail.insights may contain exactly two insights only when two are supported by evidence. Each must retain its evidence verbatim or as a faithful concise paraphrase.
+- If fewer than two insights are sufficiently supported, use only the supported insights and add "Insufficient verified audit insights" to firstEmail.warnings.
+- firstEmail.confidence must reflect the quantity and quality of real evidence available.
+- Email 1 must be 100-160 words, with a maximum of 190 words, and should be the most consultative email in the sequence.
+- Email 1 must mention exactly two verified opportunities from the audit or selected insights.
+- Email 1 must not include a link unless previewAvailable is true and the chosen CTA is direct.
+- Email 1 should ask for a simple response if the preview should be sent, or provide the preview link if the CTA is direct.
+- Emails 2-5 can expand the idea but must remain concise and consistent with the same evidence.
+- The sequence must stay in English and sound human, not templated.
+- Show the business was reviewed and mention only verified problems or opportunities without attacking the brand.
+- Present the preview as a concept proposal, never as a definitive audit.
+- Do not invent figures, customers, testimonials, urgency, revenue, or results.
+- Do not use technical jargon, emojis, aggressive language, or more than one question per email.
+- The CTA must be low-friction and the call should be framed as a short next step, not a hard sell.
+- Use one CTA only. When a preview URL is available, either ask permission to send the preview plus a 90-second video or link directly to the preview, never both.
+- emailSequence[0] must use firstEmail.selectedSubject and firstEmail.fullEmail without changing the two insights.
+
+LOOM RULES
+- Return exactly four segments: 00:00-00:15 Hook, 00:15-00:45 Walkthrough, 00:45-01:15 Offer, 01:15-01:30 CTA.
+- The script must be consultative, specific, and consistent with the emails.
+- The Loom should reuse the same two selected insights and the same preview story.
+- If the preview link is missing, note that it must be added before sending and add that warning to claimsToVerify.
+
+OUTPUT
+- firstEmail must include subjectOptions, selectedSubject, opening, insights, body, cta, fullEmail, confidence, and warnings.
+- emailSequence must contain exactly five objects, indexed 1-5, with purpose, subject, body, cta, and delay.
+- personalizationUsed lists only the data actually used.
+- claimsToVerify lists any data that must be confirmed before approving the send.`,
   });
   return generation.output;
 }

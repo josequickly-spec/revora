@@ -22,12 +22,13 @@ async function addEvent(campaignId:string|null,eventType:string,metadata:Record<
   await pool.query("INSERT INTO outreach_events(id,campaign_id,recipient_id,message_id,event_type,metadata) VALUES($1,$2,$3,$4,$5,$6)",[randomUUID(),campaignId,recipientId,messageId,eventType,JSON.stringify(metadata)]);
 }
 function campaign(row:Record<string,unknown>) {
-  return { id:String(row.id),name:String(row.name),status:String(row.status),businessId:Number(row.business_id),proposalId:row.proposal_id?String(row.proposal_id):null,auditId:row.audit_id?String(row.audit_id):null,consultantReportId:row.consultant_report_id?String(row.consultant_report_id):null,objective:String(row.objective),senderIdentityId:String(row.sender_identity_id),providerConnectionId:String(row.provider_connection_id),providerName:row.provider_name?String(row.provider_name):null,providerStatus:row.provider_status?String(row.provider_status):null,senderStatus:row.sender_status?String(row.sender_status):null,timezone:String(row.timezone),sendingWindow:row.sending_window,dailyLimit:Number(row.daily_limit),hourlyLimit:Number(row.hourly_limit),version:Number(row.version),contentVersion:Number(row.content_version),warnings:row.warnings||[],approvedAt:row.approved_at,scheduledAt:row.scheduled_at,createdAt:row.created_at,updatedAt:row.updated_at };
+  return { id:String(row.id),name:String(row.name),status:String(row.status),businessId:Number(row.business_id),proposalId:row.proposal_id?String(row.proposal_id):null,auditId:row.audit_id?String(row.audit_id):null,consultantReportId:row.consultant_report_id?String(row.consultant_report_id):null,objective:String(row.objective),senderIdentityId:String(row.sender_identity_id),providerConnectionId:String(row.provider_connection_id),providerName:row.provider_name?String(row.provider_name):null,providerStatus:row.provider_status?String(row.provider_status):null,senderStatus:row.sender_status?String(row.sender_status):null,timezone:String(row.timezone),sendingWindow:row.sending_window,dailyLimit:Number(row.daily_limit),hourlyLimit:Number(row.hourly_limit),version:Number(row.version),contentVersion:Number(row.content_version),warnings:row.warnings||[],videoPitch:row.video_pitch||null,approvedAt:row.approved_at,scheduledAt:row.scheduled_at,createdAt:row.created_at,updatedAt:row.updated_at };
 }
 export async function createCampaign(input:CampaignCreate) {
   await ensureOutreachSchema();
-  const business=await pool.query("SELECT id FROM businesses WHERE id=$1",[input.businessId]);
+  const business=await pool.query("SELECT id,outreach_approved_at FROM businesses WHERE id=$1",[input.businessId]);
   if (!business.rows[0]) throw new Error("business_not_found");
+  if (!business.rows[0].outreach_approved_at) throw new Error("outreach_readiness_approval_required");
   if (input.proposalId) {
     const proposal=await pool.query("SELECT id,business_id,status,published_version,public_token_hash,public_expires_at FROM proposal_documents WHERE id=$1",[input.proposalId]);
     const p=proposal.rows[0];
@@ -86,12 +87,12 @@ export async function addRecipient(campaignId:string,input:{contactId:number;pro
   await addEvent(campaignId,"recipient_added",{verificationStatus,provenance:input.provenance},id);
   return {id,unsubscribeToken:token.token};
 }
-export async function addSequenceStep(campaignId:string,input:SequenceStepInput) {
+export async function addSequenceStep(campaignId:string,input:SequenceStepInput & {selectedInsights?:unknown[];subjectOptions?:string[];generationWarnings?:string[];confidence?:number}) {
   const current=await pool.query("SELECT status FROM outreach_campaigns WHERE id=$1",[campaignId]); if(current.rows[0]?.status!=="draft") throw new Error("campaign_not_editable");
   const count=await pool.query("SELECT COUNT(*)::int total FROM outreach_sequence_steps WHERE campaign_id=$1",[campaignId]); if(count.rows[0].total>=5) throw new Error("maximum_five_steps");
-  const id=randomUUID(); await pool.query(`INSERT INTO outreach_sequence_steps(id,campaign_id,position,delay_value,delay_unit,subject_template,body_template,message_type,requires_manual_review,enabled)
-    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,[id,campaignId,input.position,input.delayValue,input.delayUnit,input.subjectTemplate,input.bodyTemplate,input.messageType,input.requiresManualReview,input.enabled]);
-  await addEvent(campaignId,"sequence_step_added",{position:input.position}); return {id,...input};
+  const id=randomUUID(); await pool.query(`INSERT INTO outreach_sequence_steps(id,campaign_id,position,delay_value,delay_unit,subject_template,body_template,message_type,requires_manual_review,enabled,selected_insights,subject_options,generation_warnings,confidence)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,[id,campaignId,input.position,input.delayValue,input.delayUnit,input.subjectTemplate,input.bodyTemplate,input.messageType,input.requiresManualReview,input.enabled,JSON.stringify(input.selectedInsights||[]),JSON.stringify(input.subjectOptions||[]),JSON.stringify(input.generationWarnings||[]),input.confidence??null]);
+  await addEvent(campaignId,"sequence_step_added",{position:input.position,selectedInsights:input.selectedInsights||[],confidence:input.confidence??null}); return {id,...input};
 }
 export async function checkSuppression(email:string,campaignId?:string) {
   const hash=createHash("sha256").update(normalizeEmail(email)).digest("hex");
@@ -229,14 +230,17 @@ export async function scheduleCampaign(id:string,expectedVersion:number,startAt:
         proposal_url:"[published proposal link]",
       };
       let occurrence=nextAllowedTime(start,policy);
+      let firstOccurrence:Date|null=null;
       for(const step of details.steps.filter((item:Record<string,unknown>)=>item.enabled)) {
         occurrence=new Date(occurrence.getTime()+Number(step.delay_value)*(step.delay_unit==="day"?86_400_000:3_600_000));
         occurrence=nextAllowedTime(occurrence,policy);
+        firstOccurrence ||= occurrence;
         const key=messageIdempotencyKey(id,String(recipient.id),String(step.id),details.contentVersion,occurrence.toISOString());
         await client.query(`INSERT INTO outbound_messages(id,campaign_id,recipient_id,sequence_step_id,idempotency_key,subject,body_html,body_text,status,content_version,scheduled_at,next_attempt_at)
           VALUES($1,$2,$3,$4,$5,$6,$7,$7,'scheduled',$8,$9,$9) ON CONFLICT(idempotency_key) DO NOTHING`,
           [randomUUID(),id,recipient.id,step.id,key,renderTemplate(String(step.subject_template),vars),renderTemplate(String(step.body_template),vars),details.contentVersion,occurrence.toISOString()]);
       }
+      await client.query("UPDATE outreach_recipients SET next_scheduled_at=$2,sequence_state='scheduled',updated_at=NOW() WHERE id=$1",[recipient.id,firstOccurrence]);
     }
     await client.query("COMMIT");
   } catch(error) { await client.query("ROLLBACK"); throw error; } finally { client.release(); }
@@ -266,6 +270,7 @@ export async function processOutreachBatch(limit=10,providerFilter:string|null=n
       JOIN outreach_sender_identities si ON si.id=c.sender_identity_id
       JOIN outreach_provider_connections pc ON pc.id=c.provider_connection_id
       WHERE om.status IN ('scheduled','deferred') AND om.next_attempt_at<=NOW()
+        AND r.sequence_state NOT IN ('replied','unsubscribed','bounced','complaint','completed','nurture')
         AND (om.lease_expires_at IS NULL OR om.lease_expires_at<NOW())
         AND c.status IN ('scheduled','running')
         AND ($2::text IS NULL OR pc.provider=$2)
@@ -352,7 +357,9 @@ export async function processOutreachBatch(limit=10,providerFilter:string|null=n
         [id,finalStatus,sent.providerMessageId,JSON.stringify({provider:sent.provider,status:sent.status,warnings:sent.warnings}),retryAt,sent.safeErrorCode]);
       if(sent.accepted) {
         liveMessagesSent++;
-        await pool.query("UPDATE outreach_recipients SET last_sent_at=NOW(),sequence_state='active',current_step=current_step+1,updated_at=NOW() WHERE id=$1",[recipientId]);
+        await pool.query(`UPDATE outreach_recipients SET last_sent_at=NOW(),sequence_state='active',current_step=current_step+1,
+          next_scheduled_at=(SELECT MIN(scheduled_at) FROM outbound_messages WHERE recipient_id=$1 AND status IN ('scheduled','deferred','queued')),
+          updated_at=NOW() WHERE id=$1`,[recipientId]);
         await pool.query("UPDATE outreach_campaigns SET status='running',updated_at=NOW() WHERE id=$1 AND status='scheduled'",[campaignId]);
       }
       await addEvent(campaignId,sent.accepted?"sent":sent.status==="dry_run"?"dry_run_processed":"delivery_failed",

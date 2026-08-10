@@ -42,32 +42,32 @@ export async function generateAdCampaign(
   budget: number,
   platform: "facebook" | "google" | "instagram"
 ): Promise<AdCampaign> {
-  const prompt = `Eres experto en performance marketing y ad copywriting.
+  const prompt = `You are an expert in performance marketing and ad copywriting.
 
-Genera campañas publicitarias de alto ROI para:
-Negocio: ${businessName}
-Oferta: ${offer}
-Problema: ${painPoint}
-Presupuesto: $${budget}
-Plataforma: ${platform}
+Generate high-ROI ad campaigns for:
+Business: ${businessName}
+Offer: ${offer}
+Problem: ${painPoint}
+Budget: $${budget}
+Platform: ${platform}
 
-Responde SOLO JSON:
+Respond with JSON ONLY:
 {
-  "name": "Nombre campaña descriptivo",
+  "name": "Descriptive campaign name",
   "dailyBudget": ${budget / 30},
   "creatives": [
     {
-      "headline": "Titular principal max 30 caracteres",
-      "subheading": "Subtítulo max 50 caracteres",
-      "description": "Descripción 80-120 caracteres",
-      "cta": "Botón CTA: Learn More, Get Started, etc",
-      "imagePrompt": "Prompt detallado para generar imagen con IA",
-      "targetAudience": "Audiencia especifica: Edad, interes, comportamiento",
-      "estimatedCPC": numero_costo_por_click_estimado
+      "headline": "Main headline, max 30 characters",
+      "subheading": "Subheading, max 50 characters",
+      "description": "Description, 80-120 characters",
+      "cta": "CTA button: Learn More, Get Started, etc",
+      "imagePrompt": "Detailed prompt for AI image generation",
+      "targetAudience": "Specific audience: age, interest, behavior",
+      "estimatedCPC": estimated_cost_per_click_number
     }
   ],
-  "targetAudience": "Descripcion audiencia objetivo",
-  "geolocation": "ES, USA, LATAM, etc",
+  "targetAudience": "Target audience description",
+  "geolocation": "US, LATAM, etc",
   "duration": 30,
   "roi_target": 300
 }`;
@@ -76,7 +76,7 @@ Responde SOLO JSON:
     task: "bulk",
     schemaName: "ad_campaign",
     schema: adCampaignAISchema,
-    system: "Eres especialista en publicidad responsable. No inventes resultados históricos, disponibilidad, prueba social ni garantías.",
+    system: "You are a responsible advertising specialist. Do not invent historical results, availability, social proof, or guarantees.",
     user: prompt,
   });
   return {
@@ -110,23 +110,23 @@ export async function generateAIBotOptimizations(
   const cpc = metrics.spend / metrics.clicks;
   const roas = metrics.spend > 0 ? (metrics.revenue || 0) / metrics.spend : 0;
 
-  const prompt = `Eres experto en optimizacion de campañas publicitarias.
+  const prompt = `You are an expert in ad campaign optimization.
 
-Metricas actuales:
+Current metrics:
 - CTR: ${ctr.toFixed(2)}%
 - Conversion Rate: ${conversionRate.toFixed(2)}%
 - CPC: $${cpc.toFixed(2)}
 - ROAS: ${roas.toFixed(2)}x
 
-Dame 3 recomendaciones ESPECIFICAS para mejorar. Responde como JSON array de strings.`;
+Give me 3 SPECIFIC recommendations to improve. Respond as a JSON array of strings.`;
 
   try {
     const generation = await generateStructured({
       task: "bulk",
       schemaName: "ad_optimizations",
       schema: optimizationSchema,
-      system: "Eres un analista de campañas. Basa cada recomendación únicamente en las métricas entregadas.",
-      user: `${prompt}\nResponde como un objeto con la propiedad recommendations.`,
+      system: "You are a campaign analyst. Base each recommendation exclusively on the metrics provided.",
+      user: `${prompt}\nRespond as an object with a recommendations property.`,
     });
 
     return {

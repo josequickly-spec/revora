@@ -7,7 +7,7 @@ export async function POST(req: Request) {
   try {
     const mapped = legacyRequest(await req.json());
     const parsed = leadSearchSchema.safeParse(mapped);
-    if (!parsed.success) return NextResponse.json({ success: false, error: "Indica una ciudad, ZIP o dirección" }, { status: 400 });
+    if (!parsed.success) return NextResponse.json({ success: false, error: "Enter a city, ZIP, or address" }, { status: 400 });
     const result = await searchLeads(parsed.data);
     const businesses = result.candidates.map(legacyBusiness);
     return NextResponse.json({
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     const status = error instanceof LeadSearchError ? error.status : 502;
-    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : "La búsqueda falló" }, { status });
+    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : "The search failed" }, { status });
   }
 }
 

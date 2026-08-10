@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AlertTriangle, Bot, CheckCircle2, FileSearch, LoaderCircle, Sparkles } from "lucide-react";
 import type { AIConsultantReportRecord } from "@/lib/ai-consultant/contracts";
 
@@ -66,7 +67,8 @@ export function ConsultantListView({ initialBusinessId = "" }: { initialBusiness
   );
 }
 
-export function BusinessConsultantView({ businessId, initialAuditId }: { businessId: number; initialAuditId?: string }) {
+export function BusinessConsultantView({ businessId, initialAuditId, autoFlow = false }: { businessId: number; initialAuditId?: string; autoFlow?: boolean }) {
+  const router = useRouter();
   const [audits, setAudits] = useState<AuditSummary[]>([]);
   const [reports, setReports] = useState<AIConsultantReportRecord[]>([]);
   const [auditId, setAuditId] = useState(initialAuditId || "");
@@ -78,6 +80,7 @@ export function BusinessConsultantView({ businessId, initialAuditId }: { busines
   const [opportunities, setOpportunities] = useState<Array<{ id: string; title: string; priority: string }>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const autoGenerateStartedRef = useRef(false);
 
   const loadReports = useCallback(() => fetch(`/api/businesses/${businessId}/consultant-reports`).then(response => response.json()).then(data => setReports(data.reports || [])), [businessId]);
   useEffect(() => {
@@ -99,7 +102,7 @@ export function BusinessConsultantView({ businessId, initialAuditId }: { busines
       }).catch(() => setError("Unable to load deterministic opportunities."));
   }, [auditId, businessId]);
 
-  async function generate(regenerate = false) {
+  const generate = useCallback(async (regenerate = false) => {
     setLoading(true); setError("");
     try {
       const response = await fetch("/api/ai-consultant/generate", {
@@ -109,12 +112,26 @@ export function BusinessConsultantView({ businessId, initialAuditId }: { busines
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Generation failed.");
       await loadReports();
-      window.location.assign(`/consultant/${data.report.id}`);
+      if (autoFlow) {
+        router.replace(`/proposals/new?businessId=${businessId}&auditId=${auditId}&consultantReportId=${data.report.id}&flow=1`);
+      } else {
+        window.location.assign(`/consultant/${data.report.id}`);
+      }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Generation failed.");
       await loadReports();
     } finally { setLoading(false); }
-  }
+  }, [auditId, autoFlow, businessId, instructions, loadReports, locale, objective, reportStyle, router, selected]);
+
+  useEffect(() => {
+    if (!autoFlow || autoGenerateStartedRef.current || loading) return;
+    if (!auditId || audits.length === 0) return;
+    autoGenerateStartedRef.current = true;
+    const timer = window.setTimeout(() => {
+      void generate(false);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [autoFlow, auditId, audits.length, generate, loading]);
 
   const selectedAudit = useMemo(() => audits.find(item => item.id === auditId), [audits, auditId]);
   const latestCompleted = reports.find(item => item.status === "completed" && item.report);
@@ -132,7 +149,7 @@ export function BusinessConsultantView({ businessId, initialAuditId }: { busines
               <label className="text-sm text-slate-300">Persisted audit<select value={auditId} onChange={event => setAuditId(event.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-[#0c1220] px-3 py-2"><option value="">Select audit</option>{audits.map(audit => <option key={audit.id} value={audit.id}>{new Date(audit.createdAt).toLocaleDateString()} · score {audit.score}</option>)}</select></label>
               <label className="text-sm text-slate-300">Objective<select value={objective} onChange={event => setObjective(event.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-[#0c1220] px-3 py-2">{["general_growth_strategy","improve_lead_generation","improve_conversion","improve_local_visibility","improve_tracking","improve_mobile_experience","improve_trust","prepare_sales_proposal"].map(item => <option key={item} value={item}>{item.replaceAll("_", " ")}</option>)}</select></label>
               <label className="text-sm text-slate-300">Report style<select value={reportStyle} onChange={event => setReportStyle(event.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-[#0c1220] px-3 py-2"><option>concise</option><option>standard</option><option>detailed</option></select></label>
-              <label className="text-sm text-slate-300">Language<select value={locale} onChange={event => setLocale(event.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-[#0c1220] px-3 py-2"><option value="en">English</option><option value="es">Español</option></select></label>
+              <label className="text-sm text-slate-300">Language<select value={locale} onChange={event => setLocale(event.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-[#0c1220] px-3 py-2"><option value="en">English</option></select></label>
             </div>
             <label className="mt-4 block text-sm text-slate-300">Optional instructions<textarea value={instructions} onChange={event => setInstructions(event.target.value)} maxLength={2000} rows={4} className="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2" placeholder="Additional emphasis; cannot override evidence and safety rules." /></label>
           </Card>
@@ -179,3 +196,4 @@ export function ConsultantDetailView({ reportId }: { reportId: string }) {
     </div>
   );
 }
+

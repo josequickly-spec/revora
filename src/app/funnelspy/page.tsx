@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Activity,
   ArrowUpRight,
@@ -28,6 +29,7 @@ import {
 } from "lucide-react";
 import type { FunnelSpyAnalysis } from "@/lib/funnelspy";
 import type { FunnelAIReport } from "@/lib/funnelspy-ai";
+import { ScrapingQuickButton } from "@/components/scraping/QuickAccessButtons";
 
 function Stat({
   value,
@@ -86,6 +88,7 @@ function Pill({ children }: { children: React.ReactNode }) {
 }
 
 export default function FunnelSpyPage() {
+  const router = useRouter();
   const [url, setUrl] = useState("");
   const [businessId, setBusinessId] = useState<number | undefined>();
   const [analysis, setAnalysis] = useState<FunnelSpyAnalysis | null>(null);
@@ -103,6 +106,9 @@ export default function FunnelSpyPage() {
     en: string | null;
   } | null>(null);
   const [auditNotice, setAuditNotice] = useState("");
+  const autoFlowRef = useRef(false);
+  const autoAnalyzeStartedRef = useRef(false);
+  const autoAdvanceRef = useRef(false);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -114,11 +120,67 @@ export default function FunnelSpyPage() {
           ? candidateBusinessId
           : undefined,
       );
+      autoFlowRef.current = params.get("flow") === "1" || params.get("autoFlow") === "1";
     }, 0);
     return () => window.clearTimeout(timer);
   }, []);
 
-  async function analyze(target = url, forceRefresh = false) {
+  const generateReport = useCallback(async (currentAnalysis: FunnelSpyAnalysis, currentAuditId: string) => {
+    setAiLoading(true);
+    setError("");
+    try {
+      const response = await fetch("/api/funnelspy/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          analysis: currentAnalysis,
+          auditId: currentAuditId,
+          language: "en",
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok)
+        throw new Error(data.error || "Could not generate the report.");
+      setReport(data.report);
+      return data.report as FunnelAIReport;
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : "Could not generate the report.";
+      setError(message);
+      throw cause;
+    } finally {
+      setAiLoading(false);
+    }
+  }, []);
+
+  const handoffToOtom = useCallback((
+    currentAnalysis: FunnelSpyAnalysis,
+    currentReport: FunnelAIReport,
+    currentAuditId: string,
+    currentBusinessId?: number,
+  ) => {
+    window.sessionStorage.setItem(
+      "revora-otom-context",
+      JSON.stringify({
+        businessId: currentBusinessId,
+        businessName: currentAnalysis.pages.find((page) => page.kind === "home")?.title || currentAnalysis.domain,
+        businessType: currentReport.funnelType,
+        targetAudience: currentReport.targetAudience,
+        currentOffer: currentReport.valueProposition,
+        currentPrice: 0,
+        primaryObjective: currentReport.primaryObjective,
+        valueProposition: currentReport.valueProposition,
+        weaknesses: currentReport.weaknesses,
+        recommendations: currentReport.recommendations.map((item) => item.action),
+        evidence: currentAnalysis.pages.slice(0, 8).map((page) => `${page.kind}: ${page.title} — ${page.description}`),
+        auditId: currentAuditId,
+        sourceUrl: currentAnalysis.origin,
+        visualIdentity: currentAnalysis.visualIdentity,
+      }),
+    );
+    router.push("/otom?flow=1");
+  }, [router]);
+
+  const analyze = useCallback(async (target = url, forceRefresh = false, overrideBusinessId = businessId) => {
     if (!target.trim()) return;
     setLoading(true);
     setError("");
@@ -130,11 +192,11 @@ export default function FunnelSpyPage() {
       const response = await fetch("/api/funnelspy/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: target, businessId, forceRefresh }),
+        body: JSON.stringify({ url: target, businessId: overrideBusinessId, forceRefresh }),
       });
       const data = await response.json();
       if (!response.ok)
-        throw new Error(data.error || "No se pudo analizar el sitio.");
+        throw new Error(data.error || "Could not analyze the site.");
       setAnalysis(data.analysis);
       setAuditId(data.audit?.id || "");
       setShareToken(data.audit?.shareToken || "");
@@ -146,45 +208,35 @@ export default function FunnelSpyPage() {
           ...(data.warnings || []),
         ].join(" "),
       );
+      if (autoFlowRef.current && !autoAdvanceRef.current) {
+        autoAdvanceRef.current = true;
+        const reportData = await generateReport(data.analysis, data.audit?.id || "");
+        handoffToOtom(data.analysis, reportData, data.audit?.id || "", data.businessId || overrideBusinessId);
+      }
     } catch (cause) {
       setError(
         cause instanceof Error
           ? cause.message
-          : "No se pudo analizar el sitio.",
+          : "Could not analyze the site.",
       );
     } finally {
       setLoading(false);
     }
-  }
+  }, [businessId, generateReport, handoffToOtom, url]);
+
+  useEffect(() => {
+    if (!autoFlowRef.current || autoAnalyzeStartedRef.current || loading) return;
+    if (!url.trim()) return;
+    autoAnalyzeStartedRef.current = true;
+    const timer = window.setTimeout(() => {
+      void analyze(url, false, businessId);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [analyze, businessId, loading, url]);
 
   async function analyzeWithAI() {
     if (!analysis) return;
-    setAiLoading(true);
-    setError("");
-    try {
-      const response = await fetch("/api/funnelspy/ai", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          analysis,
-          auditId,
-          language:
-            localStorage.getItem("funnelspy-language") === "en" ? "en" : "es",
-        }),
-      });
-      const data = await response.json();
-      if (!response.ok)
-        throw new Error(data.error || "No se pudo generar el informe.");
-      setReport(data.report);
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "No se pudo generar el informe.",
-      );
-    } finally {
-      setAiLoading(false);
-    }
+    await generateReport(analysis, auditId);
   }
 
   async function activateMonitor() {
@@ -202,10 +254,10 @@ export default function FunnelSpyPage() {
         }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "No se pudo activar.");
+      if (!response.ok) throw new Error(data.error || "Could not activate.");
     } catch (cause) {
       setMonitoring(false);
-      setError(cause instanceof Error ? cause.message : "No se pudo activar.");
+      setError(cause instanceof Error ? cause.message : "Could not activate.");
     }
   }
 
@@ -218,17 +270,17 @@ export default function FunnelSpyPage() {
       const response = await fetch("/api/funnelspy/create-funnel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ analysis, report, auditId: auditId || undefined, languageMode: "bilingual" }),
+        body: JSON.stringify({ analysis, report, auditId: auditId || undefined, languageMode: "en" }),
       });
       const data = await response.json();
       if (!response.ok)
-        throw new Error(data.error || "No fue posible crear el funnel.");
+        throw new Error(data.error || "Could not create the funnel.");
       setCreatedFunnel(data.previewUrls);
     } catch (cause) {
       setFunnelError(
         cause instanceof Error
           ? cause.message
-          : "No fue posible crear el funnel.",
+          : "Could not create the funnel.",
       );
     } finally {
       setFunnelLoading(false);
@@ -261,20 +313,20 @@ export default function FunnelSpyPage() {
               Command Center
             </Link>
             <a href="#scanner" className="hover:text-white">
-              Analizar
+              Analyze
             </a>
             <Link href="/funnelspy/compare" className="hover:text-white">
-              Comparar
+              Compare
             </Link>
             <Link href="/funnelspy/history" className="hover:text-white">
-              Historial
+              History
             </Link>
           </nav>
           <a
             href="#scanner"
             className="rounded-xl border border-violet-400/30 bg-violet-500/10 px-4 py-2 text-sm font-bold text-violet-200"
           >
-            Nueva auditoría
+            New audit
           </a>
         </div>
       </header>
@@ -285,18 +337,18 @@ export default function FunnelSpyPage() {
             <section className="mx-auto max-w-7xl px-5 pb-20 pt-20 text-center md:pt-28">
               <div className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-violet-400/20 bg-violet-500/10 px-4 py-2 text-xs font-bold uppercase tracking-[.16em] text-violet-200">
                 <Sparkles className="size-3.5" />
-                Inteligencia de embudos con IA
+                AI-powered funnel intelligence
               </div>
               <h1 className="mx-auto max-w-5xl text-5xl font-black leading-[.98] tracking-[-.055em] text-white md:text-8xl">
-                Descubre la estrategia detrás de{" "}
+                Discover the strategy behind{" "}
                 <span className="bg-gradient-to-r from-violet-400 via-fuchsia-300 to-cyan-300 bg-clip-text text-transparent">
-                  cualquier sitio.
+                  any site.
                 </span>
               </h1>
               <p className="mx-auto mt-7 max-w-2xl text-base leading-7 text-slate-400 md:text-lg">
-                Mapea páginas, CTAs, formularios, tecnologías y rendimiento.
-                FunnelSpy convierte evidencia pública en un plan de conversión
-                accionable.
+                Map pages, CTAs, forms, technologies, and performance.
+                FunnelSpy turns public evidence into an actionable conversion
+                plan.
               </p>
               <form
                 id="scanner"
@@ -312,7 +364,7 @@ export default function FunnelSpyPage() {
                     value={url}
                     onChange={(event) => setUrl(event.target.value)}
                     className="h-14 w-full bg-transparent text-base text-white outline-none placeholder:text-slate-600"
-                    placeholder="https://competidor.com"
+                    placeholder="https://competitor.com"
                   />
                 </div>
                 <button
@@ -324,7 +376,7 @@ export default function FunnelSpyPage() {
                   ) : (
                     <ScanLine className="size-5" />
                   )}
-                  {loading ? "Rastreando..." : "Analizar embudo"}
+                  {loading ? "Crawling..." : "Analyze funnel"}
                 </button>
               </form>
               {error && (
@@ -333,6 +385,9 @@ export default function FunnelSpyPage() {
                   {error}
                 </div>
               )}
+              <div className="mx-auto mt-8 max-w-2xl">
+                <ScrapingQuickButton variant="funnel" />
+              </div>
             </section>
             <section
               id="features"
@@ -341,18 +396,18 @@ export default function FunnelSpyPage() {
               {[
                 [
                   FileSearch,
-                  "Rastreo inteligente",
-                  "Descubre rutas clave y clasifica páginas del recorrido sin enviar formularios.",
+                  "Smart crawling",
+                  "Discover key paths and classify journey pages without submitting forms.",
                 ],
                 [
                   Activity,
-                  "Señales técnicas",
-                  "Identifica tecnologías, píxeles, formularios, rendimiento y edad del dominio.",
+                  "Technical signals",
+                  "Identify technologies, pixels, forms, performance, and domain age.",
                 ],
                 [
                   Bot,
-                  "Estrategia con IA",
-                  "Transforma los hallazgos en fortalezas, brechas, anuncios y acciones priorizadas.",
+                  "AI strategy",
+                  "Turn findings into strengths, gaps, ads, and prioritized actions.",
                 ],
               ].map(([Icon, title, copy]) => {
                 const FeatureIcon = Icon as typeof FileSearch;
@@ -387,24 +442,24 @@ export default function FunnelSpyPage() {
                   }}
                   className="mb-4 text-xs font-bold uppercase tracking-[.15em] text-violet-300"
                 >
-                  ← Nueva auditoría
+                  ← New audit
                 </button>
                 <div className="flex items-center gap-3">
                   <span className="size-2 animate-pulse rounded-full bg-lime-400 shadow-[0_0_14px_#a3e635]" />
                   <span className="text-xs font-bold uppercase tracking-[.18em] text-slate-500">
-                    Auditoría completada
+                    Audit completed
                   </span>
                 </div>
                 <h1 className="mt-3 text-4xl font-black tracking-tight text-white">
                   {analysis.domain}
                 </h1>
                 <p className="mt-2 text-sm text-slate-500">
-                  Analizado {new Date(analysis.analyzedAt).toLocaleString("es")}{" "}
+                  Analyzed {new Date(analysis.analyzedAt).toLocaleString("en-US")}{" "}
                   ·{" "}
                   {analysis.discovery.renderedWithBrowser
                     ? "Playwright"
                     : "HTML"}{" "}
-                  · {analysis.discovery.sitemapUrls} URLs en sitemap
+                  · {analysis.discovery.sitemapUrls} URLs in sitemap
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -414,14 +469,14 @@ export default function FunnelSpyPage() {
                   rel="noreferrer"
                   className="flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-xs text-slate-400 hover:text-white"
                 >
-                  Visitar <ExternalLink className="size-3" />
+                  Visit <ExternalLink className="size-3" />
                 </a>
                 {auditId && (
                   <a
                     href={`/api/funnelspy/export?id=${auditId}&format=csv`}
                     className="rounded-xl border border-white/10 px-3 py-2 text-xs text-slate-400 hover:text-white"
                   >
-                    Exportar CSV
+                    Export CSV
                   </a>
                 )}
                 {auditId && (
@@ -438,7 +493,7 @@ export default function FunnelSpyPage() {
                     target="_blank"
                     className="rounded-xl border border-violet-400/25 bg-violet-500/10 px-3 py-2 text-xs text-violet-200"
                   >
-                    Compartir
+                    Share
                   </a>
                 )}
                 <button
@@ -453,7 +508,7 @@ export default function FunnelSpyPage() {
                   disabled={monitoring}
                   className="rounded-xl border border-lime-400/20 bg-lime-400/[.06] px-3 py-2 text-xs text-lime-200"
                 >
-                  {monitoring ? "Monitoreo activo" : "Monitorear semanalmente"}
+                  {monitoring ? "Monitoring active" : "Monitor weekly"}
                 </button>
               </div>
             </div>
@@ -473,14 +528,14 @@ export default function FunnelSpyPage() {
               <article className="flex flex-col justify-between overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-violet-500/15 to-cyan-400/[.04] p-7 md:flex-row md:items-center">
                 <div className="max-w-xl">
                   <div className="text-xs font-bold uppercase tracking-[.18em] text-violet-300">
-                    Diagnóstico FunnelSpy
+                    FunnelSpy Diagnosis
                   </div>
                   <h2 className="mt-3 text-3xl font-black">
                     {analysis.scoreLabel}
                   </h2>
                   <p className="mt-3 leading-7 text-slate-400">
-                    La puntuación combina estructura pública, CTAs, captura,
-                    seguimiento y señales del recorrido detectado.
+                    The score combines public structure, CTAs, capture,
+                    tracking, and signals from the detected journey.
                   </p>
                   <div className="mt-6 flex flex-wrap gap-2">
                     {analysis.technologies.slice(0, 5).map((item) => (
@@ -491,14 +546,14 @@ export default function FunnelSpyPage() {
                 <ScoreRing score={analysis.score} />
               </article>
               <div className="grid grid-cols-2 gap-4">
-                <Stat value={analysis.totals.pages} label="Páginas" />
+                <Stat value={analysis.totals.pages} label="Pages" />
                 <Stat value={analysis.totals.ctas} label="CTAs" tone="cyan" />
                 <Stat
                   value={analysis.totals.forms}
-                  label="Formularios"
+                  label="Forms"
                   tone="lime"
                 />
-                <Stat value={analysis.totals.pixels} label="Píxeles" />
+                <Stat value={analysis.totals.pixels} label="Pixels" />
               </div>
             </section>
 
@@ -509,7 +564,7 @@ export default function FunnelSpyPage() {
                     <span className="text-xs font-bold uppercase tracking-[.16em] text-cyan-300">
                       Journey map
                     </span>
-                    <h3 className="mt-2 text-xl font-black">Embudo estimado</h3>
+                    <h3 className="mt-2 text-xl font-black">Estimated funnel</h3>
                   </div>
                   <Target className="text-slate-600" />
                 </div>
@@ -543,9 +598,9 @@ export default function FunnelSpyPage() {
               <article className="overflow-hidden rounded-3xl border border-white/[.08] bg-white/[.025]">
                 <div className="border-b border-white/[.07] p-6">
                   <span className="text-xs font-bold uppercase tracking-[.16em] text-violet-300">
-                    Snapshot público
+                    Public snapshot
                   </span>
-                  <h3 className="mt-2 text-xl font-black">Vista del sitio</h3>
+                  <h3 className="mt-2 text-xl font-black">Site view</h3>
                 </div>
                 {/* eslint-disable @next/next/no-img-element -- dynamic third-party audit screenshots cannot use a fixed host allowlist */}
                 <div className="grid bg-gradient-to-br from-slate-900 to-violet-950 sm:grid-cols-2">
@@ -554,14 +609,14 @@ export default function FunnelSpyPage() {
                     {analysis.screenshot ? (
                       <img
                         src={analysis.screenshot}
-                        alt={`Captura pública de ${analysis.domain}`}
+                        alt={`Public screenshot of ${analysis.domain}`}
                         className="h-full w-full object-cover object-top"
                       />
                     ) : (
                       <div className="grid h-full place-items-center text-center">
                         <LayoutDashboard className="mx-auto size-10 text-slate-700" />
                         <p className="mt-3 text-xs text-slate-600">
-                          Sin captura pública disponible
+                          No public screenshot available
                         </p>
                       </div>
                     )}
@@ -570,12 +625,12 @@ export default function FunnelSpyPage() {
                     {analysis.screenshotMobile ? (
                       <img
                         src={analysis.screenshotMobile}
-                        alt={`Vista móvil de ${analysis.domain}`}
+                        alt={`Mobile view of ${analysis.domain}`}
                         className="h-full w-full object-cover object-top"
                       />
                     ) : (
                       <div className="grid h-full place-items-center text-xs text-slate-600">
-                        Vista móvil no disponible
+                        Mobile view not available
                       </div>
                     )}
                   </div>
@@ -584,7 +639,7 @@ export default function FunnelSpyPage() {
                 <div className="grid grid-cols-2 gap-px bg-white/[.06]">
                   <div className="bg-[#0b0e16] p-4">
                     <span className="text-[10px] uppercase tracking-wider text-slate-600">
-                      Rendimiento
+                      Performance
                     </span>
                     <strong className="mt-1 block text-xl">
                       {analysis.performance.performance ?? "—"}
@@ -606,14 +661,14 @@ export default function FunnelSpyPage() {
               <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                 <div>
                   <span className="text-xs font-bold uppercase tracking-[.16em] text-cyan-300">
-                    Galería de páginas
+                    Page gallery
                   </span>
                   <h3 className="mt-2 text-xl font-black">
-                    Superficies detectadas
+                    Detected surfaces
                   </h3>
                 </div>
                 <span className="text-xs text-slate-500">
-                  {analysis.pages.length} URLs auditadas
+                  {analysis.pages.length} URLs audited
                 </span>
               </div>
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -639,7 +694,7 @@ export default function FunnelSpyPage() {
                     <div className="mt-5 flex items-center gap-4 border-t border-white/[.06] pt-4 text-xs text-slate-500">
                       <span>{page.ctas.length} CTAs</span>
                       <span>{page.forms} forms</span>
-                      <span>{page.evidence.length} evidencias</span>
+                      <span>{page.evidence.length} evidence points</span>
                     </div>
                   </article>
                 ))}
@@ -654,11 +709,11 @@ export default function FunnelSpyPage() {
                     FunnelSpy AI
                   </div>
                   <h3 className="mt-3 text-2xl font-black">
-                    Convierte las señales en estrategia
+                    Turn signals into strategy
                   </h3>
                   <p className="mt-2 leading-7 text-slate-400">
-                    Interpreta objetivo, audiencia, propuesta de valor, fricción
-                    y oportunidades usando solo la evidencia recopilada.
+                    Interprets objective, audience, value proposition,
+                    friction, and opportunities using only the collected evidence.
                   </p>
                 </div>
                 <button
@@ -672,10 +727,10 @@ export default function FunnelSpyPage() {
                     <Sparkles className="size-5" />
                   )}
                   {aiLoading
-                    ? "Interpretando..."
+                    ? "Interpreting..."
                     : report
-                      ? "Regenerar informe"
-                      : "Analizar con IA"}
+                      ? "Regenerate report"
+                      : "Analyze with AI"}
                 </button>
               </div>
             </section>
@@ -686,7 +741,7 @@ export default function FunnelSpyPage() {
                   <div className="flex flex-col justify-between gap-5 md:flex-row">
                     <div>
                       <span className="text-xs font-bold uppercase tracking-[.16em] text-lime-300">
-                        Informe estratégico
+                        Strategic report
                       </span>
                       <h2 className="mt-3 text-3xl font-black">
                         {report.primaryObjective}
@@ -700,16 +755,16 @@ export default function FunnelSpyPage() {
                         {report.confidence}%
                       </strong>
                       <span className="mt-1 block text-[10px] uppercase text-slate-500">
-                        Confianza
+                        Confidence
                       </span>
                     </div>
                   </div>
                 </article>
                 <div className="grid gap-5 lg:grid-cols-2">
                   {[
-                    ["Fortalezas", report.strengths, Check, "text-lime-300"],
+                    ["Strengths", report.strengths, Check, "text-lime-300"],
                     [
-                      "Debilidades",
+                      "Weaknesses",
                       report.weaknesses,
                       CircleAlert,
                       "text-amber-300",
@@ -742,7 +797,7 @@ export default function FunnelSpyPage() {
                   })}
                 </div>
                 <article className="rounded-3xl border border-white/[.08] bg-white/[.025] p-7">
-                  <h3 className="text-xl font-black">Plan de optimización</h3>
+                  <h3 className="text-xl font-black">Optimization plan</h3>
                   <div className="mt-6 grid gap-4 md:grid-cols-2">
                     {report.recommendations.map((item, index) => (
                       <div
@@ -782,13 +837,13 @@ export default function FunnelSpyPage() {
                         Funnel Builder
                       </span>
                       <h3 className="mt-3 text-2xl font-black">
-                        Crea un funnel nuevo desde este reporte
+                        Create a new funnel from this report
                       </h3>
                       <p className="mt-2 leading-7 text-slate-400">
-                        Genera una experiencia bilingüe conectada con identidad
-                        visual, oferta principal, upsell, downsell, recorrido,
-                        formulario y seguimiento. Landing, OTOM y Web Builder
-                        parten de la misma evidencia.
+                        Generates a connected experience with visual identity,
+                        core offer, upsell, downsell, journey,
+                        form, and tracking. Landing, OTOM, and Web Builder
+                        all start from the same evidence.
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-3">
@@ -824,7 +879,7 @@ export default function FunnelSpyPage() {
                         className="flex min-h-13 shrink-0 items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-300 px-6 py-3 font-black text-slate-950 shadow-lg shadow-orange-500/20"
                       >
                         <CircleDollarSign className="size-5" />
-                        Generar OTOM con esta auditoría
+                        Generate OTOM with this audit
                       </Link>
                       <Link
                         href="/web-builder"
@@ -857,7 +912,7 @@ export default function FunnelSpyPage() {
                         className="flex min-h-13 shrink-0 items-center gap-2 rounded-xl border border-orange-300/25 bg-orange-300/[.06] px-6 py-3 font-black text-orange-200 transition hover:bg-orange-300/[.12]"
                       >
                         <LayoutTemplate className="size-5" />
-                        Crear preview web completo
+                        Create full web preview
                       </Link>
                       <button
                         onClick={createFunnelFromReport}
@@ -870,8 +925,8 @@ export default function FunnelSpyPage() {
                           <Sparkles className="size-5" />
                         )}
                         {funnelLoading
-                          ? "Creando funnel..."
-                          : "Crear experiencia completa"}
+                          ? "Creating funnel..."
+                          : "Create full experience"}
                       </button>
                     </div>
                   </div>
@@ -884,7 +939,7 @@ export default function FunnelSpyPage() {
                     <div className="mt-6 flex flex-wrap items-center gap-3 rounded-2xl border border-lime-400/20 bg-lime-400/[.07] p-5">
                       <Check className="size-5 text-lime-300" />
                       <strong className="text-lime-200">
-                        Funnel creado correctamente
+                        Funnel created successfully
                       </strong>
                       {createdFunnel.es && (
                         <a
@@ -892,7 +947,7 @@ export default function FunnelSpyPage() {
                           target="_blank"
                           className="rounded-xl bg-white px-4 py-2 text-xs font-black text-slate-950"
                         >
-                          Abrir ES
+                          Open ES
                         </a>
                       )}
                       {createdFunnel.en && (
@@ -913,14 +968,14 @@ export default function FunnelSpyPage() {
             <section className="mt-5 grid gap-5 md:grid-cols-3">
               <article className="rounded-3xl border border-white/[.08] bg-white/[.025] p-6">
                 <Gauge className="text-cyan-300" />
-                <h3 className="mt-5 font-black">Calidad técnica</h3>
+                <h3 className="mt-5 font-black">Technical quality</h3>
                 <div className="mt-4 space-y-3 text-sm text-slate-400">
                   <div className="flex justify-between">
-                    <span>Accesibilidad</span>
+                    <span>Accessibility</span>
                     <strong>{analysis.performance.accessibility ?? "—"}</strong>
                   </div>
                   <div className="flex justify-between">
-                    <span>Buenas prácticas</span>
+                    <span>Best practices</span>
                     <strong>{analysis.performance.bestPractices ?? "—"}</strong>
                   </div>
                   <div className="flex justify-between">
@@ -931,7 +986,7 @@ export default function FunnelSpyPage() {
               </article>
               <article className="rounded-3xl border border-white/[.08] bg-white/[.025] p-6">
                 <Code2 className="text-violet-300" />
-                <h3 className="mt-5 font-black">Stack detectado</h3>
+                <h3 className="mt-5 font-black">Detected stack</h3>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {analysis.technologies.length ? (
                     analysis.technologies.map((item) => (
@@ -939,25 +994,25 @@ export default function FunnelSpyPage() {
                     ))
                   ) : (
                     <span className="text-sm text-slate-600">
-                      Sin firmas públicas claras.
+                      No clear public signatures.
                     </span>
                   )}
                 </div>
               </article>
               <article className="rounded-3xl border border-white/[.08] bg-white/[.025] p-6">
                 <ShieldCheck className="text-lime-300" />
-                <h3 className="mt-5 font-black">Dominio</h3>
+                <h3 className="mt-5 font-black">Domain</h3>
                 <div className="mt-4 space-y-3 text-sm text-slate-400">
                   <div className="flex justify-between gap-4">
-                    <span>Antigüedad</span>
+                    <span>Age</span>
                     <strong>
                       {analysis.domainIntel.ageYears !== null
-                        ? `${analysis.domainIntel.ageYears} años`
+                        ? `${analysis.domainIntel.ageYears} years`
                         : "—"}
                     </strong>
                   </div>
                   <div className="flex justify-between gap-4">
-                    <span>Registrador</span>
+                    <span>Registrar</span>
                     <strong className="truncate">
                       {analysis.domainIntel.registrar ?? "—"}
                     </strong>
@@ -969,8 +1024,8 @@ export default function FunnelSpyPage() {
         )}
       </main>
       <footer className="relative z-10 border-t border-white/[.06] py-8 text-center text-xs text-slate-600">
-        FunnelSpy analiza únicamente información pública. Los hallazgos son
-        estimaciones, no acceso interno.
+        FunnelSpy analyzes public information only. Findings are
+        estimates, not internal access.
       </footer>
     </div>
   );

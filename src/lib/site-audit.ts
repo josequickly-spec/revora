@@ -57,15 +57,15 @@ export async function auditSite(input: string): Promise<SiteAudit> {
   ]);
   const platform = detectWebsitePlatform(html);
   const issues: string[] = [];
-  if (!title) issues.push("Falta la etiqueta title");
-  else if (text(title).length < 25 || text(title).length > 65) issues.push("El title no tiene una longitud SEO óptima");
-  if (!description) issues.push("Falta la meta description");
-  if (h1.length !== 1) issues.push(`Se detectaron ${h1.length} encabezados H1`);
-  if (imagesWithoutAlt > 0) issues.push(`${imagesWithoutAlt} imágenes no tienen texto alternativo`);
-  if (!canonical) issues.push("Falta URL canónica");
-  if (!robots) issues.push("No se encontró robots.txt");
-  if (!sitemap) issues.push("No se encontró sitemap.xml");
-  if (Date.now() - started > 3000) issues.push("La respuesta inicial fue lenta");
+  if (!title) issues.push("Missing title tag");
+  else if (text(title).length < 25 || text(title).length > 65) issues.push("Title length is not SEO-optimal");
+  if (!description) issues.push("Missing meta description");
+  if (h1.length !== 1) issues.push(`Detected ${h1.length} H1 headings`);
+  if (imagesWithoutAlt > 0) issues.push(`${imagesWithoutAlt} images are missing alt text`);
+  if (!canonical) issues.push("Missing canonical URL");
+  if (!robots) issues.push("robots.txt not found");
+  if (!sitemap) issues.push("sitemap.xml not found");
+  if (Date.now() - started > 3000) issues.push("The initial response was slow");
   const score = Math.max(0, 100 - issues.length * 9);
   return {
     url: finalUrl, reachable: response.ok, status: response.status,
@@ -95,5 +95,5 @@ export function detectWebsitePlatform(html: string): string {
     ["BigCommerce", /cdn\d*\.bigcommerce\.com|stencil-utils/i],
     ["PrestaShop", /prestashop|modules\/ps_/i],
   ];
-  return detectors.find(([, pattern]) => pattern.test(html))?.[0] || "Sitio web";
+  return detectors.find(([, pattern]) => pattern.test(html))?.[0] || "Website";
 }

@@ -3,6 +3,7 @@ import AppShell from "@/components/app-shell/AppShell";
 import PageHeader from "@/components/app-shell/PageHeader";
 import OverviewDashboard from "@/components/platform/OverviewDashboard";
 import { brand } from "@/lib/brand";
+import { ScrapingFeatureCard } from "@/components/scraping/QuickAccessButtons";
 
 export const metadata: Metadata = {
   title: "Command Center",
@@ -22,6 +23,14 @@ export default function OverviewPage() {
             { label: "Open Funnel Builder", href: "/funnelspy", tone: "secondary" },
           ]}
         />
+        <section className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <ScrapingFeatureCard icon="🔍" title="Business Discovery" description="Find businesses from web directories automatically" variant="leads" />
+          <ScrapingFeatureCard icon="👁️" title="Funnel Analysis" description="Analyze competitor landing pages" variant="funnel" />
+          <ScrapingFeatureCard icon="👥" title="Competitor Intelligence" description="Monitor competitor data and strategies" variant="competitor" />
+          <ScrapingFeatureCard icon="💾" title="Data Enrichment" description="Enrich business information from web" variant="business" />
+          <ScrapingFeatureCard icon="👤" title="Contact Extraction" description="Find decision-makers and employees" variant="contacts" />
+          <ScrapingFeatureCard icon="📝" title="Proposal Personalization" description="Generate AI-personalized proposals" variant="proposal" />
+        </section>
         <OverviewDashboard />
       </>
     </AppShell>

@@ -15,3 +15,5 @@ build/
 *.tsbuildinfo
 .vercel/
 secrets/*.txt
+.vs/
+.vscode/

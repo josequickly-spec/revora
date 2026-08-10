@@ -26,7 +26,7 @@ async function findLocation(body: DiscoveryRequest) {
     signal: AbortSignal.timeout(15000),
     headers: { "User-Agent": "RevoraBusinessDiscovery/1.0 (public business research)" },
   });
-  if (!response.ok) throw new Error(`OpenStreetMap respondió ${response.status}`);
+  if (!response.ok) throw new Error(`OpenStreetMap responded ${response.status}`);
   return await response.json() as LocationMatch[];
 }
 
@@ -49,7 +49,7 @@ export async function POST(req: Request) {
     await ensureTechnologyDataColumn();
     if (!body.businessName || (!body.domain && !body.city && !body.zipcode)) {
       return NextResponse.json(
-        { success: false, error: "Indica el negocio y un dominio, ciudad o código postal" },
+        { success: false, error: "Enter the business and a domain, city, or ZIP code" },
         { status: 400 }
       );
     }
@@ -67,7 +67,7 @@ export async function POST(req: Request) {
       if (!discoveredUrl) {
         return NextResponse.json({
           success: false,
-          error: "Encontré negocios en esa ubicación, pero ninguno tiene una web pública verificable. Añade el dominio manualmente.",
+          error: "I found businesses in that location, but none has a verifiable public website. Add the domain manually.",
           candidates: matches.slice(0, 5).map(match => ({
             name: match.name || match.display_name.split(",")[0],
             address: match.display_name,
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
     await assertPublicDomain(domain);
     const siteResponse = await fetchWebsite(domain);
     if (!siteResponse) {
-      return NextResponse.json({ success: false, error: "La web encontrada no respondió correctamente" }, { status: 422 });
+      return NextResponse.json({ success: false, error: "The website found did not respond correctly" }, { status: 422 });
     }
 
     const html = await siteResponse.text();
@@ -100,7 +100,7 @@ export async function POST(req: Request) {
     const generatedFunnel = createFunnel ? await generateLocalizedFunnel(
       body.businessName, industryType, niche, ind.defaultPainPoint,
       { website: siteResponse.url || domain, country: locationMatch?.address?.country, platform, audit: { site: audit, technologyProfile: builtWith } },
-      body.languageMode || "bilingual"
+      body.languageMode || "en"
     ) : null;
     const domainData = await getDomainEmails(domain);
     let bestContact = domainData?.emails?.slice().sort((a, b) => b.confidence - a.confidence)[0] || null;
@@ -156,7 +156,7 @@ export async function POST(req: Request) {
          (business_id,funnel_name,template_type,headline,subheadline,cta_text,offer_badge,bonus_offer,custom_primary_color,slug,content_json)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING ${funnelSelect}`,
         [
-          business.id, `Embudo para ${body.businessName}`, ind.funnelType,
+          business.id, `Funnel for ${body.businessName}`, ind.funnelType,
           generatedFunnel.headline, generatedFunnel.subheadline,
           generatedFunnel.ctaText, generatedFunnel.offerBadge, generatedFunnel.bonusOffer,
           generatedFunnel.colorScheme.primary, slug, JSON.stringify(generatedFunnel),

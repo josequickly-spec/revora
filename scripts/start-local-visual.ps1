@@ -18,8 +18,12 @@ if (-not $standalone) {
   throw "The visual QA build is missing. Run npm run build first."
 }
 
-# Local-only runtime. It never reads or changes the remote Supabase database.
-$env:DATABASE_URL = "postgresql://ecoscale_local_app:local_only_Revora_2026@127.0.0.1:5432/ecoscale_local"
+# Local-only runtime. Credentials stay in the ignored .env.local file.
+$localDatabaseLine = Get-Content -LiteralPath $localEnvFile | Where-Object { $_ -match "^LOCAL_DATABASE_URL=" } | Select-Object -Last 1
+if (-not $localDatabaseLine) {
+  throw "LOCAL_DATABASE_URL is required in .env.local. Refusing to use a remote database."
+}
+$env:DATABASE_URL = ($localDatabaseLine.Substring($localDatabaseLine.IndexOf('=') + 1)).Trim().Trim('"').Trim("'")
 $env:APP_URL = "http://127.0.0.1:$Port"
 $env:AUTH_JWT_SECRET = "local-development-jwt-secret-not-for-production-2026"
 $env:AUTH_ENCRYPTION_KEY = "local-development-encryption-key-not-for-production-2026"

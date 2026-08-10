@@ -21,6 +21,74 @@ body {
 
 * { scrollbar-color: rgb(148 163 184 / .32) transparent; }
 
+/* Unified production workspace visual system. Scoped to authenticated routes. */
+.revora-shell {
+  --workspace-accent: #fb923c;
+  --workspace-accent-soft: rgb(251 146 60 / .1);
+  --workspace-panel: rgb(255 255 255 / .032);
+  --workspace-line: rgb(255 255 255 / .08);
+  background:
+    radial-gradient(circle at 82% -8%, rgb(249 115 22 / .09), transparent 28rem),
+    radial-gradient(circle at 30% 110%, rgb(132 204 22 / .035), transparent 32rem),
+    #06080d;
+}
+
+.revora-shell main input,
+.revora-shell main select,
+.revora-shell main textarea {
+  border-color: var(--workspace-line);
+  background-color: rgb(0 0 0 / .28);
+  color: #f8fafc;
+  outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.revora-shell main input:focus,
+.revora-shell main select:focus,
+.revora-shell main textarea:focus {
+  border-color: rgb(251 146 60 / .55);
+  background-color: rgb(0 0 0 / .42);
+  box-shadow: 0 0 0 3px rgb(249 115 22 / .1);
+}
+
+.revora-shell main button,
+.revora-shell main a {
+  transition-duration: 160ms;
+}
+
+.revora-shell main button:focus-visible,
+.revora-shell main a:focus-visible {
+  outline: 2px solid var(--workspace-accent);
+  outline-offset: 3px;
+}
+
+.revora-shell main table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.revora-shell main th {
+  color: #94a3b8;
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.revora-shell main tbody tr {
+  transition: background-color 160ms ease;
+}
+
+.revora-shell main tbody tr:hover {
+  background: rgb(255 255 255 / .025);
+}
+
+.revora-shell main [role="alert"],
+.revora-shell main [role="status"] {
+  backdrop-filter: blur(16px);
+}
+
 /* Legacy revenue workspace: OTOM-grade visual layer kept intentionally scoped. */
 .legacy-studio {
   position: relative;

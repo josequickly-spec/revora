@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   try {
     const client = request.headers.get("x-forwarded-for")?.split(",")[0] || "local";
     const limit = checkRateLimit(`audit:${client}`);
-    if (!limit.allowed) return NextResponse.json({ error: "Límite temporal alcanzado. Intenta más tarde." }, { status: 429 });
+    if (!limit.allowed) return NextResponse.json({ error: "Temporary limit reached. Try again later." }, { status: 429 });
     const input = funnelAuditRequestSchema.parse(await request.json());
     const domain = normalizeAuditDomain(input.url);
     if (input.businessId) {
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
       freshnessPolicyDays: 7,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "No fue posible analizar el dominio.";
+    const message = error instanceof Error ? error.message : "Could not analyze the domain.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

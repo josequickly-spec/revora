@@ -9,7 +9,7 @@ const leadSchema = z.object({
   email: z.string().trim().email().max(320),
   phone: z.string().trim().max(40).optional(),
   consent: z.literal(true),
-  language: z.enum(["en", "es"]).default("es"),
+  language: z.enum(["en", "es"]).default("en"),
   website: z.string().max(0).optional(),
 }).strict();
 
@@ -17,7 +17,7 @@ export async function POST(req: Request) {
   try {
     const body = leadSchema.parse(await req.json());
     const language = body.language;
-    await pool.query("ALTER TABLE funnel_leads ADD COLUMN IF NOT EXISTS language VARCHAR(5) DEFAULT 'es'");
+    await pool.query("ALTER TABLE funnel_leads ADD COLUMN IF NOT EXISTS language VARCHAR(5) DEFAULT 'en'");
     const result = await pool.query(
       `INSERT INTO funnel_leads (funnel_id,name,email,phone,consent,language)
        VALUES ($1,$2,$3,$4,TRUE,$5)
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
           "",
           language === "en"
             ? `You requested this information from ${funnel.name}.`
-            : `Solicitaste esta información a ${funnel.name}.`,
+            : `You requested this information from ${funnel.name}.`,
         ].filter(Boolean).join("\n\n");
         try {
           await sendOutreachEmail(
@@ -60,7 +60,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, lead: result.rows[0], language, emailDelivered }, { status: 201 });
   } catch {
     return NextResponse.json(
-      { success: false, error: "Lead capture failed" },
+      { success: false, error: "Lead capture failed." },
       { status: 400 }
     );
   }

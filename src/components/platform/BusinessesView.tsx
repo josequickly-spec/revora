@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, Building2, Globe2, Mail, Network, Plus, Search, Trash2, X } from "lucide-react";
+import { ArrowRight, Building2, CheckCircle2, CircleDashed, Globe2, Mail, Network, Plus, Search, Sparkles, Trash2, X } from "lucide-react";
 
 type Business = {
   id: number;
@@ -37,8 +37,19 @@ type ConsultantReport = {
 };
 type ProposalSummary = { id: string; title: string; status: string };
 type CampaignSummary = { id: string; name: string; status: string };
+type OutreachReadiness = { score: number; grade: string; ready: boolean; verifiedInsightCount: number; contactReady: boolean; business: { outreach_approved_at?: string | null }; checks: Record<string, boolean> };
 
-export default function BusinessesView({ selectedId }: { selectedId?: number }) {
+type SalesFlowStep = {
+  key: "audit" | "strategy" | "proposal" | "outreach" | "handoff";
+  title: string;
+  detail: string;
+  href: string;
+  action: string;
+  tone: "cyan" | "violet" | "lime" | "amber";
+  complete: boolean;
+};
+
+export default function BusinessesView({ selectedId, autoFlow = false }: { selectedId?: number; autoFlow?: boolean }) {
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [funnels, setFunnels] = useState<Funnel[]>([]);
@@ -46,6 +57,8 @@ export default function BusinessesView({ selectedId }: { selectedId?: number }) 
   const [consultantReports, setConsultantReports] = useState<ConsultantReport[]>([]);
   const [proposals, setProposals] = useState<ProposalSummary[]>([]);
   const [campaigns, setCampaigns] = useState<CampaignSummary[]>([]);
+  const [readiness, setReadiness] = useState<OutreachReadiness | null>(null);
+  const [approvingOutreach, setApprovingOutreach] = useState(false);
   const [deletingFunnelId, setDeletingFunnelId] = useState<number | null>(null);
   const [pendingDeleteFunnelId, setPendingDeleteFunnelId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -71,15 +84,36 @@ export default function BusinessesView({ selectedId }: { selectedId?: number }) 
       fetch(`/api/businesses/${selectedId}/consultant-reports`).then(response => response.ok ? response.json() : { reports: [] }),
       fetch(`/api/proposals?businessId=${selectedId}`).then(response => response.ok ? response.json() : { proposals: [] }),
       fetch(`/api/outreach/campaigns?businessId=${selectedId}`).then(response => response.ok ? response.json() : { campaigns: [] }),
-    ]).then(([auditData, consultantData, proposalData, campaignData]) => {
+      fetch(`/api/businesses/${selectedId}/outreach-readiness`).then(response => response.ok ? response.json() : null),
+    ]).then(([auditData, consultantData, proposalData, campaignData, readinessData]) => {
       setAudits(auditData.audits || []);
       setConsultantReports(consultantData.reports || []);
       setProposals(proposalData.proposals || []);
       setCampaigns(campaignData.campaigns || []);
+      setReadiness(readinessData);
     }).catch(() => { setAudits([]); setConsultantReports([]); setProposals([]); setCampaigns([]); });
   }, [selectedId]);
 
+  async function approveForOutreach() {
+    if (!selectedId || approvingOutreach) return;
+    setApprovingOutreach(true);
+    try {
+      const response = await fetch(`/api/businesses/${selectedId}/outreach-readiness`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirmation: "APPROVE OUTREACH" }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Outreach approval failed.");
+      const refreshed = await fetch(`/api/businesses/${selectedId}/outreach-readiness`).then(item => item.json());
+      setReadiness(refreshed);
+    } catch (reason) {
+      window.alert(reason instanceof Error ? reason.message : "Outreach approval failed.");
+    } finally { setApprovingOutreach(false); }
+  }
+
   const selected = useMemo(() => businesses.find((business) => business.id === selectedId), [businesses, selectedId]);
+  const selectedAudit = audits[0];
+  const selectedConsultant = consultantReports.find((report) => report.status === "completed" && report.report) || consultantReports[0];
+  const selectedProposal = proposals[0];
+  const selectedCampaign = campaigns[0];
+  const salesFlow = selected ? buildSalesFlow(selected, selectedAudit, selectedConsultant, selectedProposal, selectedCampaign, autoFlow) : null;
 
   async function deleteFunnel(funnel: Funnel) {
     if (deletingFunnelId !== null) return;
@@ -88,7 +122,7 @@ export default function BusinessesView({ selectedId }: { selectedId?: number }) 
       const response = await fetch("/api/funnels", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: funnel.id, confirmation: `BORRAR EMBUDO ${funnel.id}` }),
+        body: JSON.stringify({ id: funnel.id, confirmation: `DELETE FUNNEL ${funnel.id}` }),
       });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data.error || "The funnel could not be deleted.");
@@ -111,6 +145,43 @@ export default function BusinessesView({ selectedId }: { selectedId?: number }) 
     return (
       <div className="grid gap-6 xl:grid-cols-[1.25fr_.75fr]">
         <section className="rounded-3xl border border-white/[.07] bg-white/[.03] p-6">
+          {autoFlow && salesFlow && (
+            <section className="mb-6 rounded-3xl border border-cyan-300/20 bg-cyan-300/[.05] p-5">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="max-w-3xl">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/[.08] px-3 py-1 text-[10px] font-black uppercase tracking-[.18em] text-cyan-200">
+                    <Sparkles className="size-3.5" />
+                    Guided sales flow
+                  </span>
+                  <h3 className="mt-3 text-2xl font-black text-white">Start from this business and move to the next best step automatically.</h3>
+                  <p className="mt-2 text-sm leading-6 text-slate-400">
+                    The app will lead you through audit, strategy, proposal and outreach in order. Nothing is published or sent without an explicit action.
+                  </p>
+                </div>
+                <Link
+                  href={salesFlow.startHref}
+                  className={`inline-flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-black text-slate-950 shadow-lg ${salesFlow.tone === "violet" ? "bg-violet-300" : salesFlow.tone === "lime" ? "bg-lime-300" : salesFlow.tone === "amber" ? "bg-amber-300" : "bg-cyan-300"}`}
+                >
+                  {salesFlow.startLabel}
+                  <ArrowRight className="size-4" />
+                </Link>
+              </div>
+              <div className="mt-5 grid gap-3 md:grid-cols-4">
+                {salesFlow.steps.map((step) => (
+                  <div
+                    key={step.key}
+                    className={`rounded-2xl border p-4 ${step.complete ? "border-lime-300/20 bg-lime-300/[.06]" : step.key === salesFlow.current.key ? "border-cyan-300/20 bg-cyan-300/[.06]" : "border-white/[.06] bg-black/15"}`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-black uppercase tracking-[.16em] text-slate-500">{step.title}</span>
+                      {step.complete ? <CheckCircle2 className="size-4 text-lime-300" /> : <CircleDashed className="size-4 text-slate-600" />}
+                    </div>
+                    <p className="mt-2 text-sm font-bold text-white">{step.detail}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <span className="text-xs font-bold uppercase tracking-[.16em] text-cyan-300">{selected.status}</span>
@@ -119,7 +190,7 @@ export default function BusinessesView({ selectedId }: { selectedId?: number }) 
                 <Globe2 className="size-4" />{selected.domain}
               </a>
             </div>
-            <Link href={`/funnelspy?url=${encodeURIComponent(selected.domain)}&businessId=${selected.id}`} className="rounded-xl bg-cyan-300 px-4 py-2.5 text-sm font-black text-slate-950 outline-none hover:bg-cyan-200 focus-visible:ring-2 focus-visible:ring-cyan-300">Run Funnel Audit</Link>
+            <Link href={salesFlow?.startHref || `/funnelspy?url=${encodeURIComponent(selected.domain)}&businessId=${selected.id}&flow=1`} className="rounded-xl bg-cyan-300 px-4 py-2.5 text-sm font-black text-slate-950 outline-none hover:bg-cyan-200 focus-visible:ring-2 focus-visible:ring-cyan-300">Continue sales flow</Link>
           </div>
           <dl className="mt-8 grid gap-4 border-t border-white/[.07] pt-6 sm:grid-cols-2">
             {[
@@ -129,6 +200,7 @@ export default function BusinessesView({ selectedId }: { selectedId?: number }) 
               ["Platform", selected.platform || "Not detected"],
             ].map(([label, value]) => <div key={label}><dt className="text-xs uppercase tracking-wider text-slate-600">{label}</dt><dd className="mt-1 text-sm font-semibold text-slate-200">{value}</dd></div>)}
           </dl>
+          {readiness&&<section className="mt-8 rounded-3xl border border-orange-300/15 bg-orange-300/[.04] p-5"><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-[10px] font-black uppercase tracking-[.18em] text-orange-300">Opportunity qualification</p><h3 className="mt-2 text-xl font-black text-white">{readiness.score}/100 · Priority {readiness.grade}</h3><p className="mt-2 text-sm text-slate-400">Evidence-readiness score only. It does not predict revenue, replies or conversion.</p></div><span className={`rounded-full px-3 py-1 text-xs font-black ${readiness.business.outreach_approved_at?"bg-lime-300/10 text-lime-300":"bg-amber-300/10 text-amber-300"}`}>{readiness.business.outreach_approved_at?"Approved for Outreach":"Approval required"}</span></div><div className="mt-5 grid gap-2 sm:grid-cols-2">{Object.entries(readiness.checks).map(([key,complete])=><div key={key} className="flex items-center gap-2 rounded-xl border border-white/[.06] bg-black/15 px-3 py-2 text-xs text-slate-300">{complete?<CheckCircle2 className="size-4 text-lime-300"/>:<CircleDashed className="size-4 text-slate-600"/>}{key.replace(/([A-Z])/g," $1").replace(/^./,letter=>letter.toUpperCase())}</div>)}</div><p className="mt-3 text-xs text-slate-500">Verified audit insights: {readiness.verifiedInsightCount} · Decision-maker contact: {readiness.contactReady?"available":"still required before campaign generation"}</p>{!readiness.business.outreach_approved_at&&<button type="button" disabled={!readiness.ready||approvingOutreach} onClick={approveForOutreach} className="mt-4 rounded-xl bg-orange-400 px-4 py-2.5 text-sm font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-40">{approvingOutreach?"Approving…":readiness.ready?"Approve for Outreach":"Complete required evidence first"}</button>}</section>}
           <section className="mt-8 border-t border-white/[.07] pt-6">
             <h3 className="font-black text-white">Enrichment status</h3>
             <div className="mt-3 flex flex-wrap gap-2 text-xs">
@@ -188,7 +260,7 @@ export default function BusinessesView({ selectedId }: { selectedId?: number }) 
             id: funnel.id,
             title: funnel.funnelName,
             detail: `${funnel.viewCount || 0} views`,
-            href: `/es/funnel/${funnel.slug}`,
+            href: `/en/funnel/${funnel.slug}`,
             onDelete: () => setPendingDeleteFunnelId(funnel.id),
             onConfirmDelete: () => deleteFunnel(funnel),
             onCancelDelete: () => setPendingDeleteFunnelId(null),
@@ -210,7 +282,7 @@ export default function BusinessesView({ selectedId }: { selectedId?: number }) 
           const funnelCount = funnels.filter((funnel) => funnel.businessId === business.id).length;
           return (
             <li key={business.id}>
-              <Link href={`/businesses/${business.id}`} className="group flex items-center gap-4 px-5 py-4 outline-none transition hover:bg-white/[.04] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-300">
+              <Link href={`/businesses/${business.id}?flow=1`} className="group flex items-center gap-4 px-5 py-4 outline-none transition hover:bg-white/[.04] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-300">
                 <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-cyan-300/[.08] text-cyan-300"><Building2 className="size-5" /></span>
                 <span className="min-w-0 flex-1"><strong className="block truncate text-sm text-white">{business.name}</strong><span className="mt-1 block truncate text-xs text-slate-500">{business.domain} · {business.businessType}</span></span>
                 <span className="hidden text-xs text-slate-500 sm:block">{contactCount} contacts · {funnelCount} funnels</span>
@@ -388,4 +460,66 @@ function Notice({ children }: { children: React.ReactNode }) {
 
 function Status({ label, value }: { label: string; value: string }) {
   return <span className="rounded-full border border-white/10 bg-white/[.04] px-3 py-1 text-slate-300">{label}: {value}</span>;
+}
+
+function buildSalesFlow(
+  business: Business,
+  audit: Audit | undefined,
+  consultant: ConsultantReport | undefined,
+  proposal: ProposalSummary | undefined,
+  campaign: CampaignSummary | undefined,
+  autoFlow: boolean,
+) {
+  const withFlow = (href: string) => autoFlow ? `${href}${href.includes("?") ? "&" : "?"}flow=1` : href;
+  const steps: SalesFlowStep[] = [
+    {
+      key: "audit",
+      title: "Audit",
+      detail: audit ? `Completed · ${audit.score} score` : "Run FunnelSpy on the business",
+      href: withFlow(`/funnelspy?url=${encodeURIComponent(business.domain)}&businessId=${business.id}`),
+      action: audit ? "Re-run audit" : "Run audit",
+      tone: "cyan",
+      complete: Boolean(audit),
+    },
+    {
+      key: "strategy",
+      title: "Strategy",
+      detail: consultant?.report ? "Completed AI strategy" : "Generate an advisory report",
+      href: withFlow(audit ? `/businesses/${business.id}/consultant?auditId=${audit.id}` : `/businesses/${business.id}/consultant`),
+      action: consultant?.report ? "Open strategy" : "Generate strategy",
+      tone: "violet",
+      complete: Boolean(consultant?.report),
+    },
+    {
+      key: "proposal",
+      title: "Proposal",
+      detail: proposal ? proposal.title : "Create the commercial draft",
+      href: withFlow(audit ? `/proposals/new?businessId=${business.id}&auditId=${audit.id}${consultant?.id ? `&consultantReportId=${consultant.id}` : ""}` : `/proposals/new?businessId=${business.id}`),
+      action: proposal ? "Open proposal" : "Create proposal",
+      tone: "amber",
+      complete: Boolean(proposal),
+    },
+    {
+      key: "outreach",
+      title: "Outreach",
+      detail: campaign ? `${campaign.name} · ${campaign.status}` : "Create an approved outreach draft",
+      href: withFlow(proposal ? `/outreach/campaigns/new?businessId=${business.id}&proposalId=${proposal.id}` : `/outreach/campaigns/new?businessId=${business.id}`),
+      action: campaign ? "Open outreach" : "Create outreach",
+      tone: "lime",
+      complete: Boolean(campaign),
+    },
+  ];
+
+  const current = steps.find((step) => !step.complete) || {
+    key: "handoff" as const,
+    title: "Handoff",
+    detail: campaign ? "Ready for CRM follow-through" : "Final step ready",
+    href: campaign ? `/campaign/${campaign.id}` : `/crm`,
+    action: campaign ? "Open campaign" : "Open CRM",
+    tone: "lime" as const,
+    complete: true,
+  };
+  const nextHref = current.href;
+  const nextLabel = current.action;
+  return { steps, current, nextHref, nextLabel, startHref: nextHref, startLabel: nextLabel, tone: current.tone };
 }
