@@ -110,7 +110,7 @@ export class ScraplingOrchestrator {
    * Execute business discovery job
    */
   private async executeBusinessDiscovery(job: ScrapingJob): Promise<void> {
-    const { keyword, location, limit } = job;
+    const { keyword = "", location = "", limit = 50 } = job;
     job.progress = 20;
 
     const results = await this.businessDiscovery.scrapeDirectories(

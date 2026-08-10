@@ -29,7 +29,7 @@ export type ScraperType =
   | "apify-youtube-channels"    // YouTube channel + emails via Apify
   | "apify-twitter-profiles";   // Twitter/X profile scraper via Apify
 
-export interface ScrapingJob {
+export interface ScrapingJob extends Record<string, any> {
   id: string;
   type: ScraperType;
   businessId?: number;
@@ -41,6 +41,10 @@ export interface ScrapingJob {
   error?: string;
   createdAt: Date;
   completedAt?: Date;
+  keyword?: string;
+  location?: string;
+  limit?: number;
+  domain?: string;
 }
 
 export interface ScrapingResult {

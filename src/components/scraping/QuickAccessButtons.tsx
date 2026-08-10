@@ -62,12 +62,12 @@ export function ScrapingQuickAccessButton({ variant = "leads" }: QuickAccessButt
     emerald: "border-emerald-300/20 bg-emerald-300/[.07] text-emerald-200 hover:bg-emerald-300/[.12]",
     pink: "border-pink-300/20 bg-pink-300/[.07] text-pink-200 hover:bg-pink-300/[.12]",
     lime: "border-lime-300/20 bg-lime-300/[.07] text-lime-200 hover:bg-lime-300/[.12]",
-  };
+  } as const;
 
   return (
     <Link
       href={config.href}
-      className={`flex items-center gap-3 rounded-2xl border p-4 transition ${colorClasses[config.color]}`}
+      className={`flex items-center gap-3 rounded-2xl border p-4 transition ${colorClasses[config.color as keyof typeof colorClasses]}`}
     >
       <span className="text-2xl">{config.icon}</span>
       <div>
@@ -110,12 +110,12 @@ export function ScrapingFeatureCard({
   icon,
   title,
   description,
-  variant,
+  variant = "leads",
 }: {
   icon: string;
   title: string;
   description: string;
-  variant: QuickAccessButtonProps["variant"];
+  variant?: QuickAccessButtonProps["variant"];
 }) {
   const configs = {
     leads: { href: "/scraping?tab=discovery", color: "cyan" },
@@ -124,9 +124,9 @@ export function ScrapingFeatureCard({
     business: { href: "/scraping?tab=enrichment", color: "emerald" },
     contacts: { href: "/scraping?tab=contacts", color: "pink" },
     proposal: { href: "/scraping?tab=proposal", color: "lime" },
-  };
+  } as const;
 
-  const config = configs[variant];
+  const config = configs[variant as keyof typeof configs];
 
   const borderClasses = {
     cyan: "border-cyan-300/20 hover:border-cyan-300/40",
@@ -135,12 +135,12 @@ export function ScrapingFeatureCard({
     emerald: "border-emerald-300/20 hover:border-emerald-300/40",
     pink: "border-pink-300/20 hover:border-pink-300/40",
     lime: "border-lime-300/20 hover:border-lime-300/40",
-  };
+  } as const;
 
   return (
     <Link
       href={config.href}
-      className={`group rounded-2xl border p-6 transition hover:bg-white/[.035] ${borderClasses[config.color]}`}
+      className={`group rounded-2xl border p-6 transition hover:bg-white/[.035] ${borderClasses[config.color as keyof typeof borderClasses]}`}
     >
       <div className="text-4xl mb-3">{icon}</div>
       <h3 className="font-bold text-white mb-1">{title}</h3>

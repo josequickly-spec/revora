@@ -24,7 +24,7 @@ export default function ScrapingJobMonitor({
   const [closed, setClosed] = useState(false);
 
   useEffect(() => {
-    let interval: NodeJS.Timer;
+    let interval: NodeJS.Timeout | undefined;
 
     let notFoundCount = 0;
 
