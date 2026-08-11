@@ -101,11 +101,6 @@ export async function proxy(request: NextRequest) {
       status,
       headers: { "Content-Security-Policy": policy, ...headers },
     });
-  if (pathname === "/login" && isDev && process.env.LOCAL_AUTH_BYPASS === "true") {
-    return NextResponse.redirect(new URL("/crm", requestOrigin(request)), {
-      headers: { "Content-Security-Policy": policy },
-    });
-  }
   if (pathname.startsWith("/api/")) {
     const contentLength = Number(request.headers.get("content-length") || 0);
     if (contentLength > 2_000_000) return reject({ error: "Request body is too large.", code: "payload_too_large" }, 413);
