@@ -54,6 +54,7 @@ function permissionFor(request: NextRequest): Permission {
 function isPublicPage(pathname: string) {
   return pathname === "/" ||
     pathname === "/login" ||
+    pathname === "/admin/login" ||
     pathname === "/docs/api" ||
     /^\/(?:en|es)\/funnel\/[^/]+$/.test(pathname) ||
     /^\/funnel\/[^/]+$/.test(pathname) ||
