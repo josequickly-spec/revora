@@ -1,0 +1,50 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main, refactor/enterprise-platform]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env: {POSTGRES_USER: revora, POSTGRES_PASSWORD: revora_ci, POSTGRES_DB: revora}
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U revora" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgresql://revora:revora_ci@localhost:5432/revora
+      AUTH_JWT_SECRET: ci-only-jwt-secret-with-at-least-32-characters
+      AUTH_ENCRYPTION_KEY: ci-only-encryption-key-with-at-least-32-characters
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 22, cache: npm}
+      - uses: azure/setup-kubectl@v4
+        with: {version: v1.32.2}
+      - uses: hashicorp/setup-terraform@v3
+        with: {terraform_version: 1.10.5}
+      - run: npm ci
+      - run: npm audit
+      - run: npm run scan:secrets
+      - run: npm run init
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test:phase2
+      - run: npm run test:phase3
+      - run: npm run test:phase4
+      - run: npm run test:phase5
+      - run: npm run test:phase6
+      - run: npm run test:phase7
+      - run: npm run test:phase8
+      - run: npm run test:outreach-live
+      - run: npm run test:security
+      - run: npm run build
+      - run: kubectl kustomize infrastructure/kubernetes/base > /dev/null
+      - run: terraform -chdir=infrastructure/terraform fmt -check
+      - run: terraform -chdir=infrastructure/terraform init -backend=false
+      - run: terraform -chdir=infrastructure/terraform validate
+      - run: docker build -t revora:${{ github.sha }} .

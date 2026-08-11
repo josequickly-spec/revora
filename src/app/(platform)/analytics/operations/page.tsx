@@ -1,0 +1,1 @@
+import PageHeader from "@/components/app-shell/PageHeader";import ExecutiveDashboard from "@/components/executive/ExecutiveDashboard";export default function Page(){return <><PageHeader eyebrow="Executive Analytics" title="Operations health" description="Queue throughput, retries, failures and latency from durable workflow facts."/><ExecutiveDashboard dashboard="operations"/></>}

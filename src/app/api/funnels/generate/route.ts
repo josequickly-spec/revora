@@ -3,6 +3,7 @@ import { FunnelLanguageMode, generateLocalizedFunnel } from "@/lib/funnel-genera
 import { getIndustry } from "@/lib/industries";
 import { funnelSelect, pool } from "@/lib/postgres";
 import { auditSite } from "@/lib/site-audit";
+import { findLatestAudit } from "@/lib/funnelspy-store";
 
 interface FunnelGenerateRequest {
   businessId: number;
@@ -27,7 +28,7 @@ export async function POST(req: Request) {
 
     console.log(`Generating funnel for: ${businessName}`);
     const businessResult = businessId ? await pool.query(
-      `SELECT domain,country,platform,hero_offer,hero_price,pain_point,niche,business_type
+      `SELECT domain,country,platform,hero_offer,hero_price,pain_point,niche,business_type,logo_url,brand_color,brand_accent
        FROM businesses WHERE id=$1`, [businessId]
     ) : null;
     const business = businessResult?.rows[0];
@@ -35,6 +36,17 @@ export async function POST(req: Request) {
     const audit = business?.domain
       ? await auditSite(business.domain).catch(() => null)
       : null;
+    const latestFunnelSpy = business?.domain
+      ? await findLatestAudit(business.domain).catch(() => null)
+      : null;
+    const visualIdentity = latestFunnelSpy?.analysis.visualIdentity || {
+      logoUrl: business?.logo_url || "",
+      heroImageUrl: "",
+      colors: [business?.brand_color, business?.brand_accent].filter(Boolean),
+      fonts: [],
+      navigation: [],
+      layout: "",
+    };
 
     const generatedFunnel = await generateLocalizedFunnel(
       businessName,
@@ -48,8 +60,9 @@ export async function POST(req: Request) {
         offer: business?.hero_offer && business.hero_offer !== ind.defaultOffer ? business.hero_offer : undefined,
         price: business?.hero_price && business.hero_price !== ind.defaultPrice ? business.hero_price : undefined,
         audit,
+        visualIdentity,
       },
-      body.languageMode || "bilingual"
+      body.languageMode || "en"
     );
 
     const slug =
@@ -61,7 +74,7 @@ export async function POST(req: Request) {
       `INSERT INTO funnels
        (business_id,funnel_name,template_type,headline,subheadline,cta_text,offer_badge,bonus_offer,custom_primary_color,slug,content_json)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING ${funnelSelect}`,
-      [businessId || null, `Embudo para ${businessName}`, ind.funnelType,
+      [businessId || null, `Funnel for ${businessName}`, ind.funnelType,
        generatedFunnel.headline, generatedFunnel.subheadline, generatedFunnel.ctaText,
        generatedFunnel.offerBadge, generatedFunnel.bonusOffer,
        generatedFunnel.colorScheme.primary, slug, JSON.stringify(generatedFunnel)]
@@ -72,7 +85,7 @@ export async function POST(req: Request) {
       success: true,
       funnel: newFunnel,
       generatedContent: generatedFunnel,
-      message: `Embudo generado automaticamente para "${businessName}"`,
+      message: `Funnel automatically generated for "${businessName}"`,
       availableLanguages: generatedFunnel.availableLanguages,
     });
   } catch (error) {

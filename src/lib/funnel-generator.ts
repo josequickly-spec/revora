@@ -1,3 +1,6 @@
+import { z } from "zod";
+import { generateStructured } from "@/lib/ai-provider-router";
+
 export interface GeneratedFunnel {
   headline: string;
   subheadline: string;
@@ -37,6 +40,29 @@ export interface GeneratedFunnel {
     secondary: string;
     accent: string;
   };
+  landingPage: {
+    brandName: string;
+    navigation: string[];
+    logoUrl: string;
+    heroImageUrl: string;
+    preserveOriginalDesign: boolean;
+    fontFamily: string;
+    headerStyle: string;
+    sectionOrder: string[];
+    backgroundColor: string;
+    surfaceColor: string;
+    textColor: string;
+  };
+  otom: {
+    hook: { name: string; description: string; psychologicalTrigger: string; pricePoint: number };
+    coreOffer: { name: string; description: string; psychologicalTrigger: string; pricePoint: number };
+    upsell: { name: string; description: string; psychologicalTrigger: string; pricePoint: number };
+    downsell: { name: string; description: string; psychologicalTrigger: string; pricePoint: number };
+    pricingStrategy: { anchorPrice: number; suggestedPrice: number; premiumPrice: number; rationale: string };
+    psychologicalTriggers: string[];
+    customerJourney: Array<{ step: number; action: string; trigger: string; expectedResult: string }>;
+    followUp: Array<{ day: number; subject: string; purpose: string; body: string }>;
+  };
 }
 
 export interface FunnelBusinessContext {
@@ -47,7 +73,75 @@ export interface FunnelBusinessContext {
   price?: string;
   audit?: unknown;
   language?: "es" | "en";
+  visualIdentity?: {
+    logoUrl?: string;
+    heroImageUrl?: string;
+    colors?: string[];
+    fonts?: string[];
+    navigation?: string[];
+    layout?: string;
+  };
 }
+
+const offerStepSchema = z.object({
+  name: z.string(),
+  description: z.string(),
+  psychologicalTrigger: z.string(),
+  pricePoint: z.number().min(0),
+});
+
+const funnelAISchema = z.object({
+  headline: z.string(), subheadline: z.string(), ctaText: z.string(), offer: z.string(),
+  offerBadge: z.string(), bonusOffer: z.string(), painPoint: z.string(), agitationCopy: z.string(),
+  solutionCopy: z.string(), proofCopy: z.string(), eyebrow: z.string(),
+  benefits: z.array(z.string()).min(3).max(5),
+  objections: z.array(z.object({ question: z.string(), answer: z.string() })).min(2).max(5),
+  trustPoints: z.array(z.string()).min(3).max(5), audience: z.string(), primaryGoal: z.string(), valueProposition: z.string(),
+  leadMagnet: z.object({ name: z.string(), format: z.string(), deliveryPromise: z.string() }),
+  fascinationBullets: z.array(z.string()).length(4), ctaOptions: z.array(z.string()).length(3),
+  welcomeEmail: z.object({ subject: z.string(), previewText: z.string(), body: z.string(), postscript: z.string() }),
+  processSteps: z.array(z.object({ title: z.string(), description: z.string() })).min(3).max(5),
+  visualDirection: z.string(),
+  colorScheme: z.object({ primary: z.string(), secondary: z.string(), accent: z.string() }),
+  landingPage: z.object({
+    brandName: z.string(),
+    navigation: z.array(z.string()).min(2).max(6),
+    logoUrl: z.string(),
+    heroImageUrl: z.string(),
+    preserveOriginalDesign: z.boolean(),
+    fontFamily: z.string(),
+    headerStyle: z.string(),
+    sectionOrder: z.array(z.string()).min(5).max(12),
+    backgroundColor: z.string(),
+    surfaceColor: z.string(),
+    textColor: z.string(),
+  }),
+  otom: z.object({
+    hook: offerStepSchema,
+    coreOffer: offerStepSchema,
+    upsell: offerStepSchema,
+    downsell: offerStepSchema,
+    pricingStrategy: z.object({
+      anchorPrice: z.number().min(0),
+      suggestedPrice: z.number().min(0),
+      premiumPrice: z.number().min(0),
+      rationale: z.string(),
+    }),
+    psychologicalTriggers: z.array(z.string()).min(3).max(8),
+    customerJourney: z.array(z.object({
+      step: z.number().int().positive(),
+      action: z.string(),
+      trigger: z.string(),
+      expectedResult: z.string(),
+    })).min(5).max(9),
+    followUp: z.array(z.object({
+      day: z.number().int().min(0),
+      subject: z.string(),
+      purpose: z.string(),
+      body: z.string(),
+    })).length(5),
+  }),
+});
 
 export type FunnelLanguageMode = "es" | "en" | "bilingual";
 
@@ -64,167 +158,187 @@ export async function generateFunnel(
   painPoint: string,
   context: FunnelBusinessContext = {}
 ): Promise<GeneratedFunnel> {
-  const outputLanguage = context.language === "en" ? "English (United States)" : "español";
-  const prompt = `Actúa como estratega senior de conversión, UX writer y especialista en investigación comercial.
-Tu trabajo es crear un sistema de adquisición de leads de respuesta directa, profesional y específico, basado únicamente en los datos proporcionados.
+  const outputLanguage = "English (United States)";
+  const prompt = `Act as a senior conversion strategist, UX writer, and business research specialist.
+Your job is to create a professional, specific, direct-response lead-acquisition system based solely on the data provided.
 
-IDIOMA DE SALIDA
-- Escribe TODO el contenido visible en ${outputLanguage}.
-- Localiza el mensaje para el mercado indicado; no traduzcas literalmente.
-- Conserva exactamente nombres comerciales, marcas, precios, dominios y direcciones.
+OUTPUT LANGUAGE
+- Write ALL visible content in ${outputLanguage}.
+- Localize the message for the target market; do not translate literally.
+- Keep business names, brands, prices, domains, and addresses exactly as given.
 
-DATOS DEL NEGOCIO
-- Nombre: ${businessName}
-- Industria: ${industryType}
-- Nicho: ${niche}
-- País/mercado: ${context.country || "no confirmado"}
-- Web: ${context.website || "no proporcionada"}
-- Tecnología detectada: ${context.platform || "no confirmada"}
-- Oferta configurada (puede ser un valor provisional): ${context.offer || "no confirmada"}
-- Precio informado: ${context.price || "no confirmado"}
-- Problema inicial: ${painPoint}
-- Auditoría observada del sitio: ${JSON.stringify(context.audit || null)}
+BUSINESS DATA
+- Name: ${businessName}
+- Industry: ${industryType}
+- Niche: ${niche}
+- Country/market: ${context.country || "not confirmed"}
+- Website: ${context.website || "not provided"}
+- Detected technology: ${context.platform || "not confirmed"}
+- Configured offer (may be a placeholder value): ${context.offer || "not confirmed"}
+- Reported price: ${context.price || "not confirmed"}
+- Initial problem: ${painPoint}
+- Observed site audit: ${JSON.stringify(context.audit || null)}
+- Observed visual identity: ${JSON.stringify(context.visualIdentity || null)}
 
-PROCESO INTERNO OBLIGATORIO
-1. Define el público y su intención principal a partir de industria, nicho y datos observados.
-2. Elige UNA acción de conversión adecuada: consulta, cita, reserva, cotización, prueba, visita o compra.
-3. Construye la propuesta de valor con claridad, especificidad y bajo riesgo.
-4. Ordena el mensaje: contexto -> problema -> solución -> beneficios -> confianza -> objeciones -> CTA.
-5. Revisa consistencia entre titular, oferta, CTA y tipo de negocio.
-6. Da prioridad al title, description, H1 y demás señales de la auditoría sobre etiquetas genéricas configuradas.
-7. Identifica correctamente quién es el cliente: por ejemplo, en un concesionario la acción principal suele ser consultar inventario, financiación o prueba de manejo; no ofrecer valoración del vehículo salvo que el sitio indique compra o trade-in.
-8. Diseña para móvil primero: una idea por sección, lectura escaneable y CTA repetible sin saturación.
-9. La página debe poder competir con una landing profesional de agencia, no parecer una plantilla genérica.
-10. Cada beneficio debe responder "qué obtiene el cliente" y cada paso debe reducir incertidumbre.
-11. Infiere un buyer persona concreto: situación, intención, frustración, objeción y nivel de conciencia.
-12. Diseña un lead magnet de bajo coste de entrega y alto valor percibido, coherente con el negocio. No afirmes que ya existe: preséntalo como el recurso que esta campaña entregará.
-13. Usa PAS: describe el problema con precisión, agita consecuencias plausibles de posponerlo y presenta el lead magnet como el primer paso rápido, no como una cura milagrosa.
-14. Aplica psicología inversa con moderación: permite que el visitante se autodescalifique sin insultarlo ni manipularlo.
-15. La urgencia solo puede basarse en tiempo, coste de oportunidad o disponibilidad que pueda confirmarse. Nunca inventes cupos, fechas límite ni escasez.
-16. Escribe frases cortas, tono conversacional y párrafos de máximo tres líneas. Evita los adjetivos "revolucionario", "increíble" y "único".
-17. Las viñetas de fascinación deben revelar el beneficio y reservar el mecanismo, sin promesas engañosas.
-18. Los CTA deben usar verbos de propiedad en primera persona y nunca decir "Enviar" o "Registrarse".
-19. El email de bienvenida debe entregar o explicar claramente cómo acceder al recurso, romper el escepticismo y anticipar el servicio de pago sin presión.
-20. No declares porcentajes de apertura o CTR. Optimiza el asunto para curiosidad y relevancia, sin clickbait.
+MANDATORY INTERNAL PROCESS
+1. Define the audience and their primary intent from industry, niche, and observed data.
+2. Choose ONE appropriate conversion action: inquiry, appointment, reservation, quote, trial, visit, or purchase.
+3. Build the value proposition with clarity, specificity, and low perceived risk.
+4. Order the message: context -> problem -> solution -> benefits -> trust -> objections -> CTA.
+5. Check consistency between headline, offer, CTA, and business type.
+6. Prioritize the title, description, H1, and other audit signals over generic configured labels.
+7. Correctly identify who the customer is: for example, at a dealership the primary action is usually checking inventory, financing, or a test drive; do not offer a vehicle appraisal unless the site indicates purchase or trade-in.
+8. Design mobile-first: one idea per section, scannable reading, and a repeatable CTA without clutter.
+9. The page must be able to compete with a professional agency landing page, not look like a generic template.
+10. Each benefit must answer "what does the customer get" and each step must reduce uncertainty.
+11. Infer a concrete buyer persona: situation, intent, frustration, objection, and awareness level.
+12. Design a lead magnet with low delivery cost and high perceived value, consistent with the business. Do not claim it already exists: present it as the resource this campaign will deliver.
+13. Use PAS: describe the problem precisely, agitate plausible consequences of postponing it, and present the lead magnet as the fast first step, not a miracle cure.
+14. Apply reverse psychology in moderation: let the visitor self-disqualify without insulting or manipulating them.
+15. Urgency may only be based on time, opportunity cost, or availability that can be confirmed. Never invent slots, deadlines, or scarcity.
+16. Write short sentences, a conversational tone, and paragraphs of at most three lines. Avoid the adjectives "revolutionary," "amazing," and "unique."
+17. Fascination bullets must reveal the benefit and withhold the mechanism, without misleading promises.
+18. CTAs must use first-person ownership verbs and never say "Submit" or "Sign up."
+19. The welcome email must deliver or clearly explain how to access the resource, break skepticism, and preview the paid service without pressure.
+20. Do not state open rates or CTR percentages. Optimize the subject line for curiosity and relevance, without clickbait.
+21. Include the complete OTOM in the same JSON: hook, core offer, upsell, downsell, pricing, five follow-ups, and journey.
+22. landingPage is not a new template: it must preserve the observed logo, hero image, colors, typography, navigation, density, and structure.
+23. Do not invent resource URLs. When no observed URL exists, use an empty string.
+24. The offer, CTA, upsell, downsell, and emails must tell the same business story and use the same names and prices.
 
-CONTROL EDITORIAL ANTES DE RESPONDER
-- Descarta cualquier frase intercambiable con otro negocio. Cada bloque debe reflejar el nicho, la intención y el problema observado.
-- Comprueba que ninguna frase presuponga promociones, testimonios, reseñas, tasas, aprobación de crédito, inventario, entrega inmediata o disponibilidad si la auditoría no lo demuestra.
-- No escribas "disponible hoy", "promociones actuales", "clientes satisfechos" ni equivalentes sin evidencia explícita.
-- El asunto del email debe prometer una información concreta o abrir una pregunta relevante; nunca uses "Bienvenido", "Gracias por registrarte" ni saludos genéricos como idea principal.
-- El lead magnet debe poder crearse honestamente con la información del negocio. No prometas un archivo adjunto o enlace que todavía no existe; explica que llegará al correo indicado cuando la campaña esté configurada.
-- Haz una última revisión silenciosa y reescribe cualquier sección vaga, exagerada o no sustentada antes de producir el JSON.
+EDITORIAL CHECK BEFORE RESPONDING
+- Discard any phrase interchangeable with another business. Each block must reflect the observed niche, intent, and problem.
+- Verify that no phrase assumes promotions, testimonials, reviews, rates, credit approval, inventory, immediate delivery, or availability unless the audit shows it.
+- Do not write "available today," "current promotions," "satisfied customers," or equivalents without explicit evidence.
+- The email subject must promise concrete information or open a relevant question; never use "Welcome," "Thanks for signing up," or generic greetings as the main idea.
+- The lead magnet must be honestly creatable from the business information. Do not promise an attachment or link that doesn't exist yet; explain that it will arrive at the provided email once the campaign is configured.
+- Do one final silent review and rewrite any vague, exaggerated, or unsupported section before producing the JSON.
 
-REGLAS DE VERACIDAD
-- No inventes testimonios, clientes, años de experiencia, certificaciones, descuentos, stock, plazas, garantías, resultados, estadísticas ni urgencia.
-- No prometas ingresos ni resultados garantizados.
-- Si falta información, usa lenguaje verificable como "solicita información" o "consulta disponibilidad".
-- No uses clichés vacíos como "líder del mercado", "revolucionario" o "la mejor calidad".
-- Escribe en español natural, profesional, concreto y centrado en el cliente.
-- El titular debe comunicar valor, no mencionar que la página es un embudo.
+TRUTHFULNESS RULES
+- Do not invent testimonials, customers, years of experience, certifications, discounts, stock, slots, guarantees, results, statistics, or urgency.
+- Do not promise revenue or guaranteed results.
+- If information is missing, use verifiable language such as "request information" or "check availability."
+- Do not use empty clichés like "market leader," "revolutionary," or "the best quality."
+- Write in natural, professional, concrete, customer-focused ${outputLanguage}.
+- The headline must communicate value, not mention that the page is a funnel.
 
-Responde SOLO con un objeto JSON válido, sin markdown y con exactamente esta estructura:
+Respond ONLY with a valid JSON object, no markdown, with exactly this structure:
 {
-  "eyebrow": "Contexto breve de 3-7 palabras",
-  "audience": "Descripción concreta del cliente ideal y su intención",
-  "primaryGoal": "Una sola conversión medible para esta landing",
-  "valueProposition": "Por qué elegir este negocio, sin afirmaciones no verificadas",
+  "eyebrow": "Brief 3-7 word context",
+  "audience": "Concrete description of the ideal customer and their intent",
+  "primaryGoal": "A single measurable conversion for this landing page",
+  "valueProposition": "Why choose this business, without unverified claims",
   "leadMagnet": {
-    "name": "Nombre específico y deseable del recurso",
-    "format": "Auditoría, guía, checklist, calculadora, diagnóstico u otro formato apropiado",
-    "deliveryPromise": "Qué recibirá exactamente el lead y cómo lo recibirá"
+    "name": "Specific, desirable resource name",
+    "format": "Audit, guide, checklist, calculator, diagnostic, or other appropriate format",
+    "deliveryPromise": "What exactly the lead will receive and how"
   },
-  "headline": "Titular específico de máximo 70 caracteres",
-  "subheadline": "Propuesta de valor de máximo 160 caracteres",
-  "ctaText": "La mejor acción en primera persona, máximo 38 caracteres",
+  "headline": "Specific headline, max 70 characters",
+  "subheadline": "Value proposition, max 160 characters",
+  "ctaText": "The best first-person action, max 38 characters",
   "ctaOptions": [
-    "CTA de propiedad en primera persona 1",
-    "CTA de propiedad en primera persona 2",
-    "CTA de propiedad en primera persona 3"
+    "First-person ownership CTA 1",
+    "First-person ownership CTA 2",
+    "First-person ownership CTA 3"
   ],
-  "offer": "Oferta principal coherente y verificable",
-  "offerBadge": "Etiqueta informativa sin falsa urgencia",
-  "bonusOffer": "Valor adicional; si no existe, indicar Evaluación personalizada",
-  "painPoint": "Problema específico en una oración",
-  "agitationCopy": "Consecuencia realista del problema en 2 oraciones",
-  "solutionCopy": "Cómo el negocio ayuda en 2-3 oraciones",
-  "proofCopy": "Texto de confianza basado solo en hechos observados; si no hay pruebas, explicar el siguiente paso sin riesgo",
-  "benefits": ["3 a 5 beneficios concretos y distintos"],
+  "offer": "Coherent, verifiable primary offer",
+  "offerBadge": "Informative label with no false urgency",
+  "bonusOffer": "Additional value; if none exists, use Personalized evaluation",
+  "painPoint": "Specific problem in one sentence",
+  "agitationCopy": "Realistic consequence of the problem in 2 sentences",
+  "solutionCopy": "How the business helps in 2-3 sentences",
+  "proofCopy": "Trust copy based only on observed facts; if no proof exists, explain the next low-risk step",
+  "benefits": ["3 to 5 concrete, distinct benefits"],
   "fascinationBullets": [
-    "Beneficio atractivo que reserva el mecanismo 1",
-    "Beneficio atractivo que reserva el mecanismo 2",
-    "Beneficio atractivo que reserva el mecanismo 3",
-    "Beneficio atractivo que reserva el mecanismo 4"
+    "Compelling benefit that withholds the mechanism 1",
+    "Compelling benefit that withholds the mechanism 2",
+    "Compelling benefit that withholds the mechanism 3",
+    "Compelling benefit that withholds the mechanism 4"
   ],
-  "trustPoints": ["3 señales de confianza verificables o pasos transparentes"],
+  "trustPoints": ["3 verifiable trust signals or transparent steps"],
   "processSteps": [
-    {"title": "Paso 1 corto", "description": "Qué hace el visitante y qué ocurre"},
-    {"title": "Paso 2 corto", "description": "Qué hace el negocio y qué recibe el visitante"},
-    {"title": "Paso 3 corto", "description": "Cómo se completa la conversión sin fricción"}
+    {"title": "Short step 1", "description": "What the visitor does and what happens"},
+    {"title": "Short step 2", "description": "What the business does and what the visitor receives"},
+    {"title": "Short step 3", "description": "How the conversion completes with no friction"}
   ],
-  "visualDirection": "Dirección visual específica: tono, composición hero, tipo de imagen y uso del color; no generes una URL",
+  "visualDirection": "Specific visual direction: tone, hero composition, image type, and color usage; do not generate a URL",
   "objections": [
-    {"question": "Objeción real 1", "answer": "Respuesta prudente"},
-    {"question": "Objeción real 2", "answer": "Respuesta prudente"},
-    {"question": "Objeción real 3", "answer": "Respuesta prudente"}
+    {"question": "Real objection 1", "answer": "Careful answer"},
+    {"question": "Real objection 2", "answer": "Careful answer"},
+    {"question": "Real objection 3", "answer": "Careful answer"}
   ],
   "welcomeEmail": {
-    "subject": "Asunto breve, específico y creíble",
-    "previewText": "Texto de vista previa que complementa el asunto",
-    "body": "Email móvil con bienvenida, acceso al recurso, ruptura del escepticismo y un siguiente paso concreto. Usa saltos de línea.",
-    "postscript": "P.D. que anticipa de forma natural el producto o servicio de pago"
+    "subject": "Brief, specific, credible subject line",
+    "previewText": "Preview text that complements the subject",
+    "body": "Mobile email with welcome, resource access, skepticism-breaking, and one concrete next step. Use line breaks.",
+    "postscript": "P.S. that naturally previews the paid product or service"
   },
   "colorScheme": {
     "primary": "#RRGGBB",
     "secondary": "#RRGGBB",
     "accent": "#RRGGBB"
+  },
+  "landingPage": {
+    "brandName": "Exact brand name",
+    "navigation": ["Home", "Benefits", "Offer", "FAQ"],
+    "logoUrl": "Observed URL or empty string",
+    "heroImageUrl": "Observed URL or empty string",
+    "preserveOriginalDesign": true,
+    "fontFamily": "Observed font or compatible recommendation",
+    "headerStyle": "Brief description of the original header and layout",
+    "sectionOrder": ["hero", "trust", "problem", "solution", "offer", "upsell", "faq", "lead-capture"],
+    "backgroundColor": "#RRGGBB",
+    "surfaceColor": "#RRGGBB",
+    "textColor": "#RRGGBB"
+  },
+  "otom": {
+    "hook": {"name":"...","description":"...","psychologicalTrigger":"...","pricePoint":0},
+    "coreOffer": {"name":"...","description":"...","psychologicalTrigger":"...","pricePoint":0},
+    "upsell": {"name":"...","description":"...","psychologicalTrigger":"...","pricePoint":0},
+    "downsell": {"name":"...","description":"...","psychologicalTrigger":"...","pricePoint":0},
+    "pricingStrategy": {"anchorPrice":0,"suggestedPrice":0,"premiumPrice":0,"rationale":"Assumptions and logic, without presenting estimates as facts"},
+    "psychologicalTriggers": ["3 to 8 honest triggers"],
+    "customerJourney": [{"step":1,"action":"...","trigger":"...","expectedResult":"..."}],
+    "followUp": [
+      {"day":0,"subject":"...","purpose":"Delivery","body":"..."},
+      {"day":1,"subject":"...","purpose":"Value","body":"..."},
+      {"day":3,"subject":"...","purpose":"Objection","body":"..."},
+      {"day":5,"subject":"...","purpose":"Offer","body":"..."},
+      {"day":7,"subject":"...","purpose":"Honest close","body":"..."}
+    ]
   }
 }`;
 
-  try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4.1-mini",
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: 1800,
-        temperature: 0.35,
-        response_format: { type: "json_object" },
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      console.error("OpenAI error:", error);
-      throw new Error(`OpenAI API error`);
-    }
-
-    const data = (await response.json()) as {
-      choices: Array<{ message: { content: string } }>;
-    };
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) throw new Error("OpenAI no devolvió contenido para el embudo");
-    const result = JSON.parse(content.replace(/```json\s*|```/g, "").trim()) as GeneratedFunnel;
-    if (!result.headline || !result.subheadline || !result.ctaText || !result.colorScheme?.primary ||
-        !Array.isArray(result.benefits) || result.benefits.length < 3 ||
-        !Array.isArray(result.objections) || result.objections.length < 2 ||
-        !Array.isArray(result.processSteps) || result.processSteps.length < 3 ||
-        !Array.isArray(result.fascinationBullets) || result.fascinationBullets.length !== 4 ||
-        !Array.isArray(result.ctaOptions) || result.ctaOptions.length !== 3 ||
-        !result.leadMagnet?.name || !result.welcomeEmail?.subject || !result.welcomeEmail?.body ||
-        !result.audience || !result.primaryGoal || !result.valueProposition) {
-      throw new Error("OpenAI devolvió un embudo incompleto");
-    }
-    result.heroImage = `hero-${businessName.toLowerCase().replace(/\s+/g, "-")}.jpg`;
-    return result;
-  } catch (error) {
-    console.error("Funnel generation error:", error);
-    throw error;
-  }
+  const generation = await generateStructured({
+    task: "strategy",
+    schemaName: "funnel_content",
+    schema: funnelAISchema,
+    system: "You are a senior conversion strategist and UX writer. Use only the evidence provided and avoid unverified claims.",
+    user: prompt,
+    timeoutMs: 150_000,
+  });
+  const identity = context.visualIdentity;
+  return {
+    ...generation.output,
+    colorScheme: {
+      primary: identity?.colors?.[0] || generation.output.colorScheme.primary,
+      secondary: identity?.colors?.[1] || identity?.colors?.[0] || generation.output.colorScheme.secondary,
+      accent: identity?.colors?.[2] || generation.output.colorScheme.accent,
+    },
+    landingPage: {
+      ...generation.output.landingPage,
+      brandName: businessName,
+      logoUrl: identity?.logoUrl || "",
+      heroImageUrl: identity?.heroImageUrl || "",
+      preserveOriginalDesign: Boolean(context.website && identity),
+      navigation: identity?.navigation && identity.navigation.length >= 2
+        ? identity.navigation.slice(0, 6)
+        : generation.output.landingPage.navigation,
+      fontFamily: identity?.fonts?.[0] || generation.output.landingPage.fontFamily,
+      headerStyle: identity?.layout || generation.output.landingPage.headerStyle,
+    },
+    heroImage: `hero-${businessName.toLowerCase().replace(/\s+/g, "-")}.jpg`,
+  };
 }
 
 export async function generateLocalizedFunnel(
@@ -233,9 +347,9 @@ export async function generateLocalizedFunnel(
   niche: string,
   painPoint: string,
   context: FunnelBusinessContext = {},
-  mode: FunnelLanguageMode = "bilingual"
+  mode: FunnelLanguageMode = "en"
 ): Promise<LocalizedFunnelContent> {
-  const languages: Array<"es" | "en"> = mode === "bilingual" ? ["es", "en"] : [mode];
+  const languages: Array<"es" | "en"> = mode === "bilingual" ? ["en", "es"] : [mode];
   const generated = await Promise.all(
     languages.map(async (language) => [
       language,
@@ -243,9 +357,9 @@ export async function generateLocalizedFunnel(
     ] as const)
   );
   const translations = Object.fromEntries(generated) as Partial<Record<"es" | "en", GeneratedFunnel>>;
-  const defaultLanguage: "es" | "en" = mode === "en" ? "en" : "es";
+  const defaultLanguage: "es" | "en" = mode === "es" ? "es" : "en";
   const primary = translations[defaultLanguage] || translations[languages[0]];
-  if (!primary) throw new Error("No se pudo generar el contenido localizado");
+  if (!primary) throw new Error("Could not generate the localized content");
   return {
     ...primary,
     defaultLanguage,

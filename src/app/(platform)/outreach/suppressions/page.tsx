@@ -1,0 +1,1 @@
+import PageHeader from"@/components/app-shell/PageHeader";import{SuppressionsView}from"@/components/outreach/OutreachViews";export default function Page(){return <><PageHeader eyebrow="Outreach" title="Suppressions" description="Append-only unsubscribe, bounce, complaint and manual suppression records."/><SuppressionsView/></>}

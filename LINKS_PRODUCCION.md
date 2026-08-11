@@ -26,23 +26,11 @@ DATABASE_URL="postgresql://postgres:TUPASSWORD@[HOST]:5432/postgres"
 
 ## 2️⃣ Autenticación
 
-### Clerk (Recomendado - GRATIS hasta 10k usuarios)
+La aplicación utiliza autenticación integrada. Configura dos secretos aleatorios diferentes, de al menos 32 caracteres:
 
-**Link:** https://dashboard.clerk.com
-
-1. Sign up con GitHub
-2. Crea nueva "Application"
-3. Nombre: `Revora`
-4. Sign in methods: **Email** (y opcionalmente Google/GitHub)
-5. Ve a **API Keys** en el sidebar izquierdo
-6. Copia ambas:
-   - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
-   - `CLERK_SECRET_KEY`
-
-**Pega en `.env.local`:**
 ```env
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_abc123..."
-CLERK_SECRET_KEY="sk_test_xyz789..."
+AUTH_JWT_SECRET="RANDOM_SECRET_WITH_AT_LEAST_32_CHARACTERS"
+AUTH_ENCRYPTION_KEY="DIFFERENT_RANDOM_SECRET_WITH_AT_LEAST_32_CHARACTERS"
 ```
 
 ---
@@ -86,9 +74,9 @@ RESEND_API_KEY="re_abc123xyz789..."
 # Base de Datos
 DATABASE_URL="postgresql://postgres:TuPasswordAqui@db.supabase.co:5432/postgres"
 
-# Autenticación (Clerk)
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_abc123def456"
-CLERK_SECRET_KEY="sk_test_xyz789uvw012"
+# Autenticación integrada
+AUTH_JWT_SECRET="RANDOM_SECRET_WITH_AT_LEAST_32_CHARACTERS"
+AUTH_ENCRYPTION_KEY="DIFFERENT_RANDOM_SECRET_WITH_AT_LEAST_32_CHARACTERS"
 
 # Email (Resend)
 RESEND_API_KEY="re_abc123xyz789uvw012"

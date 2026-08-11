@@ -1,42 +1,43 @@
 import { NextResponse } from "next/server";
 import { pool } from "@/lib/postgres";
+import { verifyTimestampedHexHmac } from "@/lib/webhook-security";
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
+  const raw = await request.text();
+  const secret = process.env.ANALYTICS_INGEST_SECRET;
+  const valid = secret && verifyTimestampedHexHmac(
+    raw,
+    request.headers.get("x-revora-signature") || "",
+    request.headers.get("x-revora-timestamp") || "",
+    secret,
+  );
+  if (!valid) return NextResponse.json({ success: false, error: "Invalid signature" }, { status: 401 });
   const client = await pool.connect();
   try {
-    const event = await req.json();
-    if (!event.campaignId || !["page_view", "conversion"].includes(event.eventType)) {
-      return NextResponse.json({ success: false, error: "Valid campaignId and eventType are required" }, { status: 400 });
+    const event = JSON.parse(raw) as { campaignId?: string; eventType?: string };
+    if (!event.campaignId || !["page_view", "conversion"].includes(event.eventType || "")) {
+      return NextResponse.json({ success: false, error: "Invalid event" }, { status: 400 });
     }
     await client.query("BEGIN");
+    const campaign = await client.query("SELECT 1 FROM campaigns WHERE id=$1", [event.campaignId]);
+    if (!campaign.rowCount) {
+      await client.query("ROLLBACK");
+      return NextResponse.json({ success: false, error: "Campaign not found" }, { status: 404 });
+    }
     const existing = await client.query(
       "SELECT id FROM campaign_metrics WHERE campaign_id=$1 AND DATE(timestamp)=CURRENT_DATE ORDER BY timestamp DESC LIMIT 1 FOR UPDATE",
-      [event.campaignId]
+      [event.campaignId],
     );
-    let id = existing.rows[0]?.id;
-    if (!id) {
-      const created = await client.query(
-        "INSERT INTO campaign_metrics (campaign_id,timestamp) VALUES ($1,NOW()) RETURNING id",
-        [event.campaignId]
-      );
-      id = created.rows[0].id;
-    }
-    if (event.eventType === "page_view") {
-      await client.query("UPDATE campaign_metrics SET landing_page_views=COALESCE(landing_page_views,0)+1 WHERE id=$1", [id]);
-    } else {
-      await client.query(
-        "UPDATE campaign_metrics SET conversions=COALESCE(conversions,0)+1,revenue=COALESCE(revenue,0)+$1 WHERE id=$2",
-        [Math.max(0, Number(event.revenue) || 0), id]
-      );
-    }
+    const id = existing.rows[0]?.id || (
+      await client.query("INSERT INTO campaign_metrics(campaign_id,timestamp) VALUES($1,NOW()) RETURNING id", [event.campaignId])
+    ).rows[0].id;
+    const column = event.eventType === "page_view" ? "landing_page_views" : "conversions";
+    await client.query(`UPDATE campaign_metrics SET ${column}=COALESCE(${column},0)+1 WHERE id=$1`, [id]);
     await client.query("COMMIT");
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch {
     await client.query("ROLLBACK").catch(() => undefined);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Analytics failed" },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: "Analytics processing failed" }, { status: 400 });
   } finally {
     client.release();
   }

@@ -1,17 +1,12 @@
+import { NextResponse } from "next/server";
+import { healthSnapshot } from "@/lib/observability/health";
+
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  try {
-    // Simple health check
-    return Response.json({
-      ok: true,
-      database: process.env.DATABASE_URL ? "connected" : "mock",
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    return Response.json({
-      ok: false,
-      error: error instanceof Error ? error.message : "Unknown error"
-    }, { status: 500 });
-  }
+  const health = await healthSnapshot();
+  return NextResponse.json(health, {
+    status: health.ok ? 200 : 503,
+    headers: { "Cache-Control": "no-store" },
+  });
 }

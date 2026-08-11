@@ -1,0 +1,16 @@
+receivers:
+  otlp:
+    protocols:
+      http:
+exporters:
+  debug:
+    verbosity: basic
+  otlphttp:
+    endpoint: ${env:OTEL_UPSTREAM_ENDPOINT}
+    headers:
+      Authorization: ${env:OTEL_UPSTREAM_AUTHORIZATION}
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [debug, otlphttp]

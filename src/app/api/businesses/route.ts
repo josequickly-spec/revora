@@ -32,8 +32,8 @@ export async function POST(req: Request) {
        body.niche || "general", Number(body.monthlyRevenue) || 0,
        Number(body.averageOrderValue) || 0, Number(body.conversionRate) || 0,
        Number(body.monthlyAdSpend) || 0, "Website",
-       "#6366f1", "#818cf8", "created", body.heroOffer || null,
-       body.heroPrice || null, body.painPoint || "Marketing"]
+       body.brandColor || null, body.brandAccent || null, "created", body.heroOffer || null,
+       body.heroPrice || null, body.painPoint || null]
     );
     return NextResponse.json({ success: true, business: result.rows[0] });
   } catch (error) {

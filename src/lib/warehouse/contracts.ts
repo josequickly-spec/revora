@@ -1,0 +1,11 @@
+import { z } from "zod";
+export const dashboards=["executive","sales","marketing","operations","security"] as const;
+export const granularities=["daily","weekly","monthly","quarterly","yearly"] as const;
+export const forecastTypes=["revenue","pipeline","growth","capacity","usage"] as const;
+export const dashboardSchema=z.enum(dashboards);
+export const granularitySchema=z.enum(granularities);
+export const forecastTypeSchema=z.enum(forecastTypes);
+export type Dashboard=typeof dashboards[number];
+export type Granularity=typeof granularities[number];
+export type ForecastType=typeof forecastTypes[number];
+export type MetricSnapshot={metric:string;valueNumeric:number|null;valueText:string|null;currency:string|null;evidence:unknown[];calculatedAt:string;sourceWatermark:string};

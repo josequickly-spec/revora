@@ -3,21 +3,10 @@ import { findEmail, getDomainEmails, verifyEmail } from "@/lib/hunter";
 import { getIndustry } from "@/lib/industries";
 import { businessSelect, contactSelect, ensureTechnologyDataColumn, funnelSelect, pool } from "@/lib/postgres";
 import { auditSite, detectWebsitePlatform } from "@/lib/site-audit";
-import { FunnelLanguageMode, generateLocalizedFunnel } from "@/lib/funnel-generator";
+import { generateLocalizedFunnel } from "@/lib/funnel-generator";
 import { lookupBuiltWith } from "@/lib/builtwith";
-
-interface DiscoveryRequest {
-  domain?: string;
-  businessName: string;
-  industryType?: string;
-  businessCategory?: string;
-  city?: string;
-  zipcode?: string;
-  contactName?: string;
-  firstName?: string;
-  lastName?: string;
-  languageMode?: FunnelLanguageMode;
-}
+import { assertPublicDomain, normalizeBusinessDomain } from "@/lib/business-intelligence/domain";
+import { type DiscoveryRequest, parseCreateFunnel } from "@/lib/business-intelligence/request";
 
 interface LocationMatch {
   display_name: string;
@@ -37,7 +26,7 @@ async function findLocation(body: DiscoveryRequest) {
     signal: AbortSignal.timeout(15000),
     headers: { "User-Agent": "RevoraBusinessDiscovery/1.0 (public business research)" },
   });
-  if (!response.ok) throw new Error(`OpenStreetMap respondió ${response.status}`);
+  if (!response.ok) throw new Error(`OpenStreetMap responded ${response.status}`);
   return await response.json() as LocationMatch[];
 }
 
@@ -60,7 +49,7 @@ export async function POST(req: Request) {
     await ensureTechnologyDataColumn();
     if (!body.businessName || (!body.domain && !body.city && !body.zipcode)) {
       return NextResponse.json(
-        { success: false, error: "Indica el negocio y un dominio, ciudad o código postal" },
+        { success: false, error: "Enter the business and a domain, city, or ZIP code" },
         { status: 400 }
       );
     }
@@ -78,7 +67,7 @@ export async function POST(req: Request) {
       if (!discoveredUrl) {
         return NextResponse.json({
           success: false,
-          error: "Encontré negocios en esa ubicación, pero ninguno tiene una web pública verificable. Añade el dominio manualmente.",
+          error: "I found businesses in that location, but none has a verifiable public website. Add the domain manually.",
           candidates: matches.slice(0, 5).map(match => ({
             name: match.name || match.display_name.split(",")[0],
             address: match.display_name,
@@ -87,10 +76,11 @@ export async function POST(req: Request) {
       }
     }
 
-    const domain = discoveredUrl.replace(/^(https?:\/\/)?(www\.)?/, "").split("/")[0].toLowerCase();
+    const { domain } = normalizeBusinessDomain(discoveredUrl);
+    await assertPublicDomain(domain);
     const siteResponse = await fetchWebsite(domain);
     if (!siteResponse) {
-      return NextResponse.json({ success: false, error: "La web encontrada no respondió correctamente" }, { status: 422 });
+      return NextResponse.json({ success: false, error: "The website found did not respond correctly" }, { status: 422 });
     }
 
     const html = await siteResponse.text();
@@ -106,19 +96,12 @@ export async function POST(req: Request) {
       }),
     ]);
     const platform = builtWith?.primaryPlatform || localPlatform;
-    const generatedFunnel = await generateLocalizedFunnel(
-      body.businessName,
-      industryType,
-      niche,
-      ind.defaultPainPoint,
-      {
-        website: siteResponse.url || domain,
-        country: locationMatch?.address?.country,
-        platform,
-        audit: { site: audit, technologyProfile: builtWith },
-      },
-      body.languageMode || "bilingual"
-    );
+    const createFunnel = parseCreateFunnel(body);
+    const generatedFunnel = createFunnel ? await generateLocalizedFunnel(
+      body.businessName, industryType, niche, ind.defaultPainPoint,
+      { website: siteResponse.url || domain, country: locationMatch?.address?.country, platform, audit: { site: audit, technologyProfile: builtWith } },
+      body.languageMode || "en"
+    ) : null;
     const domainData = await getDomainEmails(domain);
     let bestContact = domainData?.emails?.slice().sort((a, b) => b.confidence - a.confidence)[0] || null;
     if (!bestContact && (body.firstName || body.lastName)) {
@@ -142,7 +125,7 @@ export async function POST(req: Request) {
         body.businessName, domain, address.country || domainData?.country || "Unknown",
         body.city || address.city || address.town || address.village || null,
         body.zipcode || address.postcode || null, locationMatch?.display_name || null,
-        industryType, niche, platform, ind.color, ind.accent,
+        industryType, niche, platform, null, null,
         ind.defaultOffer, ind.defaultPrice, ind.defaultPainPoint,
         builtWith ? JSON.stringify(builtWith) : null,
       ]
@@ -157,7 +140,7 @@ export async function POST(req: Request) {
          ON CONFLICT (business_id,email) DO UPDATE SET confidence_score=EXCLUDED.confidence_score,status=EXCLUDED.status
          RETURNING ${contactSelect}`,
         [
-          business.id, body.contactName || [body.firstName, body.lastName].filter(Boolean).join(" ") || "Decision maker",
+          business.id, body.contactName || [body.firstName, body.lastName].filter(Boolean).join(" ") || "Public business contact",
           bestContact.type || "Business contact", bestContact.value, domainData?.linkedin_url || null,
           Math.round(bestContact.confidence || 0), emailVerified ? "verified" : "discovered",
         ]
@@ -165,25 +148,29 @@ export async function POST(req: Request) {
       contact = contactResult.rows[0];
     }
 
-    const slug = `${body.businessName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now().toString().slice(-6)}`;
-    const funnelResult = await client.query(
-      `INSERT INTO funnels
-       (business_id,funnel_name,template_type,headline,subheadline,cta_text,offer_badge,bonus_offer,custom_primary_color,slug,content_json)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING ${funnelSelect}`,
-      [
-        business.id, `Embudo para ${body.businessName}`, ind.funnelType,
-        generatedFunnel.headline, generatedFunnel.subheadline,
-        generatedFunnel.ctaText, generatedFunnel.offerBadge, generatedFunnel.bonusOffer,
-        generatedFunnel.colorScheme.primary, slug, JSON.stringify(generatedFunnel),
-      ]
-    );
+    let funnel = null;
+    if (generatedFunnel) {
+      const slug = `${body.businessName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now().toString().slice(-6)}`;
+      const funnelResult = await client.query(
+        `INSERT INTO funnels
+         (business_id,funnel_name,template_type,headline,subheadline,cta_text,offer_badge,bonus_offer,custom_primary_color,slug,content_json)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING ${funnelSelect}`,
+        [
+          business.id, `Funnel for ${body.businessName}`, ind.funnelType,
+          generatedFunnel.headline, generatedFunnel.subheadline,
+          generatedFunnel.ctaText, generatedFunnel.offerBadge, generatedFunnel.bonusOffer,
+          generatedFunnel.colorScheme.primary, slug, JSON.stringify(generatedFunnel),
+        ]
+      );
+      funnel = funnelResult.rows[0];
+    }
     await client.query("COMMIT");
 
     return NextResponse.json({
-      success: true, business, contact, funnel: funnelResult.rows[0],
+      success: true, business, businessId: business.id, contact, funnel,
       emailFound: Boolean(bestContact?.value), emailVerified, platformDetected: platform,
       domainDiscovered: !body.domain, locationMatched: locationMatch?.display_name || null,
-      availableLanguages: generatedFunnel.availableLanguages,
+      availableLanguages: generatedFunnel?.availableLanguages || [],
       builtWith: builtWith ? {
         connected: true,
         technologyCount: builtWith.technologies.length,
@@ -192,6 +179,28 @@ export async function POST(req: Request) {
         creditsRemaining: builtWith.creditsRemaining,
         technologies: builtWith.technologies.slice(0, 20),
       } : { connected: false, configured: Boolean(process.env.BUILTWITH_API_KEY) },
+      profile: {
+        business,
+        normalizedDomain: domain,
+        websiteStatus: { reachable: true, url: siteResponse.url || null },
+        platform,
+        technologies: builtWith?.technologies || [],
+        contacts: contact ? [contact] : [],
+        publicContactEvidence: bestContact?.sources?.map(source => ({ source: "hunter", uri: source.source_url || source.uri || null })) || [],
+        auditSummary: audit,
+        enrichmentProviderStatus: {
+          website: "success",
+          siteAudit: audit ? "success" : "unavailable",
+          builtWith: builtWith ? "success" : process.env.BUILTWITH_API_KEY ? "unavailable" : "not_configured",
+          hunter: bestContact ? "success" : process.env.HUNTER_API_KEY ? "unavailable" : "not_configured",
+        },
+        warnings: [
+          ...(!audit ? ["Site audit was unavailable."] : []),
+          ...(!builtWith ? ["Technology enrichment was unavailable."] : []),
+          ...(!bestContact ? ["No public contact was found."] : []),
+        ],
+        timestamps: { enrichedAt: new Date().toISOString() },
+      },
     });
   } catch (error) {
     await client.query("ROLLBACK").catch(() => undefined);

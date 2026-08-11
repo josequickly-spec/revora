@@ -1,0 +1,33 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: revora-maintenance
+spec:
+  schedule: "*/5 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: maintenance
+              image: curlimages/curl:8.12.1
+              args:
+                - --fail-with-body
+                - --retry
+                - "2"
+                - -X
+                - POST
+                - -H
+                - x-worker-secret:$(WORKFLOW_WORKER_SECRET)
+                - http://revora/api/workflows/worker/maintenance
+              env:
+                - name: WORKFLOW_WORKER_SECRET
+                  valueFrom:
+                    secretKeyRef:
+                      name: revora-secrets
+                      key: WORKFLOW_WORKER_SECRET

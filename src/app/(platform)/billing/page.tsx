@@ -1,0 +1,2 @@
+import PageHeader from "@/components/app-shell/PageHeader";import EnterpriseRecords from "@/components/enterprise/EnterpriseRecords";
+export default function BillingPage(){return <><PageHeader eyebrow="Billing" title="Plan, usage & invoices" description="Stripe-backed subscription records, immutable usage metering and credit ledger. Provider actions require explicit configuration."/><EnterpriseRecords endpoint="/api/billing" collection="invoices" empty="No invoices are recorded for this organization."/></>}

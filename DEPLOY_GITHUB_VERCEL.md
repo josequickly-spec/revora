@@ -52,13 +52,13 @@ En la sección "Environment Variables", agrega estas 4 exactas:
 
 ```
 Name: DATABASE_URL
-Value: postgresql://postgres:Adeline@1125.1128@db.qqpojuchrkfipxyqncpp.supabase.co:5432/postgres
+Value: postgresql://postgres:[ROTATED_PASSWORD]@[SUPABASE_HOST]:5432/postgres
 
-Name: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-Value: pk_test_dW5pcXVlLWhlcnJpbmctNTcuY2xlcmsuYWNjb3VudHMuZGV2JA
+Name: AUTH_JWT_SECRET
+Value: [GENERATE_A_RANDOM_SECRET_WITH_AT_LEAST_32_CHARACTERS]
 
-Name: CLERK_SECRET_KEY
-Value: sk_test_0FflUOcPekxNwTPZhqMojJjhgFQ9WmM3iOhIMcnF5U
+Name: AUTH_ENCRYPTION_KEY
+Value: [GENERATE_A_DIFFERENT_RANDOM_SECRET_WITH_AT_LEAST_32_CHARACTERS]
 
 Name: RESEND_API_KEY
 Value: [OBTÉN TU CLAVE EN https://resend.com/api-keys]

@@ -22,81 +22,81 @@ export default async function CampaignDossier({ params }: { params: Promise<{ id
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="flex flex-wrap justify-between gap-4">
           <div>
-            <p className="text-emerald-400 text-xs font-bold uppercase">Dossier real persistido</p>
+            <p className="text-emerald-400 text-xs font-bold uppercase">Persisted live dossier</p>
             <h1 className="text-3xl font-black">{campaign.business_name}</h1>
-            <p className="text-slate-400 text-sm">Campaña {campaign.id} · {campaign.status}</p>
+            <p className="text-slate-400 text-sm">Campaign {campaign.id} · {campaign.status}</p>
           </div>
-          <Link href="/" className="bg-slate-800 px-4 py-2 rounded-xl h-fit">Volver a Revora</Link>
+          <Link href="/" className="bg-slate-800 px-4 py-2 rounded-xl h-fit">Back to EcoScale Partner</Link>
         </div>
 
         <section className="grid md:grid-cols-4 gap-4">
-          <Kpi label="SEO técnico" value={`${analysis.seoScore ?? 0}/100`} />
-          <Kpi label="Respuesta web" value={audit.responseTimeMs ? `${audit.responseTimeMs} ms` : "Sin medir"} />
-          <Kpi label="Plataforma" value={audit.platform || "Sin detectar"} />
-          <Kpi label="ROI estimado" value={projections.expectedROI == null ? "Faltan datos" : `${projections.expectedROI}%`} />
+          <Kpi label="Technical SEO" value={`${analysis.seoScore ?? 0}/100`} />
+          <Kpi label="Web response" value={audit.responseTimeMs ? `${audit.responseTimeMs} ms` : "Not measured"} />
+          <Kpi label="Platform" value={audit.platform || "Not detected"} />
+          <Kpi label="Estimated ROI" value={projections.expectedROI == null ? "Missing data" : `${projections.expectedROI}%`} />
         </section>
 
-        <Section title="Auditoría observada del sitio">
+        <Section title="Observed site audit">
           <div className="grid md:grid-cols-2 gap-3 text-sm">
-            <Fact label="URL auditada" value={audit.url} />
+            <Fact label="Audited URL" value={audit.url} />
             <Fact label="Title" value={audit.title} />
             <Fact label="Meta description" value={audit.description} />
             <Fact label="H1" value={audit.h1?.join(" | ")} />
-            <Fact label="Imágenes" value={audit.imageCount} />
-            <Fact label="Imágenes sin ALT" value={audit.imagesWithoutAlt} />
-            <Fact label="Sitemap" value={audit.hasSitemap ? "Sí" : "No"} />
-            <Fact label="Datos estructurados" value={audit.hasStructuredData ? "Sí" : "No"} />
+            <Fact label="Images" value={audit.imageCount} />
+            <Fact label="Images without ALT" value={audit.imagesWithoutAlt} />
+            <Fact label="Sitemap" value={audit.hasSitemap ? "Yes" : "No"} />
+            <Fact label="Structured data" value={audit.hasStructuredData ? "Yes" : "No"} />
           </div>
-          <List title="Problemas detectados" items={audit.issues} />
-          <List title="Oportunidades" items={analysis.opportunities} />
-          <List title="Keywords propuestas" items={analysis.keywords} />
+          <List title="Detected issues" items={audit.issues} />
+          <List title="Opportunities" items={analysis.opportunities} />
+          <List title="Proposed keywords" items={analysis.keywords} />
         </Section>
 
-        <Section title="Landing page generada">
+        <Section title="Generated landing page">
           <h3 className="text-2xl font-black">{landing.headline}</h3>
           <p className="text-slate-300">{landing.subheadline}</p>
           <div className="grid md:grid-cols-2 gap-4 mt-4">
-            <Fact label="Problema" value={landing.painPoint} />
-            <Fact label="Solución" value={landing.solution} />
-            <Fact label="Prueba" value={landing.proof} />
+            <Fact label="Problem" value={landing.painPoint} />
+            <Fact label="Solution" value={landing.solution} />
+            <Fact label="Proof" value={landing.proof} />
             <Fact label="CTA" value={landing.cta} />
           </div>
         </Section>
 
-        <Section title={`Secuencia de outreach (${emails.length})`}>
+        <Section title={`Outreach sequence (${emails.length})`}>
           <div className="space-y-3">
             {emails.map((email: { number?: number; subject?: string; body?: string; delay?: number }, index: number) => (
               <details key={index} className="bg-slate-950 border border-slate-700 rounded-xl p-4">
                 <summary className="cursor-pointer font-bold">Email {email.number || index + 1}: {email.subject}</summary>
                 <p className="whitespace-pre-wrap text-sm text-slate-300 mt-3">{email.body}</p>
-                <p className="text-xs text-slate-500 mt-2">Espera: {email.delay || 0} días</p>
+                <p className="text-xs text-slate-500 mt-2">Wait: {email.delay || 0} days</p>
               </details>
             ))}
           </div>
         </Section>
 
-        <Section title="Guion de video">
+        <Section title="Video script">
           <h3 className="font-bold">{video.title}</h3>
           <p className="whitespace-pre-wrap text-sm text-slate-300 mt-2">{video.script}</p>
-          <p className="text-xs text-purple-300 mt-2">Duración: {video.duration}</p>
+          <p className="text-xs text-purple-300 mt-2">Duration: {video.duration}</p>
         </Section>
 
-        <Section title="Estrategia publicitaria">
+        <Section title="Ad strategy">
           <List title="Google keywords" items={ads.google?.keywords} />
           <List title="Google copy" items={ads.google?.copy} />
           <List title="Meta copy" items={ads.facebook?.copy} />
-          <List title="Audiencia" items={ads.facebook?.audience} />
-          <p className="text-amber-300 text-xs mt-4">Estrategia generada. No se publica hasta configurar OAuth, cuenta, presupuesto y aprobación.</p>
+          <List title="Audience" items={ads.facebook?.audience} />
+          <p className="text-amber-300 text-xs mt-4">Strategy generated. Not published until OAuth, account, budget, and approval are configured.</p>
         </Section>
 
-        <Section title="Proyección basada en datos ingresados">
+        <Section title="Projection based on entered data">
           <div className="grid md:grid-cols-3 gap-3">
-            <Fact label="Ingresos actuales" value={money(projections.monthlyRevenue)} />
-            <Fact label="Ingresos proyectados" value={money(projections.projectedRevenue)} />
-            <Fact label="Incremento estimado" value={money(projections.incrementalRevenue)} />
-            <Fact label="Ticket promedio" value={money(projections.averageOrderValue)} />
-            <Fact label="Inversión Ads" value={money(projections.monthlyAdSpend)} />
-            <Fact label="Conversión usada" value={`${projections.conversionRate || 0}%`} />
+            <Fact label="Current revenue" value={money(projections.monthlyRevenue)} />
+            <Fact label="Projected revenue" value={money(projections.projectedRevenue)} />
+            <Fact label="Estimated increase" value={money(projections.incrementalRevenue)} />
+            <Fact label="Average order value" value={money(projections.averageOrderValue)} />
+            <Fact label="Ad spend" value={money(projections.monthlyAdSpend)} />
+            <Fact label="Conversion used" value={`${projections.conversionRate || 0}%`} />
           </div>
         </Section>
       </div>
@@ -111,7 +111,7 @@ function Kpi({ label, value }: { label: string; value: string }) {
   return <div className="bg-slate-900 border border-slate-800 rounded-xl p-4"><p className="text-xs text-slate-400">{label}</p><p className="text-xl font-black mt-1">{value}</p></div>;
 }
 function Fact({ label, value }: { label: string; value: unknown }) {
-  return <div className="bg-slate-950/70 rounded-lg p-3"><p className="text-xs text-slate-500">{label}</p><p className="text-sm mt-1 break-words">{value == null || value === "" ? "No disponible" : String(value)}</p></div>;
+  return <div className="bg-slate-950/70 rounded-lg p-3"><p className="text-xs text-slate-500">{label}</p><p className="text-sm mt-1 break-words">{value == null || value === "" ? "Not available" : String(value)}</p></div>;
 }
 function List({ title, items }: { title: string; items?: string[] }) {
   if (!items?.length) return null;
@@ -119,5 +119,5 @@ function List({ title, items }: { title: string; items?: string[] }) {
 }
 function money(value: unknown) {
   const number = Number(value);
-  return Number.isFinite(number) ? new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(number) : "Sin datos";
+  return Number.isFinite(number) ? new Intl.NumberFormat("en-US", { style: "currency", currency: "EUR" }).format(number) : "No data";
 }

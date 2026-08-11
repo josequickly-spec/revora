@@ -39,13 +39,62 @@ export async function GET(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const origin = req.headers.get("origin");
-  if (origin && origin !== req.nextUrl.origin) {
-    return NextResponse.json({ success: false, error: "Origen no permitido" }, { status: 403 });
+  const host = req.headers.get("host");
+  const forwardedProtocol = req.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+  const protocol = process.env.TRUST_PROXY === "true" && forwardedProtocol
+    ? forwardedProtocol
+    : new URL(req.url).protocol.replace(":", "");
+  if (origin && (!host || origin !== `${protocol}://${host}`)) {
+    return NextResponse.json({ success: false, error: "Origin not allowed" }, { status: 403 });
   }
   const body = await req.json().catch(() => null);
-  if (body?.confirmation !== "BORRAR TODOS LOS EMBUDOS") {
+  const funnelId = Number(body?.id);
+  if (Number.isInteger(funnelId) && funnelId > 0) {
+    if (body?.confirmation !== `DELETE FUNNEL ${funnelId}`) {
+      return NextResponse.json(
+        { success: false, error: `Confirm deletion with "DELETE FUNNEL ${funnelId}"` },
+        { status: 400 },
+      );
+    }
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const funnel = await client.query(
+        "SELECT id,funnel_name,slug FROM funnels WHERE id=$1 FOR UPDATE",
+        [funnelId],
+      );
+      if (!funnel.rows[0]) {
+        await client.query("ROLLBACK");
+        return NextResponse.json({ success: false, error: "Funnel not found" }, { status: 404 });
+      }
+      const leadCount = await client.query(
+        "SELECT COUNT(*)::int AS count FROM funnel_leads WHERE funnel_id=$1",
+        [funnelId],
+      );
+      await client.query("DELETE FROM funnels WHERE id=$1", [funnelId]);
+      await client.query("COMMIT");
+      return NextResponse.json({
+        success: true,
+        deletedFunnel: {
+          id: funnel.rows[0].id,
+          funnelName: funnel.rows[0].funnel_name,
+          slug: funnel.rows[0].slug,
+        },
+        deletedLeads: leadCount.rows[0]?.count || 0,
+      });
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => undefined);
+      return NextResponse.json(
+        { success: false, error: error instanceof Error ? error.message : "Could not delete the funnel" },
+        { status: 500 },
+      );
+    } finally {
+      client.release();
+    }
+  }
+  if (body?.confirmation !== "DELETE ALL FUNNELS") {
     return NextResponse.json(
-      { success: false, error: 'Escribe exactamente "BORRAR TODOS LOS EMBUDOS"' },
+      { success: false, error: 'Type exactly "DELETE ALL FUNNELS"' },
       { status: 400 }
     );
   }
@@ -63,7 +112,7 @@ export async function DELETE(req: NextRequest) {
   } catch (error) {
     await client.query("ROLLBACK").catch(() => undefined);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "No se pudieron borrar los embudos" },
+      { success: false, error: error instanceof Error ? error.message : "Could not delete the funnels" },
       { status: 500 }
     );
   } finally {

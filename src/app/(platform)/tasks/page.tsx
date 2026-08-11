@@ -1,0 +1,2 @@
+import PageHeader from "@/components/app-shell/PageHeader";import EnterpriseRecords from "@/components/enterprise/EnterpriseRecords";
+export default function TasksPage(){return <><PageHeader eyebrow="Operations" title="Tasks & calendar" description="Explicit, assignable work tied to CRM accounts and opportunities."/><EnterpriseRecords endpoint="/api/v1/tasks" collection="data" empty="No tasks are scheduled."/></>}

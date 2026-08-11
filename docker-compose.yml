@@ -1,0 +1,92 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: revora
+      POSTGRES_USER: revora
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets: [postgres_password]
+    volumes: [postgres_data:/var/lib/postgresql/data]
+    ports: ["5432:5432"]
+    healthcheck:
+      test: ["CMD-SHELL","pg_isready -U revora -d revora"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server","--appendonly","yes"]
+    volumes: [redis_data:/data]
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD","redis-cli","ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  migrate:
+    image: revora-app:local
+    build: .
+    command: ["sh","-c","export DATABASE_URL=\"postgresql://revora:$(cat /run/secrets/postgres_password)@postgres:5432/revora\"; exec node scripts/init-db.mjs"]
+    env_file:
+      - path: .env.production
+        required: false
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGDATABASE: revora
+      PGUSER: revora
+    secrets: [postgres_password]
+    depends_on:
+      postgres: {condition: service_healthy}
+    profiles: [operations]
+  app:
+    image: revora-app:local
+    build: .
+    env_file:
+      - path: .env.production
+        required: false
+    environment:
+      REDIS_URL: redis://redis:6379
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGDATABASE: revora
+      PGUSER: revora
+      METRICS_BEARER_TOKEN_FILE: /run/secrets/metrics_token
+    command: ["sh","-c","export DATABASE_URL=\"postgresql://revora:$(cat /run/secrets/postgres_password)@postgres:5432/revora\"; export METRICS_BEARER_TOKEN=\"$(cat /run/secrets/metrics_token)\"; exec node server.js"]
+    secrets: [postgres_password, metrics_token]
+    ports: ["3000:3000"]
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - "tr -d '\\r\\n' < /run/secrets/metrics_token > /tmp/metrics_token && exec /bin/prometheus --config.file=/etc/prometheus/prometheus.yml"
+    volumes: ["./infrastructure/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro"]
+    secrets: [metrics_token]
+    depends_on: [app]
+  grafana:
+    image: grafana/grafana:11.4.0
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana_password
+    secrets: [grafana_password]
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infrastructure/observability/grafana-datasources.yml:/etc/grafana/provisioning/datasources/revora.yml:ro
+    depends_on: [prometheus]
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password.txt
+  grafana_password:
+    file: ./secrets/grafana_password.txt
+  metrics_token:
+    file: ./secrets/metrics_token.txt
+volumes:
+  postgres_data:
+  redis_data:
+  grafana_data:

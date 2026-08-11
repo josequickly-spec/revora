@@ -1,0 +1,252 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useState, type ReactNode } from "react";
+import {
+  BarChart3,
+  BriefcaseBusiness,
+  Building2,
+  ChevronRight,
+  FileText,
+  Gauge,
+  Lightbulb,
+  Mail,
+  Menu,
+  Bot,
+  Search,
+  Settings,
+  ShieldCheck,
+  Users,
+  ListTodo,
+  Workflow,
+  CreditCard,
+  Sparkles,
+  Orbit,
+  X,
+} from "lucide-react";
+import {
+  getPlatformBreadcrumbs,
+  isPlatformRouteActive,
+  platformNavigation,
+  type PlatformNavItem,
+} from "@/lib/platform-navigation";
+import { brand } from "@/lib/brand";
+
+const icons: Record<PlatformNavItem["icon"], typeof Gauge> = {
+  overview: Gauge,
+  leads: Search,
+  intelligence: Building2,
+  audits: BarChart3,
+  funnelBuilder: Orbit,
+  opportunities: Lightbulb,
+  consultant: Bot,
+  proposals: FileText,
+  outreach: Mail,
+  crm: BriefcaseBusiness,
+  accounts: Users,
+  tasks: ListTodo,
+  workflows: Workflow,
+  security: ShieldCheck,
+  billing: CreditCard,
+  executive: BarChart3,
+  settings: Settings,
+  analytics: BarChart3,
+};
+
+function Navigation({ onNavigate }: { onNavigate?: () => void }) {
+  const pathname = usePathname();
+  const activeHref = [...platformNavigation]
+    .sort((left, right) => right.href.length - left.href.length)
+    .find((item) => isPlatformRouteActive(pathname, item.href))?.href;
+  const sections: Array<{ id: PlatformNavItem["group"]; label: string }> = [
+    { id: "command", label: "Command" },
+    { id: "intelligence", label: "Intelligence" },
+    { id: "revenue", label: "Revenue" },
+    { id: "operations", label: "Operations" },
+    { id: "platform", label: "Platform" },
+  ];
+
+  return (
+    <nav aria-label="Primary navigation" className="space-y-5">
+      {sections.map((section) => {
+        const items = platformNavigation.filter((item) => item.group === section.id);
+        if (!items.length) return null;
+        return (
+          <section key={section.id} aria-label={section.label}>
+            <p className="mb-2 px-3 text-[10px] font-black uppercase tracking-[.2em] text-slate-600">{section.label}</p>
+            <div className="space-y-1">
+              {items.map((item) => {
+                const Icon = icons[item.icon];
+                const active = activeHref === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={onNavigate}
+                    aria-current={active ? "page" : undefined}
+                    className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-cyan-300 ${
+                      active
+                        ? "bg-gradient-to-r from-orange-400 to-amber-300 text-slate-950 shadow-[0_8px_30px_rgba(249,115,22,.16)]"
+                        : "text-slate-400 hover:bg-white/[.06] hover:text-white"
+                    }`}
+                  >
+                    <Icon className="size-4 shrink-0" aria-hidden="true" />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        );
+      })}
+    </nav>
+  );
+}
+
+function Brand() {
+  return (
+    <Link href="/" className="flex items-center gap-3 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+      <span className="grid size-10 place-items-center rounded-xl bg-gradient-to-br from-orange-400 via-amber-300 to-lime-300 text-slate-950 shadow-lg shadow-orange-950/40">
+        <Sparkles className="size-5" aria-hidden="true" />
+      </span>
+      <span>
+        <strong className="block text-base font-black tracking-tight text-white">{brand.name}</strong>
+        <span className="block text-[10px] font-bold uppercase tracking-[.18em] text-orange-300">{brand.product}</span>
+      </span>
+    </Link>
+  );
+}
+
+export default function AppShell({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const breadcrumbs = getPlatformBreadcrumbs(pathname);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileOpen(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [mobileOpen]);
+
+  useEffect(() => {
+    const refreshKey = "revora:last-session-refresh";
+    const refreshSession = async () => {
+      const lastRefresh = Number(window.localStorage.getItem(refreshKey) || 0);
+      if (Date.now() - lastRefresh < 9 * 60_000) return;
+      window.localStorage.setItem(refreshKey, String(Date.now()));
+      try {
+        const response = await fetch("/api/auth/refresh", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: "{}",
+        });
+        if (!response.ok) window.localStorage.removeItem(refreshKey);
+      } catch {
+        window.localStorage.removeItem(refreshKey);
+      }
+    };
+    const timer = window.setInterval(refreshSession, 10 * 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="revora-shell min-h-screen bg-[#06080d] text-slate-100 selection:bg-orange-400/30">
+      <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_14%_-10%,rgba(34,211,238,.12),transparent_28%),radial-gradient(circle_at_85%_0%,rgba(139,92,246,.14),transparent_30%)]" />
+      <a
+        href="#main-content"
+        className="fixed left-4 top-3 z-[70] -translate-y-20 rounded-lg bg-cyan-300 px-4 py-2 font-bold text-slate-950 transition focus:translate-y-0"
+      >
+        Skip to content
+      </a>
+
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-72 border-r border-white/[.07] bg-[#090b10]/95 lg:flex lg:flex-col">
+        <div className="border-b border-white/[.07] px-5 py-5"><Brand /></div>
+        <div className="flex-1 overflow-y-auto px-3 py-5"><Navigation /></div>
+        <div className="m-3 rounded-2xl border border-orange-300/15 bg-gradient-to-br from-orange-300/[.09] to-amber-400/[.04] p-4">
+          <div className="flex items-center gap-2 text-xs font-bold text-orange-200">
+            <ShieldCheck className="size-4" aria-hidden="true" /> Production workspace
+          </div>
+          <p className="mt-2 text-xs leading-5 text-slate-500">Live records, controlled AI generation and approval-gated delivery.</p>
+          <Link href="/settings/integrations" className="mt-3 inline-flex text-xs font-bold text-orange-300 outline-none hover:text-orange-200 focus-visible:ring-2 focus-visible:ring-orange-300">
+            Check system readiness
+          </Link>
+        </div>
+      </aside>
+
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <button
+            type="button"
+            aria-label="Close navigation"
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => setMobileOpen(false)}
+          />
+          <aside
+            id="mobile-navigation"
+            aria-label="Mobile navigation"
+            className="relative flex h-full w-[min(20rem,88vw)] flex-col border-r border-white/10 bg-[#090e19] shadow-2xl"
+          >
+            <div className="flex items-center justify-between border-b border-white/[.07] px-5 py-5">
+              <Brand />
+              <button
+                type="button"
+                onClick={() => setMobileOpen(false)}
+                aria-label="Close menu"
+                className="rounded-lg p-2 text-slate-400 outline-none hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-cyan-300"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-3 py-5"><Navigation onNavigate={() => setMobileOpen(false)} /></div>
+          </aside>
+        </div>
+      )}
+
+      <div className="lg:pl-72">
+        <header className="sticky top-0 z-30 border-b border-white/[.07] bg-[#070b14]/90 backdrop-blur-xl">
+          <div className="flex min-h-16 items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+            <div className="flex min-w-0 items-center gap-3">
+              <button
+                type="button"
+                aria-label="Open navigation"
+                aria-expanded={mobileOpen}
+                aria-controls="mobile-navigation"
+                onClick={() => setMobileOpen(true)}
+                className="rounded-lg p-2 text-slate-300 outline-none hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-cyan-300 lg:hidden"
+              >
+                <Menu className="size-5" />
+              </button>
+              <nav aria-label="Breadcrumb" className="hidden min-w-0 items-center gap-1.5 text-xs text-slate-500 sm:flex">
+                {breadcrumbs.map((crumb, index) => (
+                  <span key={crumb.href} className="flex min-w-0 items-center gap-1.5">
+                    {index > 0 && <ChevronRight className="size-3 shrink-0" aria-hidden="true" />}
+                    {index === breadcrumbs.length - 1 ? (
+                      <span className="truncate font-semibold text-slate-300" aria-current="page">{crumb.label}</span>
+                    ) : (
+                      <Link href={crumb.href} className="truncate outline-none hover:text-white focus-visible:ring-2 focus-visible:ring-cyan-300">{crumb.label}</Link>
+                    )}
+                  </span>
+                ))}
+              </nav>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="hidden items-center gap-2 rounded-full border border-emerald-400/15 bg-emerald-400/[.06] px-3 py-1.5 text-[10px] font-black uppercase tracking-[.14em] text-emerald-300 sm:flex"><span className="size-1.5 rounded-full bg-emerald-300 shadow-[0_0_10px_rgba(110,231,183,.8)]" />System online</span>
+              <Link href="/funnelspy" className="rounded-xl bg-orange-400 px-3 py-2 text-xs font-black text-slate-950 outline-none transition hover:bg-orange-300 focus-visible:ring-2 focus-visible:ring-orange-200">
+                Run new audit
+              </Link>
+            </div>
+          </div>
+        </header>
+
+        <main id="main-content" className="mx-auto w-full max-w-[1500px] px-4 pb-28 pt-6 sm:px-6 sm:pb-28 sm:pt-8 lg:px-8">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+}

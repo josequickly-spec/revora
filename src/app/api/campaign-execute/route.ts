@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
       );
       if (sent.rows[0].total === 0) {
         return NextResponse.json(
-          { success: false, error: "La campaña no puede activarse hasta que exista al menos un outreach enviado y verificado." },
+          { success: false, error: "The campaign cannot be activated until at least one outreach has been sent and verified." },
           { status: 409 }
         );
       }

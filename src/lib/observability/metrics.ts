@@ -1,0 +1,5 @@
+type Labels=Record<string,string>;const counters=new Map<string,number>(),histograms=new Map<string,{sum:number;count:number}>();
+function key(name:string,labels:Labels={}){const suffix=Object.entries(labels).sort().map(([label,value])=>`${label}="${value.replaceAll('"','\\"')}"`).join(",");return suffix?`${name}{${suffix}}`:name;}
+export function increment(name:string,labels:Labels={},value=1){const metric=key(name,labels);counters.set(metric,(counters.get(metric)||0)+value);}
+export function observe(name:string,value:number,labels:Labels={}){const metric=key(name,labels),current=histograms.get(metric)||{sum:0,count:0};current.sum+=value;current.count++;histograms.set(metric,current);}
+export function renderPrometheus(){const lines=["# HELP revora_process_up Process availability.","# TYPE revora_process_up gauge","revora_process_up 1"];for(const [metric,value] of counters)lines.push(`${metric} ${value}`);for(const [metric,value] of histograms){lines.push(`${metric}_sum ${value.sum}`,`${metric}_count ${value.count}`);}return `${lines.join("\n")}\n`;}

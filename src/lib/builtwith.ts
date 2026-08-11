@@ -48,6 +48,24 @@ const primaryPlatform = (technologies: BuiltWithTechnology[]) => {
   ) || null;
 };
 
+export function profileHasTechnology(
+  profile: BuiltWithProfile,
+  technologyName: string,
+) {
+  const needle = technologyName.toLowerCase();
+  return (
+    profile.primaryPlatform?.toLowerCase().includes(needle) === true ||
+    profile.technologies.some(
+      technology =>
+        technology.name.toLowerCase().includes(needle) ||
+        technology.category?.toLowerCase().includes(needle) === true ||
+        technology.categories.some(category =>
+          category.toLowerCase().includes(needle),
+        ),
+    )
+  );
+}
+
 const epochDate = (value: unknown) => {
   const timestamp = Number(value);
   return Number.isFinite(timestamp) && timestamp > 0 ? new Date(timestamp).toISOString() : null;
@@ -90,7 +108,7 @@ export async function lookupBuiltWith(domainInput: string): Promise<BuiltWithPro
         headers: { Accept: "application/json" },
         signal: AbortSignal.timeout(20000),
       });
-      if (!freeResponse.ok) throw new Error(`BuiltWith Free respondió ${freeResponse.status}`);
+      if (!freeResponse.ok) throw new Error(`BuiltWith Free responded ${freeResponse.status}`);
       return await freeResponse.json() as {
         domain?: string;
         first?: number;
@@ -135,7 +153,7 @@ export async function lookupBuiltWith(domainInput: string): Promise<BuiltWithPro
       provider: "builtwith",
       checkedAt: new Date().toISOString(),
       technologies,
-      primaryPlatform: null,
+      primaryPlatform: primaryPlatform(technologies),
       techSpendUsd: null,
       estimatedMonthlyEcommerceRevenueUsd: null,
       firstIndexed: epochDate(freePayload.first),
@@ -159,7 +177,7 @@ export async function lookupBuiltWith(domainInput: string): Promise<BuiltWithPro
   });
   if (!response.ok) {
     const message = await response.text().catch(() => "");
-    throw new Error(`BuiltWith respondió ${response.status}${message ? `: ${message.slice(0, 160)}` : ""}`);
+    throw new Error(`BuiltWith responded ${response.status}${message ? `: ${message.slice(0, 160)}` : ""}`);
   }
 
   const payload = await response.json() as {

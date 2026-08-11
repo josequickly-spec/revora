@@ -9,21 +9,39 @@
     "init": "node scripts/init-db.mjs",
     "dev": "next dev --webpack",
     "build": "node scripts/build.mjs",
-    "start": "next start",
+    "start": "node scripts/start.mjs",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:phase2": "node --experimental-strip-types scripts/phase2-characterization.mjs",
+    "test:phase3": "node --experimental-strip-types scripts/phase3-characterization.mjs",
+    "test:phase4": "node --experimental-strip-types scripts/phase4-characterization.mjs",
+    "test:phase5": "node --experimental-strip-types scripts/phase5-characterization.mjs",
+    "test:phase6": "node --experimental-strip-types scripts/phase6-characterization.mjs",
+    "test:phase7": "node --experimental-strip-types scripts/phase7-characterization.mjs",
+    "test:phase8": "node --experimental-strip-types scripts/phase8-characterization.mjs",
+    "test:outreach-live": "node --experimental-strip-types scripts/outreach-live-characterization.mjs",
+    "test:security": "node --experimental-strip-types scripts/security-remediation-characterization.mjs",
+    "scan:secrets": "node scripts/scan-secrets.mjs",
+    "worker": "node ./src/workers/outreach-worker.ts",
+    "worker:pm2": "pm2 start ecosystem.config.js --only outreach-worker"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",
+    "bullmq": "^6.0.9",
+    "cheerio": "^1.2.0",
     "dotenv": "17.3.1",
     "drizzle-orm": "0.45.2",
+    "ioredis": "^6.0.0",
     "lucide-react": "^1.26.0",
     "next": "16.2.12",
+    "openai": "^7.0.0",
     "pg": "^8.22.0",
+    "playwright": "^1.62.0",
     "postgres": "^3.4.9",
     "react": "19.2.6",
     "react-dom": "19.2.6",
-    "resend": "^4.8.0"
+    "resend": "^4.8.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.1.17",
@@ -31,11 +49,18 @@
     "@types/pg": "^8.20.0",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
-    "drizzle-kit": "0.31.10",
-    "eslint": "9.39.4",
+    "eslint": "^9.39.4",
     "eslint-config-next": "16.2.6",
     "postcss": "8.5.23",
     "tailwindcss": "4.1.17",
     "typescript": "5.9.3"
+  },
+  "overrides": {
+    "minimatch": "10.2.6",
+    "brace-expansion": "5.0.8",
+    "next": {
+      "postcss": "8.5.24",
+      "sharp": "0.35.3"
+    }
   }
 }

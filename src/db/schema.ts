@@ -19,7 +19,7 @@ export const businesses = sqliteTable("businesses", {
   status: text("status").notNull().default("discovered"),
   heroOffer: text("hero_offer").default("Servicio Premium"),
   heroPrice: text("hero_price").default("99"),
-  painPoint: text("pain_point").default("Baja conversión de leads a clientes"),
+  painPoint: text("pain_point").default("Low lead-to-customer conversion"),
   createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
 });
 
@@ -31,8 +31,8 @@ export const funnels = sqliteTable("funnels", {
   headline: text("headline").notNull(),
   subheadline: text("subheadline").notNull(),
   ctaText: text("cta_text").notNull().default("Reservar Ahora"),
-  offerBadge: text("offer_badge").default("Oferta Especial"),
-  bonusOffer: text("bonus_offer").default("Consulta gratuita incluida"),
+  offerBadge: text("offer_badge").default("Special Offer"),
+  bonusOffer: text("bonus_offer").default("Free consultation included"),
   customPrimaryColor: text("custom_primary_color").default("#6366F1"),
   slug: text("slug").notNull().unique(),
   viewCount: integer("view_count").default(0),

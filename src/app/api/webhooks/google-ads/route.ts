@@ -1,53 +1,41 @@
-import { NextRequest, NextResponse } from "next/server";
-import { Pool } from "pg";
+import { NextResponse } from "next/server";
+import { pool } from "@/lib/postgres";
+import { verifyTimestampedHexHmac } from "@/lib/webhook-security";
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
-
-export async function POST(req: NextRequest) {
+export async function POST(request: Request) {
+  const raw = await request.text();
+  const secret = process.env.GOOGLE_ADS_WEBHOOK_SECRET;
+  const valid = secret && verifyTimestampedHexHmac(
+    raw,
+    request.headers.get("x-revora-signature") || "",
+    request.headers.get("x-revora-timestamp") || "",
+    secret,
+  );
+  if (!valid) return NextResponse.json({ error: "Invalid webhook signature" }, { status: 401 });
   try {
-    const event = await req.json();
-    const { campaignId, metrics } = event;
-
-    if (!campaignId || !metrics) {
-      return NextResponse.json(
-        { error: "Missing campaignId or metrics" },
-        { status: 400 }
-      );
+    const event = JSON.parse(raw) as {
+      campaignId?: string;
+      metrics?: { impressions?: number; clicks?: number; conversions?: number; spend?: number };
+    };
+    if (!event.campaignId || !event.metrics) {
+      return NextResponse.json({ error: "Missing campaignId or metrics" }, { status: 400 });
     }
-
-    // Guardar métricas de Google Ads
+    const campaign = await pool.query("SELECT 1 FROM campaigns WHERE id=$1", [event.campaignId]);
+    if (!campaign.rowCount) return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
     await pool.query(
       `INSERT INTO campaign_metrics
-       (campaign_id, ad_impressions, ad_clicks, ad_conversions, ad_spend, timestamp)
-       VALUES ($1, $2, $3, $4, $5, NOW())
-       ON CONFLICT (campaign_id, DATE(timestamp)) DO UPDATE SET
-       ad_impressions = $2,
-       ad_clicks = $3,
-       ad_conversions = $4,
-       ad_spend = $5`,
+       (campaign_id,ad_impressions,ad_clicks,ad_conversions,ad_spend,timestamp)
+       VALUES($1,$2,$3,$4,$5,NOW())`,
       [
-        campaignId,
-        metrics.impressions || 0,
-        metrics.clicks || 0,
-        metrics.conversions || 0,
-        metrics.spend || 0,
-      ]
+        event.campaignId,
+        Math.max(0, Number(event.metrics.impressions) || 0),
+        Math.max(0, Number(event.metrics.clicks) || 0),
+        Math.max(0, Number(event.metrics.conversions) || 0),
+        Math.max(0, Number(event.metrics.spend) || 0),
+      ],
     );
-
-    console.log(
-      `📊 Google Ads metrics updated: ${metrics.impressions} impressions, ${metrics.clicks} clicks`
-    );
-
-    return NextResponse.json({ success: true }, { status: 200 });
-  } catch (error) {
-    console.error("Google Ads webhook error:", error);
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Webhook processing failed",
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: true });
+  } catch {
+    return NextResponse.json({ error: "Webhook processing failed" }, { status: 400 });
   }
 }

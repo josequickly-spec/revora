@@ -1,0 +1,2 @@
+import {NextResponse} from "next/server";import {enterpriseFailure} from "@/lib/enterprise/http";import {requirePermission} from "@/lib/enterprise/store";import {readForecasts} from "@/lib/forecast/store";
+export async function GET(request:Request){try{const context=await requirePermission(request,"billing.read");return NextResponse.json({forecasts:await readForecasts(context.organizationId)});}catch(error){return enterpriseFailure(error);}}

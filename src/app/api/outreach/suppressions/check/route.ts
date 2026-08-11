@@ -1,0 +1,1 @@
+import{NextResponse}from"next/server";import{checkSuppression}from"@/lib/outreach/store";export async function POST(r:Request){try{const b=await r.json();return NextResponse.json({suppressionType:await checkSuppression(String(b.email||""),b.campaignId)})}catch{return NextResponse.json({error:"Suppression check failed."},{status:400})}}

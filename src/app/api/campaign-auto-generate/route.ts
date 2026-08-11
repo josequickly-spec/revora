@@ -1,17 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateFunnel } from "@/lib/funnel-generator";
-import { generateOutreachSequence } from "@/lib/outreach-generator";
 import { auditSite, type SiteAudit } from "@/lib/site-audit";
-
-interface AutoGenerateRequest {
-  businessName: string;
-  website?: string;
-  industry?: string;
-  monthlyRevenue?: number;
-  averageOrderValue?: number;
-  conversionRate?: number;
-  monthlyAdSpend?: number;
-}
+import { z } from "zod";
+import { generateStructured } from "@/lib/ai-provider-router";
+import { findLatestAudit } from "@/lib/funnelspy-store";
+import { enqueueJob, getJob } from "@/lib/job-queue";
 
 interface CampaignPackage {
   businessName: string;
@@ -31,7 +24,9 @@ interface CampaignPackage {
     proof: string;
     cta: string;
     colors: { primary: string; secondary: string; accent: string };
+    layout?: Record<string, unknown>;
   };
+  otom?: Record<string, unknown>;
   emailSequence: Array<{
     number: number;
     subject: string;
@@ -60,173 +55,106 @@ interface CampaignPackage {
   };
 }
 
-async function generateSEOAnalysis(businessName: string, audit: SiteAudit | null): Promise<any> {
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "user",
-          content: `Eres experto en SEO. Analiza el negocio: "${businessName}" usando exclusivamente estos datos observados del sitio:
+const seoAnalysisSchema = z.object({
+  seoScore: z.number().min(0).max(100),
+  topKeywords: z.array(z.string()).max(12),
+  mainIssues: z.array(z.string()).max(8),
+  quickWins: z.array(z.string()).max(8),
+  recommendations: z.array(z.string()).max(10),
+});
+
+const requestSchema = z.object({
+  businessName: z.string().min(1),
+  website: z.string().optional(),
+  industry: z.string().optional(),
+  monthlyRevenue: z.preprocess((v) => (v === "" ? undefined : Number(v)), z.number().nonnegative().optional()),
+  averageOrderValue: z.preprocess((v) => (v === "" ? undefined : Number(v)), z.number().nonnegative().optional()),
+  conversionRate: z.preprocess((v) => (v === "" ? undefined : Number(v)), z.number().nonnegative().optional()),
+  monthlyAdSpend: z.preprocess((v) => (v === "" ? undefined : Number(v)), z.number().nonnegative().optional()),
+});
+
+// Minimal funnel validation schema for the fields this route consumes
+const minimalFunnelSchema = z.object({
+  headline: z.string().min(1),
+  subheadline: z.string().min(1),
+  ctaText: z.string().min(1),
+  offer: z.string().optional(),
+  offerBadge: z.string().optional(),
+  bonusOffer: z.string().optional(),
+  painPoint: z.string().optional(),
+  agitationCopy: z.string().optional(),
+  solutionCopy: z.string().optional(),
+  proofCopy: z.string().optional(),
+  colorScheme: z.object({ primary: z.string().min(4), secondary: z.string().min(4), accent: z.string().min(4) }).optional(),
+  otom: z.any().optional(),
+});
+
+async function generateSEOAnalysis(businessName: string, audit: SiteAudit) {
+  const generation = await generateStructured({
+    task: "bulk",
+    schemaName: "seo_analysis",
+    schema: seoAnalysisSchema,
+    system: "You are an SEO specialist. Use exclusively the evidence provided. Do not invent traffic, competitors, customers, revenue, or results.",
+    user: `Analyze the business: "${businessName}" using exclusively this observed site data:
 ${JSON.stringify(audit)}
 
-Proporciona SOLO JSON válido sin markdown:
+Provide ONLY valid JSON without markdown:
 {
-  "seoScore": número entre 0-100,
+  "seoScore": number between 0-100,
   "topKeywords": ["keyword1", "keyword2", "keyword3"],
-  "competitors": ["competitor1", "competitor2", "competitor3"],
   "mainIssues": ["issue1", "issue2"],
   "quickWins": ["win1", "win2"],
-  "estimatedTraffic": número,
   "recommendations": ["rec1", "rec2", "rec3"]
 }`,
-        },
-      ],
-      max_tokens: 500,
-    }),
   });
+  return generation.output;
+}
 
-  const data = (await response.json()) as {
-    choices: Array<{ message: { content: string } }>;
-  };
-  let content = data.choices[0].message.content;
-  content = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-  return JSON.parse(content);
+function normalizeWebsiteInput(input?: string) {
+  if (!input) return undefined;
+  const trimmed = input.trim();
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  // If it looks like a domain, prefix https://
+  if (/^[^\s\/]+\.[^\s]{2,}$/i.test(trimmed)) return `https://${trimmed}`;
+  return trimmed;
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const body: AutoGenerateRequest = await req.json();
-    const { businessName, website, industry = "Negocio general" } = body;
+    const raw = await req.json();
+    const parseResult = requestSchema.safeParse(raw);
+    if (!parseResult.success) {
+      return NextResponse.json({ error: 'Invalid request', details: parseResult.error.flatten() }, { status:400 });
+    }
+    const body = parseResult.data;
+    const { businessName } = body;
+    const website = normalizeWebsiteInput(body.website);
 
-    if (!businessName) {
+    if (!businessName || !website) {
       return NextResponse.json(
-        { error: "Business name required" },
-        { status: 400 }
+        { error: "Business name and a public website are required. Name-only analysis is disabled." },
+        { status:400 }
       );
     }
 
-    console.log(`Starting auto-generation for: ${businessName}`);
-
-    // PHASE 1: SEO Analysis (NEW)
-    console.log("📊 Generating SEO Analysis...");
-    const siteAudit = website ? await auditSite(website) : null;
-    const seoAnalysis = await generateSEOAnalysis(businessName, siteAudit);
-
-    // PHASE 2: Landing Page (REUTILIZA funnel-generator.ts)
-    console.log("🎨 Generating Landing Page via Phase 2...");
-    const landingPage = await generateFunnel(
-      businessName,
-      industry,
-      "Premium Services",
-      seoAnalysis.mainIssues?.[0] || "Business growth"
-    );
-
-    // PHASE 3: Email Sequence & Video (REUTILIZA outreach-generator.ts)
-    console.log("✉️ Generating Email Sequence via Phase 3...");
-    const outreach = await generateOutreachSequence(
-      "Decisor",
-      businessName,
-      landingPage.offer,
-      landingPage.painPoint,
-      landingPage.bonusOffer
-    );
-
-    // PHASE 4: Ads Strategy (using SEO keywords)
-    const adsStrategy = {
-      google: {
-        keywords: seoAnalysis.topKeywords || [],
-        copy: [
-          `${businessName}: ${landingPage.headline}`,
-          `${landingPage.offer} - Acceso ${landingPage.offerBadge}`,
-          `Transform Your Business - ${landingPage.headline}`,
-        ],
-      },
-      facebook: {
-        copy: [
-          landingPage.headline,
-          landingPage.subheadline,
-          landingPage.agitationCopy,
-        ],
-        audience: [industry, "Business Owners", "Decision makers", "25-65"],
-      },
-    };
-
-    // PHASE 5: Revenue Projections (based on SEO and market data)
-    const estimatedTraffic = Math.max(0, Number(seoAnalysis.estimatedTraffic) || 0);
-    const conversionRate = Math.max(0, Number(body.conversionRate) || 0) / 100;
-    const averageOrderValue = Math.max(0, Number(body.averageOrderValue) || 0);
-    const currentRevenue = Math.max(0, Number(body.monthlyRevenue) || 0);
-    const adSpendEstimate = Math.max(0, Number(body.monthlyAdSpend) || 0);
-    const projectedConversions = estimatedTraffic * conversionRate;
-    const projectedRevenue = projectedConversions * averageOrderValue;
-    const incrementalRevenue = Math.max(0, projectedRevenue - currentRevenue);
-
-    const projections = {
-      monthlyRevenue: currentRevenue,
-      projectedRevenue: Math.round(projectedRevenue),
-      incrementalRevenue: Math.round(incrementalRevenue),
-      expectedROI: adSpendEstimate > 0 ? Math.round((incrementalRevenue / adSpendEstimate) * 100) : null,
-      breakEvenDays: incrementalRevenue > 0 && adSpendEstimate > 0
-        ? Math.ceil(adSpendEstimate / (incrementalRevenue / 30)) : null,
-      estimatedTraffic,
-      conversionRate: conversionRate * 100,
-      averageOrderValue,
-      monthlyAdSpend: adSpendEstimate,
-    };
-
-    const campaign: CampaignPackage = {
-      businessName,
-      status: "ready",
-      analysis: {
-        seoScore: siteAudit?.score ?? seoAnalysis.seoScore ?? 0,
-        competitors: seoAnalysis.competitors || [],
-        keywords: seoAnalysis.topKeywords || [],
-        opportunities: seoAnalysis.quickWins || [],
-        audit: siteAudit,
-      },
-      landingPage: {
-        headline: landingPage.headline,
-        subheadline: landingPage.subheadline,
-        painPoint: landingPage.painPoint,
-        solution: landingPage.solutionCopy,
-        proof: landingPage.proofCopy,
-        cta: landingPage.ctaText,
-        colors: landingPage.colorScheme,
-      },
-      emailSequence: outreach.emailSequence.map((email) => ({
-        number: email.index,
-        subject: email.subject,
-        body: email.body,
-        delay: email.delay,
-      })),
-      videoScript: outreach.videoPitch,
-      adsStrategy,
-      projections,
-    };
-
-    console.log("✅ Campaign generated successfully (using existing Phases)");
-
-    return NextResponse.json(
-      {
-        success: true,
-        campaign,
-        message: "Complete package generated successfully",
-      },
-      { status: 200 }
-    );
+    // Enqueue background work and return202 with job id
+    const jobId = await enqueueJob({ body, website });
+    return NextResponse.json({ success: true, jobId }, { status:202 });
   } catch (error) {
     console.error("Auto-generation error:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Generation failed",
       },
-      { status: 500 }
+      { status:500 }
     );
   }
+}
+
+export async function GET(req: NextRequest) {
+ const id = req.nextUrl.searchParams.get("jobId");
+ if (!id) return NextResponse.json({ error: "jobId required" }, { status:400 });
+ const job = await getJob(id);
+ if (!job) return NextResponse.json({ error: "Not found" }, { status:404 });
+ return NextResponse.json({ success: true, job }, { status:200 });
 }

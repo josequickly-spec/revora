@@ -1,0 +1,1 @@
+import PageHeader from"@/components/app-shell/PageHeader";import{TemplatesView}from"@/components/outreach/OutreachViews";export default function Page(){return <><PageHeader eyebrow="Outreach" title="Templates" description="Deterministic, review-required templates without hidden claims or pricing."/><TemplatesView/></>}

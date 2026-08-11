@@ -8,7 +8,7 @@ export default function GlobalError({
   reset: () => void;
 }) {
   return (
-    <html lang="es">
+    <html lang="en">
       <body
         style={{
           margin: 0,
@@ -22,15 +22,15 @@ export default function GlobalError({
       >
         <main style={{ maxWidth: 520, padding: 32, textAlign: "center" }}>
           <h1 style={{ fontSize: 28, marginBottom: 12 }}>
-            No pudimos cargar esta página
+            We couldn&apos;t load this page
           </h1>
           <p style={{ color: "#94a3b8", lineHeight: 1.6 }}>
-            Ocurrió un error inesperado. Puedes volver a intentarlo sin perder
-            la información que ya se haya guardado.
+            An unexpected error occurred. You can try again without losing
+            any information that was already saved.
           </p>
           {error.digest && (
             <p style={{ color: "#64748b", fontSize: 12 }}>
-              Referencia: {error.digest}
+              Reference: {error.digest}
             </p>
           )}
           <button
@@ -47,7 +47,7 @@ export default function GlobalError({
               cursor: "pointer",
             }}
           >
-            Intentar nuevamente
+            Try again
           </button>
         </main>
       </body>

@@ -20,7 +20,20 @@ export interface AdCampaign {
   geolocation: string;
   duration: number;
   roi_target: number;
+  platform: "facebook" | "google" | "instagram";
 }
+
+const adCampaignAISchema = z.object({
+  name: z.string(),
+  dailyBudget: z.number().nonnegative(),
+  creatives: z.array(z.object({
+    headline: z.string(), subheading: z.string(), description: z.string(), cta: z.string(),
+    imagePrompt: z.string(), targetAudience: z.string(), estimatedCPC: z.number().nonnegative(),
+  })).min(1).max(6),
+  targetAudience: z.string(), geolocation: z.string(), duration: z.number().positive(), roi_target: z.number().nonnegative(),
+});
+
+const optimizationSchema = z.object({ recommendations: z.array(z.string()).min(3).max(5) });
 
 export async function generateAdCampaign(
   businessName: string,
@@ -29,70 +42,51 @@ export async function generateAdCampaign(
   budget: number,
   platform: "facebook" | "google" | "instagram"
 ): Promise<AdCampaign> {
-  const prompt = `Eres experto en performance marketing y ad copywriting.
+  const prompt = `You are an expert in performance marketing and ad copywriting.
 
-Genera campañas publicitarias de alto ROI para:
-Negocio: ${businessName}
-Oferta: ${offer}
-Problema: ${painPoint}
-Presupuesto: $${budget}
-Plataforma: ${platform}
+Generate high-ROI ad campaigns for:
+Business: ${businessName}
+Offer: ${offer}
+Problem: ${painPoint}
+Budget: $${budget}
+Platform: ${platform}
 
-Responde SOLO JSON:
+Respond with JSON ONLY:
 {
-  "name": "Nombre campaña descriptivo",
+  "name": "Descriptive campaign name",
   "dailyBudget": ${budget / 30},
   "creatives": [
     {
-      "headline": "Titular principal max 30 caracteres",
-      "subheading": "Subtítulo max 50 caracteres",
-      "description": "Descripción 80-120 caracteres",
-      "cta": "Botón CTA: Learn More, Get Started, etc",
-      "imagePrompt": "Prompt detallado para generar imagen con IA",
-      "targetAudience": "Audiencia especifica: Edad, interes, comportamiento",
-      "estimatedCPC": numero_costo_por_click_estimado
+      "headline": "Main headline, max 30 characters",
+      "subheading": "Subheading, max 50 characters",
+      "description": "Description, 80-120 characters",
+      "cta": "CTA button: Learn More, Get Started, etc",
+      "imagePrompt": "Detailed prompt for AI image generation",
+      "targetAudience": "Specific audience: age, interest, behavior",
+      "estimatedCPC": estimated_cost_per_click_number
     }
   ],
-  "targetAudience": "Descripcion audiencia objetivo",
-  "geolocation": "ES, USA, LATAM, etc",
+  "targetAudience": "Target audience description",
+  "geolocation": "US, LATAM, etc",
   "duration": 30,
   "roi_target": 300
 }`;
 
-  try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: 1200,
-        temperature: 0.8,
-      }),
-    });
-
-    if (!response.ok) throw new Error("OpenAI API error");
-
-    const data = (await response.json()) as {
-      choices: Array<{ message: { content: string } }>;
-    };
-    let content = data.choices[0].message.content;
-    content = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-
-    const campaign_data = JSON.parse(content);
-    return {
-      id: `camp_${Date.now()}`,
-      businessName,
-      platform,
-      ...campaign_data,
-    };
-  } catch (error) {
-    console.error("Ad campaign generation error:", error);
-    throw error;
-  }
+  const generation = await generateStructured({
+    task: "bulk",
+    schemaName: "ad_campaign",
+    schema: adCampaignAISchema,
+    system: "You are a responsible advertising specialist. Do not invent historical results, availability, social proof, or guarantees.",
+    user: prompt,
+  });
+  return {
+    id: `camp_${Date.now()}`,
+    businessName,
+    budget,
+    platform,
+    ...generation.output,
+    creatives: generation.output.creatives.map((creative) => ({ ...creative, platform })),
+  };
 }
 
 export async function generateAIBotOptimizations(
@@ -116,49 +110,31 @@ export async function generateAIBotOptimizations(
   const cpc = metrics.spend / metrics.clicks;
   const roas = metrics.spend > 0 ? (metrics.revenue || 0) / metrics.spend : 0;
 
-  const prompt = `Eres experto en optimizacion de campañas publicitarias.
+  const prompt = `You are an expert in ad campaign optimization.
 
-Metricas actuales:
+Current metrics:
 - CTR: ${ctr.toFixed(2)}%
 - Conversion Rate: ${conversionRate.toFixed(2)}%
 - CPC: $${cpc.toFixed(2)}
 - ROAS: ${roas.toFixed(2)}x
 
-Dame 3 recomendaciones ESPECIFICAS para mejorar. Responde como JSON array de strings.`;
+Give me 3 SPECIFIC recommendations to improve. Respond as a JSON array of strings.`;
 
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: 500,
-        temperature: 0.7,
-      }),
+    const generation = await generateStructured({
+      task: "bulk",
+      schemaName: "ad_optimizations",
+      schema: optimizationSchema,
+      system: "You are a campaign analyst. Base each recommendation exclusively on the metrics provided.",
+      user: `${prompt}\nRespond as an object with a recommendations property.`,
     });
-
-    if (!response.ok) throw new Error("OpenAI API error");
-
-    const data = (await response.json()) as {
-      choices: Array<{ message: { content: string } }>;
-    };
-    let content = data.choices[0].message.content;
-    content = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-
-    const recommendations = JSON.parse(content);
 
     return {
       ctr,
       conversionRate,
       cpc,
       roas,
-      recommendations: Array.isArray(recommendations)
-        ? recommendations
-        : [recommendations],
+      recommendations: generation.output.recommendations,
     };
   } catch (error) {
     console.error("AI optimization error:", error);
@@ -175,3 +151,5 @@ Dame 3 recomendaciones ESPECIFICAS para mejorar. Responde como JSON array de str
     };
   }
 }
+import { z } from "zod";
+import { generateStructured } from "@/lib/ai-provider-router";

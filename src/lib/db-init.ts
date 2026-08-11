@@ -8,7 +8,7 @@ export async function initializeDatabase() {
   const client = await pool.connect();
 
   try {
-    // Crear tabla campaigns
+    // Create campaigns table
     await client.query(`
       CREATE TABLE IF NOT EXISTS campaigns (
         id TEXT PRIMARY KEY,
@@ -26,7 +26,7 @@ export async function initializeDatabase() {
       );
     `);
 
-    // Crear tabla campaign_metrics
+    // Create campaign_metrics table
     await client.query(`
       CREATE TABLE IF NOT EXISTS campaign_metrics (
         id BIGSERIAL PRIMARY KEY,
@@ -50,7 +50,7 @@ export async function initializeDatabase() {
       );
     `);
 
-    // Crear índices para mejor performance
+    // Create indexes for better performance
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_campaigns_status ON campaigns(status);
       CREATE INDEX IF NOT EXISTS idx_campaigns_created_at ON campaigns(created_at DESC);
@@ -68,7 +68,7 @@ export async function initializeDatabase() {
   }
 }
 
-// Ejecutar si se importa directamente
+// Run when imported directly
 if (require.main === module) {
   initializeDatabase()
     .then(() => {

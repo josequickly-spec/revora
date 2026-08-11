@@ -23,7 +23,10 @@ export const businessSelect = `id::int AS id, name, domain, country,
   platform, logo_url AS "logoUrl", brand_color AS "brandColor",
   brand_accent AS "brandAccent", status, hero_offer AS "heroOffer",
   hero_price AS "heroPrice", pain_point AS "painPoint",
-  technology_data AS "technologyData", created_at AS "createdAt"`;
+  technology_data AS "technologyData", opportunity_score AS "opportunityScore",
+  opportunity_grade AS "opportunityGrade", outreach_approved_at AS "outreachApprovedAt",
+  pipeline_stage AS "pipelineStage", created_at AS "createdAt"`;
+
 
 export const contactSelect = `id::int AS id, business_id::int AS "businessId", name, role, email,
   linkedin_url AS "linkedinUrl", confidence_score AS "confidenceScore",

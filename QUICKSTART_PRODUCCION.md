@@ -44,28 +44,13 @@ NODE_ENV=development
 
 ---
 
-## PASO 2️⃣: Crear Autenticación Gratis (3 min)
+## PASO 2️⃣: Configurar autenticación integrada (3 min)
 
-### 1. Ve a https://dashboard.clerk.com y crea cuenta
-
-- Sign up con GitHub o email
-
-### 2. Crea una aplicación
-
-- Nombre: `Revora`
-- Sign in methods: **Email**
-
-### 3. Copia las claves
-
-En **API Keys**, copia:
-- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` (empieza con `pk_test_`)
-- `CLERK_SECRET_KEY` (empieza con `sk_test_`)
-
-### 4. Pega en `.env.local`
+Genera dos secretos aleatorios diferentes, de al menos 32 caracteres, y agrégalos a `.env.local`:
 
 ```env
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_xxx"
-CLERK_SECRET_KEY="sk_test_xxx"
+AUTH_JWT_SECRET="RANDOM_SECRET_WITH_AT_LEAST_32_CHARACTERS"
+AUTH_ENCRYPTION_KEY="DIFFERENT_RANDOM_SECRET_WITH_AT_LEAST_32_CHARACTERS"
 ```
 
 ---
@@ -148,8 +133,8 @@ git push -u origin main
 
 ```
 DATABASE_URL=postgresql://...
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
-CLERK_SECRET_KEY=sk_test_...
+AUTH_JWT_SECRET=random_secret_with_at_least_32_characters
+AUTH_ENCRYPTION_KEY=different_random_secret_with_at_least_32_characters
 RESEND_API_KEY=re_...
 ```
 

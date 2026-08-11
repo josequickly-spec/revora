@@ -1,213 +1,105 @@
-# Revora — Revenue OS para Agencias
+# EcoScale Partner
 
-Plataforma universal de adquisición de clientes para cualquier negocio. Automatiza embudos, contactos, outreach y modelos de revenue-share.
+EcoScale Partner is a Next.js and PostgreSQL Commerce Intelligence platform. It connects:
 
-**Status:** ✅ Desarrollo Local | 🚀 Listo para Producción
-
-## 🚀 Quick Start Local (Sin BD externa)
-
-### 1. Clonar e instalar dependencias
-
-```bash
-cd "C:\Users\Administrator\Pictures\automated-shopify-lead-outreach (3)"
-npm install
+```text
+Lead Finder → Business Intelligence → Funnel Analysis → Opportunities
+→ AI Consultant → Proposals → Outreach → CRM
 ```
 
-### 2. Inicializar base de datos (SQLite local)
+The Enterprise layer adds organizations, RBAC, sessions, MFA, API keys,
+billing, workflows, executive analytics, forecasting and observability.
+
+## Requirements
+
+- Node.js 20.9–24
+- PostgreSQL 16+
+- Redis for production dashboard caching
+
+Copy `.env.example` to `.env.local` and replace every required placeholder.
+Never commit `.env.local`.
+
+At minimum, local authenticated operation requires:
+
+- `DATABASE_URL`
+- `APP_URL`
+- `AUTH_JWT_SECRET`
+- `AUTH_ENCRYPTION_KEY`
+
+Generate independent secrets with a cryptographically secure password manager.
+
+## Commands
 
 ```bash
+npm ci
 npm run init
-```
-
-Esto crea `data.db` en la raíz del proyecto.
-
-### 3. Ejecutar en desarrollo
-
-```bash
 npm run dev
+npm run lint
+npm run typecheck
+npm run build
+npm run test:phase2
+npm run test:phase3
+npm run test:phase4
+npm run test:phase5
+npm run test:phase6
+npm run test:phase7
+npm run test:phase8
 ```
 
-Abre `http://localhost:3000` en tu navegador.
+`npm run init` applies additive PostgreSQL migrations. Back up production before
+running migrations and run them once as a deployment job.
 
----
+## Security boundaries
 
-## 📦 Stack
+- Private `/api/**` routes require a valid EcoScale Partner session or scoped API key.
+- Public routes are limited to authentication, signed webhooks, health,
+  published proposals, unsubscribe and public funnel lead capture.
+- The operational dataset predating organizations is quarantined to the first
+  authenticated organization that claims it. Other tenants cannot access it.
+- Provider webhooks fail closed when their signing secret is absent.
+- Production readiness requires health to report both database and
+  authentication as configured.
 
-- **Frontend:** Next.js 16 + React 19 + Tailwind CSS 4
-- **Base de datos:** SQLite (better-sqlite3) — archivo local `data.db`
-- **ORM:** Drizzle ORM
-- **Autenticación:** Ninguna (desarrollo local)
+The pre-tenant quarantine is a compatibility boundary, not a substitute for
+adding `organization_id` to every future aggregate. New tables must be
+tenant-owned from their first migration.
 
----
+## Production
 
-## 📂 Estructura
+Production artifacts are provided for Docker Compose, Kubernetes and AWS
+Terraform under `infrastructure/`. Deployment remains an operator-controlled
+process:
 
-```
-src/
-├── app/
-│   ├── page.tsx           # Dashboard principal (5 pestañas)
-│   ├── layout.tsx         # Metadata y layout
-│   ├── funnel/[slug]/     # Página pública del embudo
-│   ├── api/               # Rutas API
-│   │   ├── businesses/    # CRUD negocios
-│   │   ├── funnels/       # CRUD embudos
-│   │   ├── contacts/      # CRUD contactos
-│   │   ├── outreach/      # Envío de emails (simulado)
-│   │   ├── proposals/     # CRUD propuestas
-│   │   └── health/        # Health check
-│   └── globals.css
-├── db/
-│   ├── index.ts           # Conexión a SQLite
-│   └── schema.ts          # Esquema Drizzle
-├── lib/
-│   └── industries.ts      # Config de 9 industrias
-└── ...
-```
+1. Provision secrets and data services.
+2. Build an immutable image.
+3. Run the migration job.
+4. Verify readiness privately.
+5. Promote with the reviewed canary or blue/green strategy.
+6. Run smoke, tenant-isolation and restore checks.
 
----
+See:
 
-## 🎯 Funcionalidades (5 Pasos)
+- `docs/ARCHITECTURE_GUIDE.md`
+- `docs/SECURITY_GUIDE.md`
+- `docs/DEPLOYMENT_GUIDE.md`
+- `docs/OPERATIONS_GUIDE.md`
+- `docs/INCIDENT_RESPONSE.md`
+- `docs/DISASTER_RECOVERY.md`
 
-### 1. **Descubrir** (Discover)
-- Explora negocios por industria, país, ingresos
-- Seed data con 12 negocios pre-cargados
+## Current limitations
 
-### 2. **Embudo** (Funnels)
-- Genera embudo personalizado por sector
-- Preview en vivo del funnel
-- Link compartible en `/funnel/{slug}`
-
-### 3. **Contacto** (Contacts)
-- Email verificado del decisor
-- Score de confianza
-- LinkedIn profile
-
-### 4. **Outreach** (Pitch)
-- Email hiperpersonalizado
-- Guión Loom de 90 segundos
-- Copiar/Enviar simulado
-
-### 5. **Rev-Share** (Calculator)
-- Cálculo de facturación extra
-- Comisión variable (15-40%)
-- Propuesta de ads por industria
-
-**Bonus:** CRM tipo Kanban con 5 stages.
-
----
-
-## 🛠️ Comandos
-
-| Comando | Descripción |
-|---------|-------------|
-| `npm run init` | Crea las tablas SQLite en `data.db` |
-| `npm run dev` | Inicia servidor en `http://localhost:3000` |
-| `npm run build` | Build para producción |
-| `npm start` | Ejecuta build de producción |
-| `npm run lint` | Lint con ESLint |
-| `npm run typecheck` | TypeScript check |
-
----
-
-## 📊 Base de Datos
-
-Todas las tablas están en **SQLite** (`data.db`):
-
-- **businesses** — Negocios descubiertos
-- **funnels** — Embudos por negocio
-- **contacts** — Contactos verificados
-- **outreach_campaigns** — Emails enviados
-- **proposals** — Propuestas de revenue-share
-
-Datos de seed se crean automáticamente en `/api/businesses` (primera solicitud).
-
----
-
-## 🔐 Seguridad (Local)
-
-En desarrollo local:
-- ✅ Sin autenticación (acceso libre a `localhost:3000`)
-- ✅ Sin email real (botón "Enviar Simulado")
-- ✅ SQLite en archivo local (no expuesto)
-
-**Para producción necesitas:**
-- [ ] Autenticación (NextAuth, Clerk, etc.)
-- [ ] Email real (Resend, SendGrid, etc.)
-- [ ] HTTPS
-- [ ] Base de datos remota (si necesario)
-
----
-
-## 🔐 Producción Real (PostgreSQL + Auth + Email)
-
-Para llevar a producción con servicios REALES, sigue **SETUP_PRODUCCION.md**
-
-### Resumen Producción
-
-| Componente | Local | Producción |
-|---|---|---|
-| **BD** | Mock en memoria | PostgreSQL (Supabase) |
-| **Auth** | Ninguna | Clerk (Gratis hasta 10k users) |
-| **Email** | Simulado | Resend ($0 dev, $20/mes) |
-| **Hosting** | localhost:3000 | Vercel (Gratis hobby plan) |
-| **Costo Mes 1** | $0 | $0 |
-| **Costo Escalado** | — | ~$45/mes |
-
-### Archivos de Producción
-
-- `SETUP_PRODUCCION.md` — Guía paso a paso completa
-- `.env.example` — Variables de entorno requeridas
-- `src/middleware.ts` — Autenticación con Clerk
-- `src/lib/email.ts` — Servicio de email con Resend
-
-## 📝 Notas de Desarrollo
-
-- Los emails de seed data son ficticios — usa tus propios contactos en producción
-- La BD local usa mock en memoria — datos se pierden al reiniciar
-- Outreach es simulado sin `.env` configurado — necesita Resend API Key
-- Sin autenticación en desarrollo — Clerk se agrega en producción
-
----
-
-## 🚀 Deploy a Producción
-
-### Vercel (recomendado)
-
-```bash
-npm install -g vercel
-vercel
-```
-
-Luego configura en Vercel Dashboard:
-- Base de datos remota (Supabase, Railway, etc.)
-- Integración de email real
-
-### Variables de entorno requeridas
-
-Para producción, agrega a `.env.local`:
-
-```
-DATABASE_URL=postgresql://...  # Si usas Postgres
-NEXTAUTH_SECRET=...             # Para auth
-RESEND_API_KEY=...              # Para email
-```
-
----
-
-## 📧 Próximas Integraciones
-
-- [ ] NextAuth con GitHub/Google
-- [ ] Resend o SendGrid para email real
-- [ ] Hunter.io para validación de contactos
-- [ ] Stripe para facturación
-- [ ] Analytics dashboard
-
----
-
-## 📄 Licencia
-
-Desarrollo local. Uso privado.
-
----
-
-**¿Preguntas?** Revisa el código en `src/app/page.tsx` — es autodocumentado.
+- Outreach can use Resend only after the domain and sender identity are
+  provider-verified, a physical business address is supplied, and the campaign
+  is explicitly reviewed, approved and scheduled. Without those controls it
+  remains dry-run or fails closed.
+- Resend delivery events require a public HTTPS webhook at
+  `/api/webhooks/resend` and `RESEND_WEBHOOK_SECRET`.
+- The Outreach worker must be invoked by an authenticated scheduler using a
+  dedicated `OUTREACH_WORKER_SECRET`, or `CRON_SECRET` as a local fallback;
+  campaign creation never sends automatically.
+- External AI, email, billing and enrichment providers require approved
+  credentials.
+- Characterization suites do not replace integration, browser E2E, load,
+  penetration or restore testing.
+- Credentials previously committed to Git must be rotated and removed from
+  repository history; deleting the current text alone is insufficient.

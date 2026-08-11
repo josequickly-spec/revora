@@ -31,12 +31,12 @@ export function LocalBusinessFinder({
   const [searched, setSearched] = useState(false);
   const [discoveringId, setDiscoveringId] = useState<string | null>(null);
   const [successId, setSuccessId] = useState<string | null>(null);
-  const [languageMode, setLanguageMode] = useState<"es" | "en" | "bilingual">("bilingual");
+  const [languageMode, setLanguageMode] = useState<"es" | "en" | "bilingual">("en");
 
   const handleSearch = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!searchValue.trim()) {
-      setError("Escribe una ciudad, ZIP, dirección o búsqueda");
+      setError("Enter a city, ZIP, address, or search query");
       return;
     }
 
@@ -58,11 +58,11 @@ export function LocalBusinessFinder({
       if (data.success) {
         setBusinesses(data.businesses);
       } else {
-        setError(data.error || "La búsqueda falló");
+        setError(data.error || "The search failed");
         setBusinesses([]);
       }
     } catch (err) {
-      setError("No se pudo conectar con el buscador");
+      setError("Could not connect to the search service");
     } finally {
       setLoading(false);
     }
@@ -70,7 +70,7 @@ export function LocalBusinessFinder({
 
   const discoverBusiness = async (biz: Business) => {
     if (!biz.website) {
-      setError(`"${biz.name}" no tiene una web pública en OpenStreetMap. Busca su dominio y usa Auto-Discovery.`);
+      setError(`"${biz.name}" doesn't have a public website in OpenStreetMap. Look up its domain and use Auto-Discovery.`);
       return;
     }
     setDiscoveringId(biz.id);
@@ -88,14 +88,15 @@ export function LocalBusinessFinder({
           industryType: "general",
           businessCategory: category || biz.category,
           languageMode,
+          createFunnel: true,
         }),
       });
       const data = await response.json();
-      if (!response.ok || !data.success) throw new Error(data.error || "No se pudo añadir el negocio");
+      if (!response.ok || !data.success) throw new Error(data.error || "Could not add the business");
       setSuccessId(biz.id);
       await onDiscovered?.(Number(data.business.id));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo ejecutar Discovery");
+      setError(err instanceof Error ? err.message : "Could not run Discovery");
     } finally {
       setDiscoveringId(null);
     }
@@ -107,8 +108,8 @@ export function LocalBusinessFinder({
         <div className="flex items-start gap-4 mb-6">
           <MapPin className="w-8 h-8 text-blue-400 shrink-0" />
           <div>
-            <h3 className="text-2xl font-black text-white mb-1">Buscar negocios reales</h3>
-            <p className="text-sm text-slate-300">Busca por ZIP, ciudad, dirección o una consulta completa</p>
+            <h3 className="text-2xl font-black text-white mb-1">Find real businesses</h3>
+            <p className="text-sm text-slate-300">Search by ZIP, city, address, or a free-form query</p>
           </div>
         </div>
 
@@ -125,7 +126,7 @@ export function LocalBusinessFinder({
                     : "bg-slate-800 text-slate-300"
                 }`}
               >
-                {type === "zipcode" ? "ZIP" : type === "city" ? "Ciudad" : type === "address" ? "Dirección" : "Búsqueda libre"}
+                {type === "zipcode" ? "ZIP" : type === "city" ? "City" : type === "address" ? "Address" : "Free-form search"}
               </button>
             ))}
           </div>
@@ -133,14 +134,14 @@ export function LocalBusinessFinder({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <input
               type="text"
-              placeholder={searchType === "zipcode" ? "ej. 33101" : searchType === "city" ? "ej. Miami" : "Escribe la ubicación..."}
+              placeholder={searchType === "zipcode" ? "e.g. 33101" : searchType === "city" ? "e.g. Miami" : "Enter the location..."}
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               className="bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-3"
             />
             <input
               type="text"
-              placeholder="Categoría: restaurante, taller, limpieza..."
+              placeholder="Category: restaurant, auto shop, cleaning..."
               value={category}
               onChange={(e) => setCategory(e.target.value)}
               className="bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-3"
@@ -152,9 +153,9 @@ export function LocalBusinessFinder({
             onChange={(e) => setLanguageMode(e.target.value as "es" | "en" | "bilingual")}
             className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-3"
           >
-            <option value="bilingual">Embudo bilingüe — Español + English</option>
-            <option value="es">Solo español</option>
             <option value="en">English only</option>
+            <option value="bilingual">Bilingual funnel — Spanish + English</option>
+            <option value="es">Spanish only</option>
           </select>
 
           <button
@@ -165,12 +166,12 @@ export function LocalBusinessFinder({
             {loading ? (
               <>
                 <Loader className="w-4 h-4 animate-spin" />
-                Buscando...
+                Searching...
               </>
             ) : (
               <>
                 <Search className="w-4 h-4" />
-                Buscar negocios
+                Find businesses
               </>
             )}
           </button>
@@ -187,7 +188,7 @@ export function LocalBusinessFinder({
       {searched && (
         <div>
           <h3 className="text-xl font-bold text-white mb-4">
-            {businesses.length > 0 ? `${businesses.length} negocios encontrados` : "Sin resultados"}
+            {businesses.length > 0 ? `${businesses.length} businesses found` : "No results"}
           </h3>
 
           {businesses.length > 0 ? (
@@ -233,16 +234,16 @@ export function LocalBusinessFinder({
                     disabled={!biz.website || discoveringId === biz.id}
                     className="w-full bg-blue-600 disabled:bg-slate-700 disabled:text-slate-400 text-white font-semibold py-2 rounded-lg flex items-center justify-center gap-2"
                   >
-                    {discoveringId === biz.id ? <><Loader className="w-4 h-4 animate-spin"/>Analizando...</> :
-                     successId === biz.id ? <><CheckCircle2 className="w-4 h-4"/>Negocio añadido</> :
-                     biz.website ? <><Globe className="w-4 h-4"/>Analizar y crear embudo</> : "Sin web pública"}
+                    {discoveringId === biz.id ? <><Loader className="w-4 h-4 animate-spin"/>Analyzing...</> :
+                     successId === biz.id ? <><CheckCircle2 className="w-4 h-4"/>Business added</> :
+                     biz.website ? <><Globe className="w-4 h-4"/>Analyze and create funnel</> : "No public website"}
                   </button>
                 </div>
               ))}
             </div>
           ) : (
             <div className="bg-slate-900/60 border-2 border-dashed border-slate-700 rounded-2xl p-12 text-center">
-              <p className="text-slate-400">No se encontraron negocios con esos datos</p>
+              <p className="text-slate-400">No businesses found with that data</p>
             </div>
           )}
         </div>
