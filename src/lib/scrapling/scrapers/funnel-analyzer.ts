@@ -42,24 +42,15 @@ export class FunnelAnalyzer {
         url,
         data: {
           headlines: analysis.headlines || [],
-          ctas: analysis.ctas || [],
-          forms: analysis.forms || [],
-          images: analysis.images || [],
-          layout: analysis.layout || {},
-          performance: analysis.performance || {},
-          score: result.score || 0,
-          elements: {
-            headlines: analysis.headlines || [],
-            ctas: analysis.ctas || [],
-            testimonials: analysis.testimonials || [],
-            pricing: analysis.pricing || [],
-            forms: analysis.forms || [],
-          },
+          subheadlines: analysis.subheadlines || [],
+          ctaText: analysis.ctas || [],
+          offerBadges: analysis.offers || [],
+          heroImages: analysis.images || [],
+          pageLayout: analysis.layout || {},
         },
         metadata: {
           scrapedAt: new Date(),
           pageTitle: url,
-          funnelScore: result.score || 0,
         },
       };
     } catch (error) {
@@ -115,14 +106,11 @@ export class FunnelAnalyzer {
         JSON.stringify(previous.data?.headlines) !==
         JSON.stringify(current.data?.headlines),
       ctasChanged:
-        JSON.stringify(previous.data?.ctas) !==
-        JSON.stringify(current.data?.ctas),
+        JSON.stringify(previous.data?.ctaText) !==
+        JSON.stringify(current.data?.ctaText),
       layoutChanged:
-        JSON.stringify(previous.data?.layout) !==
-        JSON.stringify(current.data?.layout),
-      scoreChange:
-        (current.metadata?.funnelScore || 0) -
-        (previous.metadata?.funnelScore || 0),
+        JSON.stringify(previous.data?.pageLayout) !==
+        JSON.stringify(current.data?.pageLayout),
     };
   }
 }

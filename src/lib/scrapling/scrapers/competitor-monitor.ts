@@ -11,7 +11,7 @@ import type { ScrapingResult } from "../scraper-config";
 const execAsync = promisify(exec);
 
 export class CompetitorMonitor {
-  private monitoringSchedule = new Map<string, NodeJS.Timer>();
+  private monitoringSchedule = new Map<string, NodeJS.Timeout>();
 
   async scrapeCompetitor(domain: string): Promise<ScrapingResult> {
     try {
@@ -35,20 +35,17 @@ export class CompetitorMonitor {
         type: "competitor-monitoring",
         url: `https://${domain}`,
         data: {
-          domain,
-          pricing: competitor.pricing || [],
-          features: competitor.features || [],
-          positioning: competitor.positioning || {},
-          weaknesses: competitor.weaknesses || [],
-          marketGaps: competitor.market_gaps || [],
-          competitiveScore: competitor.score || 0,
-          strengths: competitor.strengths || [],
-          opportunities: competitor.opportunities || [],
+          pricingInfo: {
+            pricing: competitor.pricing || [],
+            weaknesses: competitor.weaknesses || [],
+            opportunities: competitor.opportunities || [],
+          },
+          competitorFeatures: competitor.features || [],
+          marketPosition: competitor.positioning || "Unknown",
         },
         metadata: {
           scrapedAt: new Date(),
           pageTitle: domain,
-          monitoredAt: new Date().toISOString(),
         },
       };
     } catch (error) {
