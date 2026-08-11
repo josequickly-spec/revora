@@ -145,7 +145,7 @@ export default function AuthForm({ initialResetToken = "" }: { initialResetToken
             icon={<ShieldCheck className="size-4" />}
           />
         )}
-        <TurnstileWidget onTokenChange={setTurnstileToken} />
+        {process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && <TurnstileWidget onTokenChange={setTurnstileToken} />}
         <button
           type="submit"
           disabled={busy}

@@ -50,9 +50,10 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{action:
     if(action==="register"||action==="login") {
       const body=await safeJson(request) as Record<string,unknown>;
       const turnstile=await validateTurnstile(body.turnstileToken,requestIp(request));
-      // Allow login/register in development mode without Turnstile validation
+      // Allow login/register without Turnstile validation if not configured
       const isDev = process.env.NODE_ENV === "development";
-      if(!turnstile.valid && !isDev) return NextResponse.json({error:"Bot verification failed.",code:"turnstile_failed"},{status:403});
+      const turnstileConfigured = Boolean(process.env.TURNSTILE_SECRET_KEY && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY);
+      if(!turnstile.valid && turnstileConfigured && !isDev) return NextResponse.json({error:"Bot verification failed.",code:"turnstile_failed"},{status:403});
       delete body.turnstileToken;
       const session=action==="register"
         ? await registerEnterprise(request,registrationSchema.parse(body))
@@ -97,7 +98,8 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{action:
     if(action==="password-reset-confirm") {
       const body=await safeJson(request) as Record<string,unknown>;
       const turnstile=await validateTurnstile(body.turnstileToken,requestIp(request));
-      if(!turnstile.valid)return NextResponse.json({error:"Bot verification failed.",code:"turnstile_failed"},{status:403});
+      const turnstileConfigured = Boolean(process.env.TURNSTILE_SECRET_KEY && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY);
+      if(!turnstile.valid && turnstileConfigured)return NextResponse.json({error:"Bot verification failed.",code:"turnstile_failed"},{status:403});
       delete body.turnstileToken;
       const input=z.object({token:z.string().min(32).max(500),password:z.string().min(12).max(200)}).strict().parse(body);
       await confirmPasswordReset(input.token,input.password);
